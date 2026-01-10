@@ -42,12 +42,17 @@ async function callFal(endpoint: string, body: any): Promise<any> {
   return data;
 }
 
-// Poll for queue result - modelPath like "fal-ai/kling-video/v2.6/pro/image-to-video"
+// Poll for queue result
+// IMPORTANT: Kling polling uses fal-ai/kling-video/requests/{id} (NOT /o1/ or /v2.6/)
 async function pollFalResult(requestId: string, endpoint: string, maxAttempts = 120): Promise<any> {
-  // Extract model path from endpoint: https://queue.fal.run/fal-ai/model/path -> fal-ai/model/path
-  const modelPath = endpoint.replace('https://queue.fal.run/', '').split('/image-to-video')[0];
-  const statusUrl = `https://queue.fal.run/${modelPath}/requests/${requestId}/status`;
-  const resultUrl = `https://queue.fal.run/${modelPath}/requests/${requestId}`;
+  // For Kling models, always use base path: fal-ai/kling-video
+  let basePath = 'fal-ai/kling-video';
+  if (endpoint.includes('seedance')) {
+    basePath = 'fal-ai/seedance-1-lite';
+  }
+
+  const statusUrl = `https://queue.fal.run/${basePath}/requests/${requestId}/status`;
+  const resultUrl = `https://queue.fal.run/${basePath}/requests/${requestId}`;
 
   console.log('Polling URLs:', { statusUrl, resultUrl });
 
@@ -120,14 +125,14 @@ export const POST: APIRoute = async ({ request }) => {
 
       case 'video-kling-o1': {
         // Kling O1 - supports start + end frame
+        // CORRECT PARAMS: start_image_url + end_image_url (NOT image_url + tail_image_url)
         const falBody: any = {
           prompt,
-          duration,
-          aspect_ratio
+          duration
         };
 
-        if (start_image_url) falBody.image_url = start_image_url;
-        if (end_image_url) falBody.tail_image_url = end_image_url;
+        if (start_image_url) falBody.start_image_url = start_image_url;
+        if (end_image_url) falBody.end_image_url = end_image_url;
 
         result = await callFal(FAL_ENDPOINTS['video-kling-o1'], falBody);
         break;
