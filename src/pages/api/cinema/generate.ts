@@ -10,7 +10,8 @@ const FAL_ENDPOINTS = {
   'video-kling': 'https://queue.fal.run/fal-ai/kling-video/v2.6/pro/image-to-video',
   'video-kling-o1': 'https://queue.fal.run/fal-ai/kling-video/o1/image-to-video',
   'video-seedance': 'https://queue.fal.run/fal-ai/seedance-1-lite/image-to-video',
-  'image': 'https://fal.run/fal-ai/nano-banana-pro',  // Sync - fast enough
+  'image': 'https://fal.run/fal-ai/nano-banana-pro',           // Text-to-image
+  'image-edit': 'https://fal.run/fal-ai/nano-banana-pro/edit', // Image-to-image (with reference)
   'face-adapter': 'https://fal.run/fal-ai/ip-adapter-face-id'
 };
 
@@ -111,6 +112,7 @@ export const POST: APIRoute = async ({ request }) => {
     } = body;
 
     console.log('Cinema Studio request:', { type, prompt, duration, aspect_ratio, resolution });
+    console.log('Reference image received:', reference_image ? 'YES - ' + reference_image.substring(0, 50) + '...' : 'NO');
 
     let result: any;
 
@@ -163,14 +165,17 @@ export const POST: APIRoute = async ({ request }) => {
           resolution: '4K'
         };
 
-        // Add reference image if provided (for chaining shots)
-        // nano-banana uses image_urls ARRAY for image-to-image/editing
+        // Use different endpoint based on whether reference image is provided
         if (reference_image) {
+          // Image-to-image: use /edit endpoint with image_urls array
           imageBody.image_urls = [reference_image];
-          console.log('Using reference image for consistency:', reference_image);
+          console.log('Using EDIT endpoint with reference:', reference_image);
+          result = await callFal(FAL_ENDPOINTS['image-edit'], imageBody);
+        } else {
+          // Text-to-image: use regular endpoint
+          console.log('Using TEXT-TO-IMAGE endpoint (no reference)');
+          result = await callFal(FAL_ENDPOINTS['image'], imageBody);
         }
-
-        result = await callFal(FAL_ENDPOINTS['image'], imageBody);
         break;
       }
 
