@@ -18,6 +18,7 @@ import {
   CHARACTER_STYLE_PRESETS,
   buildCinemaPrompt,
   generateDirectorSuggestion,
+  type DirectorShotPreset,
 } from './cameraPresets';
 
 // Clean SVG Icons
@@ -1674,6 +1675,29 @@ export default function CinemaStudio() {
                   Click to add →
                 </span>
               </button>
+            )}
+            {/* Shot Library - Director signature shots as clickable chips */}
+            {directorIndex !== null && DIRECTOR_PRESETS[directorIndex].shotLibrary && (
+              <div className="flex flex-wrap gap-1.5 px-1">
+                <span className="text-[9px] text-gray-500 uppercase mr-1 self-center">
+                  {DIRECTOR_PRESETS[directorIndex].name} shots:
+                </span>
+                {DIRECTOR_PRESETS[directorIndex].shotLibrary!.slice(0, 6).map((shot) => (
+                  <button
+                    key={shot.id}
+                    onClick={() => setPromptText(shot.prompt)}
+                    className="px-2 py-1 bg-[#2a2a2a] hover:bg-purple-900/30 border border-gray-700 hover:border-purple-500/50 rounded text-[10px] text-gray-400 hover:text-purple-300 transition-all"
+                    title={`${shot.name}\nWhen: ${shot.whenToUse.join(', ')}\nLens: ${shot.lens || 'varies'}`}
+                  >
+                    {shot.name}
+                  </button>
+                ))}
+                {DIRECTOR_PRESETS[directorIndex].shotLibrary!.length > 6 && (
+                  <span className="text-[9px] text-gray-600 self-center">
+                    +{DIRECTOR_PRESETS[directorIndex].shotLibrary!.length - 6} more
+                  </span>
+                )}
+              </div>
             )}
             {/* Prompt Input - Larger */}
             <div className="relative">

@@ -1020,6 +1020,32 @@ export const TRANSITION_PRESETS: TransitionPreset[] = [
 // DIRECTOR STYLE PRESETS - Famous filmmakers
 // ============================================
 
+// Shot library entry for director-specific signature shots
+export interface DirectorShotPreset {
+  id: string;
+  name: string;
+  whenToUse: string[];
+  prompt: string;
+  lens?: string;
+  movement?: string;
+  rig?: string;
+}
+
+// Rules for what a director would/wouldn't do
+export interface DirectorRules {
+  neverDo: string[];
+  alwaysDo: string[];
+  signature: string[];
+}
+
+// Scene-specific shot recommendations
+export interface DirectorSceneResponse {
+  shot: string;
+  lens: string;
+  movement: string;
+  why?: string;
+}
+
 export interface DirectorPreset {
   id: string;
   name: string;
@@ -1033,11 +1059,17 @@ export interface DirectorPreset {
   recommendedLighting?: string;
   recommendedStyle?: string;
   recommendedAtmosphere?: string;
-  // NEW: Additional director-specific settings
+  // Additional director-specific settings
   recommendedFraming?: string;
   recommendedSetDesign?: string;
   recommendedColorPalette?: string;
   recommendedCharacterStyle?: string;
+  // Deep director research data
+  shotLibrary?: DirectorShotPreset[];
+  rules?: DirectorRules;
+  sceneResponses?: Record<string, DirectorSceneResponse>;
+  colorPalette?: Record<string, string>;
+  avoidPrompts?: string[];
 }
 
 export const DIRECTOR_PRESETS: DirectorPreset[] = [
@@ -1045,17 +1077,215 @@ export const DIRECTOR_PRESETS: DirectorPreset[] = [
     id: 'kubrick',
     name: 'Kubrick',
     director: 'Stanley Kubrick',
-    prompt: 'symmetrical framing, one-point perspective, wide angle, cold sterile lighting, meticulous composition, The Shining style',
+    prompt: 'Stanley Kubrick style, symmetrical one-point perspective, wide angle lens, cold sterile lighting, meticulous composition, centered framing, geometric architecture, Steadicam glide, clinical observation',
     description: 'Symmetrical, cold, meticulous',
+    recommendedCamera: 'arri-alexa',
     recommendedLens: 'wide-24',
-    recommendedMovement: ['dolly-in', 'steadicam'],
+    recommendedMovement: ['dolly-in', 'steadicam', 'static'],
     recommendedLighting: 'harsh-sun',
     recommendedStyle: 'gritty',
     recommendedAtmosphere: 'clear',
     recommendedFraming: 'centered-symmetrical',
     recommendedSetDesign: 'sterile-geometric',
     recommendedColorPalette: 'desaturated-cold',
-    recommendedCharacterStyle: 'grunge-realistic'
+    recommendedCharacterStyle: 'grunge-realistic',
+    // Shot library - 12 signature Kubrick shots
+    shotLibrary: [
+      {
+        id: 'one-point-corridor',
+        name: 'One-Point Corridor',
+        whenToUse: ['Establishing geography', 'Character trapped', 'Building dread'],
+        prompt: 'one-point perspective shot, symmetrical corridor, vanishing point center frame, geometric architecture, wide angle lens, stark lighting, character small in vast space, Kubrick style, clinical precision, cold institutional, 18mm wide angle',
+        lens: '18mm wide',
+        movement: 'static or slow push',
+        rig: 'tripod or Steadicam'
+      },
+      {
+        id: 'kubrick-stare',
+        name: 'Kubrick Stare',
+        whenToUse: ['Character madness', 'Psychological break', 'Direct confrontation'],
+        prompt: 'Kubrick stare, head tilted down, eyes looking up at camera, intense menacing gaze, direct eye contact, close-up, cold lighting, centered framing, psychological intensity, character breaking sanity, unsettling, Kubrick style',
+        lens: '25-35mm',
+        movement: 'static or slow dolly in',
+        rig: 'tripod or dolly'
+      },
+      {
+        id: 'low-steadicam',
+        name: 'Low Steadicam Follow',
+        whenToUse: ['Child POV', 'Vulnerability', 'Space hunting character'],
+        prompt: 'low angle Steadicam shot, 18 inches from ground, following character from behind, smooth gliding movement, child perspective, wide angle lens, corridor or hallway, ominous smooth tracking, Kubrick style, The Shining aesthetic',
+        lens: '18-24mm wide',
+        movement: 'smooth glide',
+        rig: 'modified Steadicam (18")'
+      },
+      {
+        id: 'steadicam-follow',
+        name: 'Steadicam Follow',
+        whenToUse: ['Character moving through space', 'Building tension', 'Space has power'],
+        prompt: 'Steadicam following shot, smooth gliding movement, character walking through space, symmetrical architecture, one-point perspective, wide angle, observational, ominous smooth tracking, Kubrick style, cold precision',
+        lens: '18-24mm',
+        movement: 'smooth follow',
+        rig: 'Steadicam'
+      },
+      {
+        id: 'slow-dolly-in',
+        name: 'Slow Dolly In',
+        whenToUse: ['Building revelation', 'Focusing attention', 'Psychological intimacy'],
+        prompt: 'slow dolly in, pushing toward face, mathematical precision, centered subject, building tension, inevitable approach, intimate observation, Kubrick style, static subject, moving camera, cold lighting',
+        lens: '25-35mm',
+        movement: 'slow dolly in',
+        rig: 'dolly'
+      },
+      {
+        id: 'architectural-wide',
+        name: 'Architectural Wide',
+        whenToUse: ['Environment power', 'Character insignificance', 'Institutional spaces'],
+        prompt: 'extreme wide shot, architectural composition, geometric space, character dwarfed by environment, symmetrical framing, one-point perspective, institutional, cold sterile, Kubrick style, 18mm wide angle, vast interior space',
+        lens: '18mm',
+        movement: 'static',
+        rig: 'tripod'
+      },
+      {
+        id: 'reverse-zoom',
+        name: 'Reverse Zoom (Barry Lyndon)',
+        whenToUse: ['Period drama', 'Revealing context', 'Painterly effect'],
+        prompt: 'reverse zoom reveal, starting close-up pulling to wide tableau, painterly composition, 18th century aesthetic, candlelit interior, period costume, soft natural lighting, Barry Lyndon style, Kubrick',
+        lens: '50mm (f/0.7 for candle)',
+        movement: 'slow zoom out',
+        rig: 'tripod'
+      },
+      {
+        id: 'overhead',
+        name: 'Overhead/Top-Down',
+        whenToUse: ['Violence', 'Maze reveal', 'Gods eye detachment'],
+        prompt: 'overhead top-down shot, looking straight down at subject, geometric composition, clinical detachment, pattern visible, Kubrick style, gods eye view, cold observation',
+        lens: 'wide',
+        movement: 'static',
+        rig: 'crane or rig'
+      },
+      {
+        id: 'interview-confrontation',
+        name: 'Interview/Confrontation',
+        whenToUse: ['Character explaining', 'Interview moments', 'Psychological examination'],
+        prompt: 'medium shot interview framing, subject centered, looking slightly off-camera, static tripod, cold lighting, institutional background, confrontational, Kubrick style, psychological examination, clinical observation',
+        lens: '25-35mm',
+        movement: 'static',
+        rig: 'tripod'
+      },
+      {
+        id: 'helicopter-establishing',
+        name: 'Helicopter Establishing',
+        whenToUse: ['Opening shot', 'Showing isolation', 'Epic scale'],
+        prompt: 'aerial helicopter shot, following vehicle through vast landscape, mountain roads, isolated journey, epic scale, character insignificant, nature dominates, Kubrick opening style, ominous establishing',
+        lens: 'wide',
+        movement: 'aerial follow',
+        rig: 'helicopter'
+      },
+      {
+        id: 'bathroom-revelation',
+        name: 'Bathroom Revelation',
+        whenToUse: ['Private madness', 'Intimate horror', 'Vulnerability'],
+        prompt: 'bathroom interior, harsh fluorescent lighting, cold tile surfaces, isolated figure, private horror, institutional space, vulnerable, Kubrick style, psychological breakdown, clinical harsh light',
+        lens: '25mm',
+        movement: 'static or slow',
+        rig: 'tripod'
+      },
+      {
+        id: 'war-room',
+        name: 'War Room/Control Center',
+        whenToUse: ['Power concentrated', 'Institutional decisions', 'Satirical'],
+        prompt: 'war room interior, circular geometric space, large central table, figures arranged around perimeter, dramatic overhead lighting, institutional power, Kubrick style, Dr. Strangelove aesthetic, cold sterile, military/governmental',
+        lens: '18-24mm wide',
+        movement: 'static or slow pan',
+        rig: 'tripod'
+      }
+    ],
+    // Rules - what Kubrick would and wouldn't do
+    rules: {
+      neverDo: [
+        'handheld chaos',
+        'dutch angles',
+        'crash zooms',
+        'quick MTV-style cuts',
+        'warm emotional lighting',
+        'asymmetrical sloppy framing'
+      ],
+      alwaysDo: [
+        'one-point perspective in corridors',
+        'center subjects in frame',
+        'wide angle for geography',
+        'hold shots past comfort',
+        'geometric precision',
+        'practical lighting sources'
+      ],
+      signature: [
+        'Steadicam follow through corridors',
+        'Kubrick stare (eyes up through brow at camera)',
+        'one-point perspective symmetry',
+        'slow dolly in to face',
+        'low Steadicam at child height'
+      ]
+    },
+    // Scene-specific responses
+    sceneResponses: {
+      'horror_corridor': {
+        shot: 'wide one-point perspective',
+        lens: '18mm wide',
+        movement: 'Steadicam glide',
+        why: 'Corridor becomes inescapable geometry'
+      },
+      'character_madness': {
+        shot: 'slow dolly to close-up, then stare',
+        lens: '25-35mm',
+        movement: 'slow dolly in',
+        why: 'Intimacy with the breakdown, then direct confrontation'
+      },
+      'dialogue_tension': {
+        shot: 'static wide or medium',
+        lens: '25mm minimum',
+        movement: 'static tripod',
+        why: 'Cold observation, let tension build without cutting'
+      },
+      'child_pov': {
+        shot: 'low tracking',
+        lens: 'wide',
+        movement: 'Steadicam at 18 inches',
+        why: 'World as child sees it, vulnerable perspective'
+      },
+      'violence': {
+        shot: 'wide or medium, often static',
+        lens: 'wide for context',
+        movement: 'static or slow motion',
+        why: 'Clinical detachment, forcing audience to watch'
+      },
+      'establishing': {
+        shot: 'extreme wide one-point',
+        lens: '18mm',
+        movement: 'static or slow Steadicam',
+        why: 'Show full geography, character dwarfed by space'
+      }
+    },
+    // Color palette with hex codes
+    colorPalette: {
+      primary: '#1A1A1A',
+      secondary: '#4A4A4A',
+      accent: '#8B0000',
+      shadows: '#0D0D0D',
+      highlights: '#C8C8C8'
+    },
+    // Prompts to avoid when generating Kubrick-style content
+    avoidPrompts: [
+      'handheld',
+      'shaky camera',
+      'quick cuts',
+      'dutch angle',
+      'tilted frame',
+      'warm emotional',
+      'soft romantic',
+      'asymmetrical chaos',
+      'crash zoom',
+      'MTV style'
+    ]
   },
   {
     id: 'spielberg',
@@ -2143,28 +2373,56 @@ export function generateDirectorSuggestion(
     }
   }
 
-  // 2. Get possible story progressions for this beat
+  // 2. Check if director has scene-specific response for this beat
+  // Map story beats to scene types
+  const beatToSceneMap: Record<string, string> = {
+    'danger': 'horror_corridor',
+    'chase': 'horror_corridor',
+    'emotion': 'character_madness',
+    'confrontation': 'dialogue_tension',
+    'calm': 'establishing',
+    'journey': 'establishing',
+    'discovery': 'establishing',
+    'defeat': 'character_madness',
+    'victory': 'establishing'
+  };
+
+  const sceneType = beatToSceneMap[detectedBeat];
+  const sceneResponse = director.sceneResponses?.[sceneType];
+
+  // 3. Get possible story progressions for this beat
   const progressions = STORY_PROGRESSIONS[detectedBeat] || STORY_PROGRESSIONS.journey;
 
-  // 3. Pick a progression (cycle through based on shot number for variety)
+  // 4. Pick a progression (cycle through based on shot number for variety)
   const progressionIndex = (shotNumber - 1) % progressions.length;
   const storyProgression = progressions[progressionIndex];
 
-  // 4. Get director's visual style from our templates
+  // 5. Get director's visual style from our templates
   const directorStyle = DIRECTOR_STORY_STYLES[director.id] || {
     visualStyle: 'cinematic composition',
     emotionalTone: 'dramatic',
     lightingHint: 'atmospheric lighting'
   };
 
-  // 5. Build FULL suggestion with ALL technical recommendations
+  // 6. Occasionally suggest a signature shot from shot library (every 3rd shot)
+  let signatureShot: DirectorShotPreset | undefined;
+  if (director.shotLibrary && shotNumber % 3 === 0) {
+    const shotIndex = Math.floor(shotNumber / 3) % director.shotLibrary.length;
+    signatureShot = director.shotLibrary[shotIndex];
+  }
+
+  // 7. Build FULL suggestion with ALL technical recommendations
   const parts: string[] = [];
 
   // === STORY (what happens next) ===
   parts.push(`Character ${storyProgression}`);
 
-  // === VISUAL STYLE ===
-  parts.push(directorStyle.visualStyle);
+  // === VISUAL STYLE (use scene response if available) ===
+  if (sceneResponse) {
+    parts.push(`${sceneResponse.shot}, ${sceneResponse.lens}, ${sceneResponse.movement}`);
+  } else {
+    parts.push(directorStyle.visualStyle);
+  }
 
   // === CAMERA BODY (ARRI, RED, IMAX, etc.) ===
   if (director.recommendedCamera) {
@@ -2239,5 +2497,38 @@ export function generateDirectorSuggestion(
     }
   }
 
-  return parts.join(', ');
+  // === SIGNATURE SHOT (if applicable) ===
+  if (signatureShot) {
+    parts.push(`[${signatureShot.name}]`);
+  }
+
+  // Build final result
+  let result = parts.join(', ');
+
+  // Filter out any terms from avoidPrompts
+  if (director.avoidPrompts && director.avoidPrompts.length > 0) {
+    for (const avoidTerm of director.avoidPrompts) {
+      const regex = new RegExp(avoidTerm, 'gi');
+      result = result.replace(regex, '');
+    }
+    // Clean up any double commas or spaces from removal
+    result = result.replace(/,\s*,/g, ',').replace(/\s+/g, ' ').trim();
+  }
+
+  return result;
+}
+
+// Helper to get a director's signature shot by scene context
+export function getDirectorSignatureShot(
+  director: DirectorPreset,
+  sceneContext: string
+): DirectorShotPreset | undefined {
+  if (!director.shotLibrary) return undefined;
+
+  const context = sceneContext.toLowerCase();
+
+  // Find a shot whose whenToUse matches the context
+  return director.shotLibrary.find(shot =>
+    shot.whenToUse.some(use => context.includes(use.toLowerCase()))
+  );
 }
