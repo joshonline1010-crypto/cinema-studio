@@ -2150,16 +2150,48 @@ export function generateDirectorSuggestion(
   const progressionIndex = (shotNumber - 1) % progressions.length;
   const storyProgression = progressions[progressionIndex];
 
-  // 4. Get director's visual style
+  // 4. Get director's visual style from our templates
   const directorStyle = DIRECTOR_STORY_STYLES[director.id] || {
     visualStyle: 'cinematic composition',
     emotionalTone: 'dramatic',
     lightingHint: 'atmospheric lighting'
   };
 
-  // 5. Build the story suggestion
-  // Format: "Character [story progression], [director visual style], [lighting]"
-  const suggestion = `Character ${storyProgression}, ${directorStyle.visualStyle}, ${directorStyle.lightingHint}`;
+  // 5. Get technical recommendations from director preset
+  const parts: string[] = [];
 
-  return suggestion;
+  // Story first!
+  parts.push(`Character ${storyProgression}`);
+
+  // Visual style
+  parts.push(directorStyle.visualStyle);
+
+  // Lens recommendation (from director preset)
+  if (director.recommendedLens) {
+    const lens = LENS_PRESETS.find(l => l.id === director.recommendedLens);
+    if (lens) {
+      parts.push(lens.name);
+    }
+  }
+
+  // Framing recommendation
+  if (director.recommendedFraming) {
+    const framing = FRAMING_PRESETS.find(f => f.id === director.recommendedFraming);
+    if (framing) {
+      parts.push(framing.name.toLowerCase());
+    }
+  }
+
+  // Lighting
+  parts.push(directorStyle.lightingHint);
+
+  // Color palette
+  if (director.recommendedColorPalette) {
+    const palette = COLOR_PALETTE_PRESETS.find(p => p.id === director.recommendedColorPalette);
+    if (palette) {
+      parts.push(palette.name.toLowerCase() + ' colors');
+    }
+  }
+
+  return parts.join(', ');
 }
