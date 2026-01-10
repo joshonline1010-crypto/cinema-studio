@@ -789,13 +789,30 @@ export default function CinemaStudio() {
                     </div>
                   </button>
                 ))}
-                {/* Next shot slot */}
-                <div className="w-32 aspect-video bg-[#151515] rounded-lg border border-dashed border-gray-700 flex flex-col items-center justify-center flex-shrink-0">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-gray-600 mb-1">
+                {/* Next shot slot - clickable to start chaining */}
+                <button
+                  onClick={() => {
+                    // If we have a completed video, trigger chaining
+                    if (currentShot.videoUrl) {
+                      setChainPrompt(true);
+                    } else if (shots.length > 0) {
+                      // Use last shot's data for chaining
+                      const lastShot = shots[shots.length - 1];
+                      if (lastShot.startFrame) {
+                        setStartFrame(lastShot.startFrame);
+                        setMode('image');
+                        setPreviousPrompt(promptText || lastShot.motionPrompt);
+                        setPromptText('');
+                      }
+                    }
+                  }}
+                  className="w-32 aspect-video bg-[#151515] rounded-lg border border-dashed border-gray-700 flex flex-col items-center justify-center flex-shrink-0 hover:border-[#e8ff00] hover:bg-[#1a1a1a] transition-all group"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-gray-600 group-hover:text-[#e8ff00] mb-1">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
-                  <span className="text-gray-600 text-[10px]">Next Shot</span>
-                </div>
+                  <span className="text-gray-600 group-hover:text-[#e8ff00] text-[10px]">Next Shot</span>
+                </button>
               </div>
               {isExtractingFrame && (
                 <div className="mt-2 text-xs text-[#e8ff00] flex items-center gap-2">
