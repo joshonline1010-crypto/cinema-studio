@@ -17,6 +17,7 @@ import {
   COLOR_PALETTE_PRESETS,
   CHARACTER_STYLE_PRESETS,
   buildCinemaPrompt,
+  generateDirectorSuggestion,
 } from './cameraPresets';
 
 // Clean SVG Icons
@@ -299,7 +300,6 @@ export default function CinemaStudio() {
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const refInputRef = useRef<HTMLInputElement>(null);
 
-
   // Model capabilities
   const MODEL_SETTINGS = {
     image: {
@@ -448,6 +448,9 @@ export default function CinemaStudio() {
   // MAIN GENERATE FUNCTION
   // ============================================
   const handleGenerate = async () => {
+    // Clear director suggestion when generating
+    setDirectorSuggestion(null);
+
     const fullPrompt = buildFullPrompt();
 
     // ========== IMAGE MODE ==========
@@ -594,6 +597,12 @@ export default function CinemaStudio() {
   const [previousPrompt, setPreviousPrompt] = useState<string>('');
   const [isExtractingFrame, setIsExtractingFrame] = useState(false);
   const [playingShot, setPlayingShot] = useState<string | null>(null);
+  const [directorSuggestion, setDirectorSuggestion] = useState<string | null>(null);
+
+  // Clear director suggestion when director changes
+  useEffect(() => {
+    setDirectorSuggestion(null);
+  }, [directorIndex]);
 
   // Extract last frame from video
   const extractLastFrame = async (videoUrl: string): Promise<string | null> => {
@@ -643,6 +652,19 @@ export default function CinemaStudio() {
 
     setChainPrompt(false);
     setMode('image'); // Switch to image mode to generate next image with reference
+
+    // Generate director suggestion if a director is selected
+    if (directorIndex !== null) {
+      const director = DIRECTOR_PRESETS[directorIndex];
+      const suggestion = generateDirectorSuggestion(
+        director,
+        currentPromptText,
+        shots.length + 1
+      );
+      setDirectorSuggestion(suggestion);
+    } else {
+      setDirectorSuggestion(null);
+    }
   };
 
   // Play a shot from timeline
@@ -1628,6 +1650,29 @@ export default function CinemaStudio() {
               <div className="text-[10px] text-gray-500 px-1">
                 Continuing from: "{previousPrompt.slice(0, 50)}..." - What happens next?
               </div>
+            )}
+            {/* Director Suggestion - clickable to add to prompt */}
+            {directorSuggestion && directorIndex !== null && currentShot.startFrame && (
+              <button
+                onClick={() => {
+                  setPromptText(prev => prev ? `${prev}, ${directorSuggestion}` : directorSuggestion);
+                  setDirectorSuggestion(null);
+                }}
+                className="flex items-center gap-2 px-3 py-2 bg-purple-900/30 border border-purple-500/50 rounded-lg text-left hover:bg-purple-900/50 transition-all group"
+              >
+                <span className="text-purple-400 text-lg">💡</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] text-purple-400 font-medium">
+                    {DIRECTOR_PRESETS[directorIndex].name} would:
+                  </div>
+                  <div className="text-xs text-gray-300 group-hover:text-white truncate">
+                    "{directorSuggestion}"
+                  </div>
+                </div>
+                <span className="text-[9px] text-purple-500 opacity-0 group-hover:opacity-100 whitespace-nowrap">
+                  Click to add →
+                </span>
+              </button>
             )}
             {/* Prompt Input - Larger */}
             <div className="relative">

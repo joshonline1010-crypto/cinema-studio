@@ -1972,3 +1972,68 @@ export function buildCinemaPrompt(options: {
 
   return parts.join(', ');
 }
+
+// ============================================
+// DIRECTOR SUGGESTION GENERATOR
+// Generates "What would [Director] do next?" suggestions
+// ============================================
+
+export function generateDirectorSuggestion(
+  director: DirectorPreset,
+  previousPrompt: string,
+  shotNumber: number
+): string {
+  const parts: string[] = [];
+
+  // Get movement names from recommendedMovement IDs
+  if (director.recommendedMovement && director.recommendedMovement.length > 0) {
+    const movementNames = director.recommendedMovement
+      .map(id => {
+        const preset = CAMERA_PRESETS.find(m => m.id === id);
+        return preset?.name;
+      })
+      .filter(Boolean);
+    if (movementNames.length > 0) {
+      parts.push(movementNames.join(' with '));
+    }
+  }
+
+  // Add framing style (convert ID to readable text)
+  if (director.recommendedFraming) {
+    const framingText = director.recommendedFraming
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    parts.push(framingText.toLowerCase());
+  }
+
+  // Add lighting mood
+  if (director.recommendedLighting) {
+    const lighting = LIGHTING_PRESETS.find(l => l.id === director.recommendedLighting);
+    if (lighting) {
+      parts.push(lighting.name.toLowerCase() + ' lighting');
+    }
+  }
+
+  // Add atmosphere
+  if (director.recommendedAtmosphere) {
+    parts.push(director.recommendedAtmosphere + ' atmosphere');
+  }
+
+  // Add color palette hint
+  if (director.recommendedColorPalette) {
+    const colorText = director.recommendedColorPalette
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    parts.push(colorText.toLowerCase() + ' tones');
+  }
+
+  // Build the suggestion
+  if (parts.length === 0) {
+    // Fallback to director's general prompt
+    return director.prompt.split(',').slice(0, 2).join(', ');
+  }
+
+  return parts.join(', ');
+}
