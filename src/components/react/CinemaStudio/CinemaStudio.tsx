@@ -596,11 +596,12 @@ export default function CinemaStudio() {
     }
   };
 
-  // Chain current shot to next - capture both start and last frame
+  // Chain current shot to next - pass generated image as reference for next IMAGE
+  // NOTE: This is for CHAINING shots (sequential), NOT for start→end single videos
   const handleChainToNext = async () => {
-    // IMPORTANT: Capture BOTH frames BEFORE saving (which resets currentShot)
-    const startFrameRef = currentShot.startFrame;  // nano-banana generated image
-    const videoUrl = currentShot.videoUrl;         // video to extract last frame from
+    // Capture the generated image BEFORE saving (which resets currentShot)
+    // This image becomes the REFERENCE for generating the NEXT shot's image
+    const previousGeneratedImage = currentShot.startFrame;
 
     // Save the current prompt for context
     const currentPromptText = promptText;
@@ -609,27 +610,18 @@ export default function CinemaStudio() {
     // Save current shot to timeline (this resets currentShot!)
     saveCurrentAsShot();
 
-    // Extract last frame from video for end reference
-    let lastFrameRef: string | null = null;
-    if (videoUrl) {
-      lastFrameRef = await extractLastFrame(videoUrl);
+    // Set the previous generated image as reference for next shot
+    // In IMAGE mode, this will be used as reference_image for nano-banana
+    // DO NOT set endFrame here - that's for start→end video workflow, not chaining
+    if (previousGeneratedImage) {
+      setStartFrame(previousGeneratedImage);
     }
 
-    // Set up next shot with both references:
-    // - startFrame = character/style reference (nano-banana generated)
-    // - endFrame = last frame from video (ending state/position)
-    if (startFrameRef) {
-      setStartFrame(startFrameRef);
-    }
-    if (lastFrameRef) {
-      setEndFrame(lastFrameRef);
-    }
-
-    // Clear prompt but keep context hint
+    // Clear prompt for new shot
     setPromptText('');
 
     setChainPrompt(false);
-    setMode('image'); // Switch to image mode to generate next frame based on references
+    setMode('image'); // Switch to image mode to generate next image with reference
   };
 
   // Play a shot from timeline
