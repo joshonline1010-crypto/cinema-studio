@@ -1974,66 +1974,192 @@ export function buildCinemaPrompt(options: {
 }
 
 // ============================================
-// DIRECTOR SUGGESTION GENERATOR
-// Generates "What would [Director] do next?" suggestions
+// STORY-BASED DIRECTOR SUGGESTION GENERATOR
+// Suggests what happens NEXT in the story (for IMAGE generation)
+// NOT camera movements - actual story continuation!
 // ============================================
+
+// Story beat detection keywords
+const STORY_BEATS = {
+  chase: ['chase', 'chasing', 'running', 'fleeing', 'escape', 'pursued', 'hunting'],
+  danger: ['dragon', 'monster', 'enemy', 'threat', 'attack', 'fire', 'explosion', 'danger'],
+  calm: ['peaceful', 'calm', 'relaxing', 'serene', 'quiet', 'resting', 'sleeping'],
+  discovery: ['finding', 'discover', 'looking', 'searching', 'exploring', 'cave', 'door'],
+  confrontation: ['facing', 'battle', 'fight', 'standoff', 'versus', 'against'],
+  emotion: ['sad', 'happy', 'crying', 'laughing', 'scared', 'terrified', 'angry', 'love'],
+  journey: ['walking', 'traveling', 'path', 'road', 'forest', 'mountain', 'desert'],
+  victory: ['winning', 'victory', 'defeating', 'celebrating', 'triumph'],
+  defeat: ['falling', 'losing', 'injured', 'trapped', 'captured']
+};
+
+// What typically follows each story beat
+const STORY_PROGRESSIONS: Record<string, string[]> = {
+  chase: [
+    'finds temporary shelter and catches breath',
+    'reaches a dead end and must turn to face the threat',
+    'discovers a hidden escape route',
+    'trips and falls, threat closing in',
+    'is saved by an unexpected ally'
+  ],
+  danger: [
+    'narrowly dodges the attack',
+    'finds cover behind debris',
+    'faces the threat with newfound courage',
+    'witnesses the destruction from a distance',
+    'prepares for the final confrontation'
+  ],
+  calm: [
+    'notices something unusual in the distance',
+    'is interrupted by unexpected visitor',
+    'makes an important decision',
+    'reflects on the journey so far',
+    'prepares to leave this peaceful place'
+  ],
+  discovery: [
+    'enters the mysterious space cautiously',
+    'finds exactly what they were looking for',
+    'triggers an unexpected trap',
+    'uncovers a shocking revelation',
+    'realizes they are not alone'
+  ],
+  confrontation: [
+    'makes the first move',
+    'circles the opponent, looking for weakness',
+    'exchanges fierce blows',
+    'gains the upper hand momentarily',
+    'is pushed back but refuses to give up'
+  ],
+  emotion: [
+    'takes a moment to process the feelings',
+    'shares the moment with a companion',
+    'channels the emotion into action',
+    'finds comfort in the environment',
+    'makes a decision based on this feeling'
+  ],
+  journey: [
+    'pauses to take in the breathtaking view',
+    'encounters an obstacle in the path',
+    'meets a fellow traveler',
+    'finds signs of civilization ahead',
+    'notices the weather changing dramatically'
+  ],
+  victory: [
+    'stands triumphant over the defeated foe',
+    'celebrates with allies',
+    'reflects on what it cost to win',
+    'claims the prize or reward',
+    'looks toward the next challenge'
+  ],
+  defeat: [
+    'struggles to get back up',
+    'is rescued at the last moment',
+    'finds inner strength to continue',
+    'accepts help from an unlikely source',
+    'plots a new strategy from the ground'
+  ]
+};
+
+// Director personality templates for story framing
+const DIRECTOR_STORY_STYLES: Record<string, {
+  visualStyle: string;
+  emotionalTone: string;
+  lightingHint: string;
+}> = {
+  kubrick: {
+    visualStyle: 'perfectly centered, symmetrical composition',
+    emotionalTone: 'cold, inevitable, haunting',
+    lightingHint: 'stark contrast, cold blue light'
+  },
+  spielberg: {
+    visualStyle: 'warm medium shot, face visible',
+    emotionalTone: 'hopeful, emotional, human',
+    lightingHint: 'golden light, lens flares'
+  },
+  tarantino: {
+    visualStyle: 'extreme close-up, intense angle',
+    emotionalTone: 'stylized, intense, cool',
+    lightingHint: 'dramatic shadows, saturated colors'
+  },
+  fincher: {
+    visualStyle: 'dark corners, clinical precision',
+    emotionalTone: 'tense, methodical, unsettling',
+    lightingHint: 'sickly green tint, underexposed'
+  },
+  nolan: {
+    visualStyle: 'epic wide shot, massive scale',
+    emotionalTone: 'grand, philosophical, weighty',
+    lightingHint: 'IMAX grandeur, natural elements'
+  },
+  villeneuve: {
+    visualStyle: 'vast negative space, tiny figure',
+    emotionalTone: 'contemplative, awe-inspiring, lonely',
+    lightingHint: 'diffused light, fog, atmosphere'
+  },
+  'wes-anderson': {
+    visualStyle: 'perfectly symmetrical, pastel colors',
+    emotionalTone: 'whimsical, melancholy, quirky',
+    lightingHint: 'soft even lighting, storybook quality'
+  },
+  'wong-kar-wai': {
+    visualStyle: 'neon reflections, rain-soaked',
+    emotionalTone: 'romantic, longing, dreamlike',
+    lightingHint: 'neon reds and blues, motion blur'
+  },
+  tarkovsky: {
+    visualStyle: 'nature elements, water reflections',
+    emotionalTone: 'poetic, spiritual, meditative',
+    lightingHint: 'natural light through trees, mist'
+  },
+  'de-palma': {
+    visualStyle: 'voyeuristic angle, split focus',
+    emotionalTone: 'suspenseful, paranoid, stylish',
+    lightingHint: 'dramatic venetian blind shadows'
+  },
+  refn: {
+    visualStyle: 'neon-drenched, stark silhouettes',
+    emotionalTone: 'hypnotic, violent beauty, minimal',
+    lightingHint: 'hot pink and electric blue neon'
+  },
+  malick: {
+    visualStyle: 'golden hour, nature communion',
+    emotionalTone: 'ethereal, transcendent, flowing',
+    lightingHint: 'magic hour sunlight, lens flares'
+  }
+};
 
 export function generateDirectorSuggestion(
   director: DirectorPreset,
   previousPrompt: string,
   shotNumber: number
 ): string {
-  const parts: string[] = [];
+  const prompt = previousPrompt.toLowerCase();
 
-  // Get movement names from recommendedMovement IDs
-  if (director.recommendedMovement && director.recommendedMovement.length > 0) {
-    const movementNames = director.recommendedMovement
-      .map(id => {
-        const preset = CAMERA_PRESETS.find(m => m.id === id);
-        return preset?.name;
-      })
-      .filter(Boolean);
-    if (movementNames.length > 0) {
-      parts.push(movementNames.join(' with '));
+  // 1. Detect what story beat the previous shot was
+  let detectedBeat = 'journey'; // default
+  for (const [beat, keywords] of Object.entries(STORY_BEATS)) {
+    if (keywords.some(keyword => prompt.includes(keyword))) {
+      detectedBeat = beat;
+      break;
     }
   }
 
-  // Add framing style (convert ID to readable text)
-  if (director.recommendedFraming) {
-    const framingText = director.recommendedFraming
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    parts.push(framingText.toLowerCase());
-  }
+  // 2. Get possible story progressions for this beat
+  const progressions = STORY_PROGRESSIONS[detectedBeat] || STORY_PROGRESSIONS.journey;
 
-  // Add lighting mood
-  if (director.recommendedLighting) {
-    const lighting = LIGHTING_PRESETS.find(l => l.id === director.recommendedLighting);
-    if (lighting) {
-      parts.push(lighting.name.toLowerCase() + ' lighting');
-    }
-  }
+  // 3. Pick a progression (cycle through based on shot number for variety)
+  const progressionIndex = (shotNumber - 1) % progressions.length;
+  const storyProgression = progressions[progressionIndex];
 
-  // Add atmosphere
-  if (director.recommendedAtmosphere) {
-    parts.push(director.recommendedAtmosphere + ' atmosphere');
-  }
+  // 4. Get director's visual style
+  const directorStyle = DIRECTOR_STORY_STYLES[director.id] || {
+    visualStyle: 'cinematic composition',
+    emotionalTone: 'dramatic',
+    lightingHint: 'atmospheric lighting'
+  };
 
-  // Add color palette hint
-  if (director.recommendedColorPalette) {
-    const colorText = director.recommendedColorPalette
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    parts.push(colorText.toLowerCase() + ' tones');
-  }
+  // 5. Build the story suggestion
+  // Format: "Character [story progression], [director visual style], [lighting]"
+  const suggestion = `Character ${storyProgression}, ${directorStyle.visualStyle}, ${directorStyle.lightingHint}`;
 
-  // Build the suggestion
-  if (parts.length === 0) {
-    // Fallback to director's general prompt
-    return director.prompt.split(',').slice(0, 2).join(', ');
-  }
-
-  return parts.join(', ');
+  return suggestion;
 }
