@@ -485,19 +485,15 @@ export default function CinemaStudio() {
             failGeneration(''); // Reset state without error
             alert('END image generated! Both frames ready - Kling O1 will be used for transition video.');
           } else {
+            // START image generated
             setStartFrame(data.image_url);
-            // If we want start→end workflow, switch target to 'end' for next generation
-            // Otherwise switch to video mode
-            if (currentShot.endFrame) {
-              setMode('video');
-              failGeneration('');
-              alert('START image generated! Now generate video.');
-            } else {
-              // Ask if they want to make end frame next
-              setMode('video');
-              failGeneration('');
-              alert('START image generated! Switch to END mode to create transition, or generate video now.');
-            }
+            failGeneration(''); // Reset state without error
+
+            // Auto-switch to END mode so user can generate end frame next
+            // START image is now visible on screen as reference
+            setImageTarget('end');
+            // Stay in image mode - don't switch to video yet
+            // User will see: START image on screen + END mode selected + hint
           }
         } else {
           throw new Error('No image URL in response');
@@ -1548,24 +1544,30 @@ export default function CinemaStudio() {
                 className={`px-3 py-2 rounded-lg text-[10px] font-semibold transition-all ${
                   imageTarget === 'start'
                     ? 'bg-[#e8ff00] text-black'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    : currentShot.startFrame ? 'bg-green-900 text-green-400' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                 }`}
               >
-                START
+                START {currentShot.startFrame && '✓'}
               </button>
               <button
                 onClick={() => setImageTarget('end')}
                 className={`px-3 py-2 rounded-lg text-[10px] font-semibold transition-all ${
                   imageTarget === 'end'
                     ? 'bg-[#e8ff00] text-black'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    : currentShot.endFrame ? 'bg-green-900 text-green-400' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                 }`}
               >
-                END
+                END {currentShot.endFrame && '✓'}
               </button>
+              {/* Hints */}
               {imageTarget === 'end' && !currentShot.startFrame && (
-                <div className="text-[9px] text-orange-400 mt-1">
+                <div className="text-[9px] text-orange-400">
                   Generate START first!
+                </div>
+              )}
+              {imageTarget === 'end' && currentShot.startFrame && !currentShot.endFrame && (
+                <div className="text-[9px] text-[#e8ff00]">
+                  Using START as ref →
                 </div>
               )}
             </div>
