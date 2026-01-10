@@ -439,8 +439,9 @@ export default function CinemaStudio() {
 
       throw new Error('No compressed URL returned');
     } catch (err) {
-      console.error('Compression failed, using original:', err);
-      return imageUrl; // Fallback to original
+      console.error('Compression failed:', err);
+      // DON'T silently fallback - that sends 20MB to Kling which fails!
+      throw new Error('Image compression failed. Cannot send to Kling without compressing first.');
     }
   };
 
