@@ -3,13 +3,14 @@ import type { APIRoute } from 'astro';
 // Direct FAL.AI integration - no n8n needed
 const FAL_API_KEY = 'Key 30048d83-df50-41fa-9c2f-61be8fcdb719:8bb12ec91651bf9dc7ee420b44895305';
 
-// FAL endpoints - use queue.fal.run for async with polling (more reliable)
+// FAL endpoints
+// Videos: use queue.fal.run (async with polling - videos take 30-60s)
+// Images: use fal.run (sync - images are fast, ~10-20s)
 const FAL_ENDPOINTS = {
   'video-kling': 'https://queue.fal.run/fal-ai/kling-video/v2.6/pro/image-to-video',
   'video-kling-o1': 'https://queue.fal.run/fal-ai/kling-video/o1/image-to-video',
   'video-seedance': 'https://queue.fal.run/fal-ai/seedance-1-lite/image-to-video',
-  'image': 'https://queue.fal.run/fal-ai/nano-banana-pro',
-  'image-edit': 'https://queue.fal.run/fal-ai/nano-banana-pro/edit',
+  'image': 'https://fal.run/fal-ai/nano-banana-pro',  // Sync - fast enough
   'face-adapter': 'https://fal.run/fal-ai/ip-adapter-face-id'
 };
 
@@ -156,20 +157,20 @@ export const POST: APIRoute = async ({ request }) => {
       case 'image':
       case 'image-video': {
         // Generate image with nano-banana - always 4K
+        const imageBody: any = {
+          prompt,
+          aspect_ratio,
+          resolution: '4K'
+        };
+
+        // Add reference image if provided (for chaining shots)
+        // nano-banana uses image_urls ARRAY for image-to-image/editing
         if (reference_image) {
-          result = await callFal(FAL_ENDPOINTS['image-edit'], {
-            image_urls: [reference_image],
-            prompt: `${prompt}, maintain exact likeness and features of the person in the reference`,
-            aspect_ratio,
-            resolution: '4K'
-          });
-        } else {
-          result = await callFal(FAL_ENDPOINTS['image'], {
-            prompt,
-            aspect_ratio,
-            resolution: '4K'
-          });
+          imageBody.image_urls = [reference_image];
+          console.log('Using reference image for consistency:', reference_image);
         }
+
+        result = await callFal(FAL_ENDPOINTS['image'], imageBody);
         break;
       }
 
