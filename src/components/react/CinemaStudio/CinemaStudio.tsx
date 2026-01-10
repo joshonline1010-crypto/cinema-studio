@@ -265,7 +265,7 @@ export default function CinemaStudio() {
   const [showCharacterStyle, setShowCharacterStyle] = useState(false);
   const [cameraPanelTab, setCameraPanelTab] = useState<'all' | 'recommended'>('all');
   const [mode, setMode] = useState<'image' | 'video'>('video');
-  const [imageTarget, setImageTarget] = useState<'start' | 'end'>('start'); // For START→END workflow
+  const [imageTarget, setImageTarget] = useState<'start' | 'end' | null>(null); // null = normal image, 'start'/'end' = transition workflow
   const [shotCount, setShotCount] = useState(1);
 
   // Independent state for each column
@@ -477,23 +477,26 @@ export default function CinemaStudio() {
         if (data.image_url) {
           setProgress(100);
 
-          // Set as START or END frame based on imageTarget setting
+          // Set as START, END, or normal frame based on imageTarget setting
           if (imageTarget === 'end') {
+            // END frame for transition workflow
             setEndFrame(data.image_url);
-            // Stay in image mode or switch to video since we have both frames
             setMode('video');
-            failGeneration(''); // Reset state without error
+            failGeneration('');
             alert('END image generated! Both frames ready - Kling O1 will be used for transition video.');
-          } else {
-            // START image generated
+          } else if (imageTarget === 'start') {
+            // START frame for transition workflow
             setStartFrame(data.image_url);
-            failGeneration(''); // Reset state without error
-
-            // Auto-switch to END mode so user can generate end frame next
-            // START image is now visible on screen as reference
+            failGeneration('');
+            // Auto-switch to END mode for next generation
             setImageTarget('end');
-            // Stay in image mode - don't switch to video yet
-            // User will see: START image on screen + END mode selected + hint
+            // Stay in image mode
+          } else {
+            // Normal image (no START/END) - just go to video
+            setStartFrame(data.image_url);
+            setMode('video');
+            failGeneration('');
+            // Kling 2.6 will be used (no end frame)
           }
         } else {
           throw new Error('No image URL in response');
@@ -1537,29 +1540,42 @@ export default function CinemaStudio() {
           </div>
 
           {/* START/END Toggle - Only visible in Image mode */}
+          {/* Double-click to deselect = normal image mode (Kling 2.6) */}
           {mode === 'image' && (
             <div className="flex flex-col gap-1">
               <button
-                onClick={() => setImageTarget('start')}
+                onClick={() => setImageTarget(imageTarget === 'start' ? null : 'start')}
                 className={`px-3 py-2 rounded-lg text-[10px] font-semibold transition-all ${
                   imageTarget === 'start'
                     ? 'bg-[#e8ff00] text-black'
                     : currentShot.startFrame ? 'bg-green-900 text-green-400' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                 }`}
+                title="Click to select, click again to deselect"
               >
                 START {currentShot.startFrame && '✓'}
               </button>
               <button
-                onClick={() => setImageTarget('end')}
+                onClick={() => setImageTarget(imageTarget === 'end' ? null : 'end')}
                 className={`px-3 py-2 rounded-lg text-[10px] font-semibold transition-all ${
                   imageTarget === 'end'
                     ? 'bg-[#e8ff00] text-black'
                     : currentShot.endFrame ? 'bg-green-900 text-green-400' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                 }`}
+                title="Click to select, click again to deselect"
               >
                 END {currentShot.endFrame && '✓'}
               </button>
               {/* Hints */}
+              {imageTarget === null && (
+                <div className="text-[9px] text-gray-500">
+                  Normal → Kling 2.6
+                </div>
+              )}
+              {imageTarget === 'start' && !currentShot.startFrame && (
+                <div className="text-[9px] text-gray-500">
+                  Transition mode
+                </div>
+              )}
               {imageTarget === 'end' && !currentShot.startFrame && (
                 <div className="text-[9px] text-orange-400">
                   Generate START first!
