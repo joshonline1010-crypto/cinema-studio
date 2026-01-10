@@ -2157,24 +2157,33 @@ export function generateDirectorSuggestion(
     lightingHint: 'atmospheric lighting'
   };
 
-  // 5. Get technical recommendations from director preset
+  // 5. Build FULL suggestion with ALL technical recommendations
   const parts: string[] = [];
 
-  // Story first!
+  // === STORY (what happens next) ===
   parts.push(`Character ${storyProgression}`);
 
-  // Visual style
+  // === VISUAL STYLE ===
   parts.push(directorStyle.visualStyle);
 
-  // Lens recommendation (from director preset)
-  if (director.recommendedLens) {
-    const lens = LENS_PRESETS.find(l => l.id === director.recommendedLens);
-    if (lens) {
-      parts.push(lens.name);
+  // === CAMERA BODY (ARRI, RED, IMAX, etc.) ===
+  if (director.recommendedCamera) {
+    const camera = CAMERA_BODY_PRESETS.find(c => c.id === director.recommendedCamera);
+    if (camera) {
+      parts.push(`shot on ${camera.name}`);
     }
   }
 
-  // Framing recommendation
+  // === LENS with mm ===
+  if (director.recommendedLens) {
+    const lens = LENS_PRESETS.find(l => l.id === director.recommendedLens);
+    if (lens) {
+      // Include focal length if available
+      parts.push(lens.focalLength ? `${lens.focalLength} ${lens.name}` : lens.name);
+    }
+  }
+
+  // === FRAMING / COMPOSITION ===
   if (director.recommendedFraming) {
     const framing = FRAMING_PRESETS.find(f => f.id === director.recommendedFraming);
     if (framing) {
@@ -2182,14 +2191,51 @@ export function generateDirectorSuggestion(
     }
   }
 
-  // Lighting
-  parts.push(directorStyle.lightingHint);
+  // === LIGHTING PRESET ===
+  if (director.recommendedLighting) {
+    const lighting = LIGHTING_PRESETS.find(l => l.id === director.recommendedLighting);
+    if (lighting) {
+      parts.push(lighting.name.toLowerCase() + ' lighting');
+    }
+  }
 
-  // Color palette
+  // === ATMOSPHERE (fog, rain, clear, etc.) ===
+  if (director.recommendedAtmosphere) {
+    const atmosphere = ATMOSPHERE_PRESETS.find(a => a.id === director.recommendedAtmosphere);
+    if (atmosphere) {
+      parts.push(atmosphere.name.toLowerCase() + ' atmosphere');
+    }
+  }
+
+  // === COLOR PALETTE ===
   if (director.recommendedColorPalette) {
     const palette = COLOR_PALETTE_PRESETS.find(p => p.id === director.recommendedColorPalette);
     if (palette) {
       parts.push(palette.name.toLowerCase() + ' colors');
+    }
+  }
+
+  // === SET DESIGN / ENVIRONMENT ===
+  if (director.recommendedSetDesign) {
+    const setDesign = SET_DESIGN_PRESETS.find(s => s.id === director.recommendedSetDesign);
+    if (setDesign) {
+      parts.push(setDesign.name.toLowerCase() + ' environment');
+    }
+  }
+
+  // === CHARACTER STYLE ===
+  if (director.recommendedCharacterStyle) {
+    const charStyle = CHARACTER_STYLE_PRESETS.find(c => c.id === director.recommendedCharacterStyle);
+    if (charStyle) {
+      parts.push(charStyle.name.toLowerCase() + ' style');
+    }
+  }
+
+  // === STYLE PRESET (genre/mood) ===
+  if (director.recommendedStyle) {
+    const style = STYLE_PRESETS.find(s => s.id === director.recommendedStyle);
+    if (style) {
+      parts.push(style.name.toLowerCase());
     }
   }
 
