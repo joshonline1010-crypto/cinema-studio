@@ -260,11 +260,89 @@ failGeneration('Error message');
 
 ---
 
+## DIRECTOR SUGGESTIONS SYSTEM (NEW!)
+
+When user clicks "Next Shot" after completing a video, the system suggests what should happen NEXT in the story - not camera movements, but actual **STORY CONTINUATION** with full technical settings for IMAGE generation.
+
+### How It Works
+
+```
+1. DETECT STORY BEAT
+   System scans previous prompt for keywords (chase, danger, calm, etc.)
+
+2. GET STORY PROGRESSION
+   Each beat has 5 possible "what happens next" progressions
+
+3. APPLY DIRECTOR'S VISUAL STYLE
+   Director personality templates (Kubrick, Spielberg, Tarantino, etc.)
+
+4. ADD ALL TECHNICAL SETTINGS
+   Camera body, lens mm, framing, lighting, atmosphere, colors, etc.
+
+5. BUILD FINAL SUGGESTION
+   Complete prompt for IMAGE generation
+```
+
+### Story Beats & Keywords
+| Beat | Keywords |
+|------|----------|
+| chase | chase, chasing, running, fleeing, escape, pursued |
+| danger | dragon, monster, enemy, threat, attack, fire |
+| calm | peaceful, calm, relaxing, serene, quiet, resting |
+| discovery | finding, discover, looking, searching, cave, door |
+| confrontation | facing, battle, fight, standoff, versus, against |
+| emotion | sad, happy, crying, laughing, scared, angry, love |
+| journey | walking, traveling, path, road, forest, mountain |
+| victory | winning, victory, defeating, celebrating, triumph |
+| defeat | falling, losing, injured, trapped, captured |
+
+### Director Visual Styles
+| Director | Visual Style | Lighting |
+|----------|--------------|----------|
+| Kubrick | perfectly centered, symmetrical | cold blue light |
+| Spielberg | warm medium shot, face visible | golden light, flares |
+| Tarantino | extreme close-up, intense angle | saturated colors |
+| Nolan | epic wide shot, massive scale | IMAX grandeur |
+| Villeneuve | vast negative space, tiny figure | fog, atmosphere |
+| Wes Anderson | perfectly symmetrical, pastel | soft even lighting |
+| Wong Kar-wai | neon reflections, rain-soaked | neon reds and blues |
+
+### Example Flow
+```
+USER'S PREVIOUS SHOT:
+  "Fluffy chipmunk running through burning forest, dragon chasing"
+
+DETECTED BEAT: "danger" (found keyword "dragon")
+
+DIRECTOR SELECTED: Spielberg
+
+GENERATED SUGGESTION:
+  "Character narrowly dodges the attack, warm medium shot face visible,
+   shot on ARRI Alexa, 50mm Standard, rule of thirds, natural lighting,
+   clear atmosphere, teal & orange colors, retro americana environment,
+   classic hollywood style, blockbuster"
+
+USER CLICKS SUGGESTION → Text added to prompt → Generate next IMAGE
+```
+
+### File Locations
+| What | Where |
+|------|-------|
+| Main Function | `cameraPresets.ts:2130-2243` - `generateDirectorSuggestion()` |
+| Story Beats | `cameraPresets.ts:1983-1993` - `STORY_BEATS` |
+| Story Progressions | `cameraPresets.ts:1996-2060` - `STORY_PROGRESSIONS` |
+| Director Styles | `cameraPresets.ts:2063-2128` - `DIRECTOR_STORY_STYLES` |
+| Director Presets | `cameraPresets.ts:1043-1235` - `DIRECTOR_PRESETS` |
+
+**Full documentation:** `Documents\Production-System\UI HIGGENS FIELD CLONE\DIRECTOR_SUGGESTIONS_SYSTEM.txt`
+
+---
+
 ## FEATURES TO ADD
 
 ### Ideas for Advanced Features
 
-1. **Color Consistency Chain**
+1. **Color Consistency Chain** ✅ (Partially implemented)
    - Extract last frame from video
    - Use as base for next shot
    - Automatic color matching
@@ -274,12 +352,12 @@ failGeneration('Error message');
    - Generate all in sequence
    - Auto-concatenate
 
-3. **Style Presets**
+3. **Style Presets** ✅ (Implemented)
    - Film noir, Golden hour, Cyberpunk
    - Camera specs (ARRI, IMAX)
    - Lens presets (35mm, 50mm)
 
-4. **AI Prompt Suggestions**
+4. **AI Prompt Suggestions** ✅ (Implemented - Director Suggestions!)
    - Based on selected presets
    - Scene analysis from image
    - Motion recommendations
