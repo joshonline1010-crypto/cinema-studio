@@ -596,11 +596,11 @@ export default function CinemaStudio() {
     }
   };
 
-  // Chain current shot to next - use generated image as reference for next
+  // Chain current shot to next - capture both start and last frame
   const handleChainToNext = async () => {
-    // IMPORTANT: Capture the startFrame (nano-banana generated image) BEFORE saving
-    // This is the image we generated that was used for this video
-    const generatedImageForNextRef = currentShot.startFrame;
+    // IMPORTANT: Capture BOTH frames BEFORE saving (which resets currentShot)
+    const startFrameRef = currentShot.startFrame;  // nano-banana generated image
+    const videoUrl = currentShot.videoUrl;         // video to extract last frame from
 
     // Save the current prompt for context
     const currentPromptText = promptText;
@@ -609,16 +609,27 @@ export default function CinemaStudio() {
     // Save current shot to timeline (this resets currentShot!)
     saveCurrentAsShot();
 
-    // Use the generated image from this shot as the reference for next shot
-    // This keeps visual consistency without needing ffmpeg frame extraction
-    if (generatedImageForNextRef) {
-      setStartFrame(generatedImageForNextRef);
-      // Clear prompt but keep context hint
-      setPromptText('');
+    // Extract last frame from video for end reference
+    let lastFrameRef: string | null = null;
+    if (videoUrl) {
+      lastFrameRef = await extractLastFrame(videoUrl);
     }
 
+    // Set up next shot with both references:
+    // - startFrame = character/style reference (nano-banana generated)
+    // - endFrame = last frame from video (ending state/position)
+    if (startFrameRef) {
+      setStartFrame(startFrameRef);
+    }
+    if (lastFrameRef) {
+      setEndFrame(lastFrameRef);
+    }
+
+    // Clear prompt but keep context hint
+    setPromptText('');
+
     setChainPrompt(false);
-    setMode('image'); // Switch to image mode to generate next frame based on reference
+    setMode('image'); // Switch to image mode to generate next frame based on references
   };
 
   // Play a shot from timeline
