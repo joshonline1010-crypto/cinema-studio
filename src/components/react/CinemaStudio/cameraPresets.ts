@@ -1082,122 +1082,122 @@ export const DIRECTOR_PRESETS: DirectorPreset[] = [
     recommendedCamera: 'arri-alexa',
     recommendedLens: 'wide-24',
     recommendedMovement: ['dolly-in', 'steadicam', 'static'],
-    recommendedLighting: 'harsh-sun',
+    recommendedLighting: 'low-key',
     recommendedStyle: 'gritty',
     recommendedAtmosphere: 'clear',
     recommendedFraming: 'centered-symmetrical',
     recommendedSetDesign: 'sterile-geometric',
     recommendedColorPalette: 'desaturated-cold',
     recommendedCharacterStyle: 'grunge-realistic',
-    // Shot library - 12 signature Kubrick shots
+    // Shot library - 12 signature Kubrick shots (from deep research)
     shotLibrary: [
       {
         id: 'one-point-corridor',
-        name: 'One-Point Corridor',
-        whenToUse: ['Establishing geography', 'Character trapped', 'Building dread'],
+        name: 'One-Point Perspective Corridor',
+        whenToUse: ['Establishing geography', 'Character trapped by environment', 'Building dread/inevitability'],
         prompt: 'one-point perspective shot, symmetrical corridor, vanishing point center frame, geometric architecture, wide angle lens, stark lighting, character small in vast space, Kubrick style, clinical precision, cold institutional, 18mm wide angle',
-        lens: '18mm wide',
+        lens: 'wide-14',
         movement: 'static or slow push',
         rig: 'tripod or Steadicam'
       },
       {
         id: 'kubrick-stare',
-        name: 'Kubrick Stare',
-        whenToUse: ['Character madness', 'Psychological break', 'Direct confrontation'],
+        name: 'The Kubrick Stare',
+        whenToUse: ['Character crossed into madness', 'Psychological break', 'Direct confrontation with audience'],
         prompt: 'Kubrick stare, head tilted down, eyes looking up at camera, intense menacing gaze, direct eye contact, close-up, cold lighting, centered framing, psychological intensity, character breaking sanity, unsettling, Kubrick style',
-        lens: '25-35mm',
+        lens: 'standard-50',
         movement: 'static or slow dolly in',
         rig: 'tripod or dolly'
       },
       {
-        id: 'low-steadicam',
+        id: 'low-steadicam-follow',
         name: 'Low Steadicam Follow',
         whenToUse: ['Child POV', 'Vulnerability', 'Space hunting character'],
         prompt: 'low angle Steadicam shot, 18 inches from ground, following character from behind, smooth gliding movement, child perspective, wide angle lens, corridor or hallway, ominous smooth tracking, Kubrick style, The Shining aesthetic',
-        lens: '18-24mm wide',
-        movement: 'smooth glide',
-        rig: 'modified Steadicam (18")'
+        lens: 'wide-24',
+        movement: 'steadicam glide',
+        rig: 'modified Steadicam 18 inches'
       },
       {
         id: 'steadicam-follow',
-        name: 'Steadicam Follow',
-        whenToUse: ['Character moving through space', 'Building tension', 'Space has power'],
+        name: 'Steadicam Follow (Standard)',
+        whenToUse: ['Character moving through environment', 'Space has power over character', 'Building tension through movement'],
         prompt: 'Steadicam following shot, smooth gliding movement, character walking through space, symmetrical architecture, one-point perspective, wide angle, observational, ominous smooth tracking, Kubrick style, cold precision',
-        lens: '18-24mm',
-        movement: 'smooth follow',
+        lens: 'wide-24',
+        movement: 'steadicam',
         rig: 'Steadicam'
       },
       {
         id: 'slow-dolly-in',
         name: 'Slow Dolly In',
-        whenToUse: ['Building revelation', 'Focusing attention', 'Psychological intimacy'],
+        whenToUse: ['Building to revelation', 'Focusing attention', 'Psychological intimacy'],
         prompt: 'slow dolly in, pushing toward face, mathematical precision, centered subject, building tension, inevitable approach, intimate observation, Kubrick style, static subject, moving camera, cold lighting',
-        lens: '25-35mm',
-        movement: 'slow dolly in',
-        rig: 'dolly'
+        lens: 'standard-50',
+        movement: 'dolly-in',
+        rig: 'dolly track'
       },
       {
         id: 'architectural-wide',
         name: 'Architectural Wide',
-        whenToUse: ['Environment power', 'Character insignificance', 'Institutional spaces'],
+        whenToUse: ['Establishing power of environment', 'Character insignificance', 'Institutional/cold spaces'],
         prompt: 'extreme wide shot, architectural composition, geometric space, character dwarfed by environment, symmetrical framing, one-point perspective, institutional, cold sterile, Kubrick style, 18mm wide angle, vast interior space',
-        lens: '18mm',
+        lens: 'wide-14',
         movement: 'static',
         rig: 'tripod'
       },
       {
-        id: 'reverse-zoom',
+        id: 'reverse-zoom-tableau',
         name: 'Reverse Zoom (Barry Lyndon)',
-        whenToUse: ['Period drama', 'Revealing context', 'Painterly effect'],
+        whenToUse: ['Period drama', 'Revealing context after intimacy', 'Painterly tableaus'],
         prompt: 'reverse zoom reveal, starting close-up pulling to wide tableau, painterly composition, 18th century aesthetic, candlelit interior, period costume, soft natural lighting, Barry Lyndon style, Kubrick',
-        lens: '50mm (f/0.7 for candle)',
-        movement: 'slow zoom out',
+        lens: 'standard-50',
+        movement: 'zoom out',
         rig: 'tripod'
       },
       {
-        id: 'overhead',
+        id: 'overhead-topdown',
         name: 'Overhead/Top-Down',
-        whenToUse: ['Violence', 'Maze reveal', 'Gods eye detachment'],
-        prompt: 'overhead top-down shot, looking straight down at subject, geometric composition, clinical detachment, pattern visible, Kubrick style, gods eye view, cold observation',
-        lens: 'wide',
+        whenToUse: ['Violence with clinical distance', 'Maze/pattern reveal', 'Gods-eye detachment'],
+        prompt: 'overhead top-down shot, looking straight down at subject, geometric composition, clinical detachment, pattern visible, Kubrick style, god\'s eye view, cold observation',
+        lens: 'wide-24',
         movement: 'static',
-        rig: 'crane or rig'
+        rig: 'crane or ceiling mount'
       },
       {
         id: 'interview-confrontation',
         name: 'Interview/Confrontation',
-        whenToUse: ['Character explaining', 'Interview moments', 'Psychological examination'],
+        whenToUse: ['Character explaining/confessing', 'Interview moments', 'Psychological examination'],
         prompt: 'medium shot interview framing, subject centered, looking slightly off-camera, static tripod, cold lighting, institutional background, confrontational, Kubrick style, psychological examination, clinical observation',
-        lens: '25-35mm',
+        lens: 'standard-50',
         movement: 'static',
         rig: 'tripod'
       },
       {
         id: 'helicopter-establishing',
         name: 'Helicopter Establishing',
-        whenToUse: ['Opening shot', 'Showing isolation', 'Epic scale'],
+        whenToUse: ['Opening establishing shots', 'Showing journey/isolation', 'Environment dwarfs human'],
         prompt: 'aerial helicopter shot, following vehicle through vast landscape, mountain roads, isolated journey, epic scale, character insignificant, nature dominates, Kubrick opening style, ominous establishing',
-        lens: 'wide',
-        movement: 'aerial follow',
-        rig: 'helicopter'
+        lens: 'telephoto-135',
+        movement: 'aerial tracking',
+        rig: 'helicopter mount'
       },
       {
         id: 'bathroom-revelation',
         name: 'Bathroom Revelation',
-        whenToUse: ['Private madness', 'Intimate horror', 'Vulnerability'],
+        whenToUse: ['Private moments of madness', 'Intimate horror', 'Institutional vulnerability'],
         prompt: 'bathroom interior, harsh fluorescent lighting, cold tile surfaces, isolated figure, private horror, institutional space, vulnerable, Kubrick style, psychological breakdown, clinical harsh light',
-        lens: '25mm',
-        movement: 'static or slow',
+        lens: 'wide-24',
+        movement: 'static',
         rig: 'tripod'
       },
       {
-        id: 'war-room',
-        name: 'War Room/Control Center',
-        whenToUse: ['Power concentrated', 'Institutional decisions', 'Satirical'],
+        id: 'war-room-control',
+        name: 'War Room / Control Center',
+        whenToUse: ['Power concentrated in space', 'Institutional decision-making', 'Satirical commentary'],
         prompt: 'war room interior, circular geometric space, large central table, figures arranged around perimeter, dramatic overhead lighting, institutional power, Kubrick style, Dr. Strangelove aesthetic, cold sterile, military/governmental',
-        lens: '18-24mm wide',
+        lens: 'wide-14',
         movement: 'static or slow pan',
-        rig: 'tripod'
+        rig: 'tripod or dolly'
       }
     ],
     // Rules - what Kubrick would and wouldn't do
