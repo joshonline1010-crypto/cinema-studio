@@ -265,6 +265,7 @@ export default function CinemaStudio() {
   const [showCharacterStyle, setShowCharacterStyle] = useState(false);
   const [cameraPanelTab, setCameraPanelTab] = useState<'all' | 'recommended'>('all');
   const [mode, setMode] = useState<'image' | 'video'>('video');
+  const [imageTarget, setImageTarget] = useState<'start' | 'end'>('start'); // For START→END workflow
   const [shotCount, setShotCount] = useState(1);
 
   // Independent state for each column
@@ -475,13 +476,29 @@ export default function CinemaStudio() {
 
         if (data.image_url) {
           setProgress(100);
-          // Set the generated image as the start frame
-          setStartFrame(data.image_url);
-          // Switch to video mode for next step
-          setMode('video');
-          // Clear generating state (don't call completeGeneration since no video yet)
-          failGeneration(''); // Reset state without error
-          alert('Image generated! Now add motion settings and generate video.');
+
+          // Set as START or END frame based on imageTarget setting
+          if (imageTarget === 'end') {
+            setEndFrame(data.image_url);
+            // Stay in image mode or switch to video since we have both frames
+            setMode('video');
+            failGeneration(''); // Reset state without error
+            alert('END image generated! Both frames ready - Kling O1 will be used for transition video.');
+          } else {
+            setStartFrame(data.image_url);
+            // If we want start→end workflow, switch target to 'end' for next generation
+            // Otherwise switch to video mode
+            if (currentShot.endFrame) {
+              setMode('video');
+              failGeneration('');
+              alert('START image generated! Now generate video.');
+            } else {
+              // Ask if they want to make end frame next
+              setMode('video');
+              failGeneration('');
+              alert('START image generated! Switch to END mode to create transition, or generate video now.');
+            }
+          }
         } else {
           throw new Error('No image URL in response');
         }
@@ -1522,6 +1539,37 @@ export default function CinemaStudio() {
               <span className="text-[9px] mt-1 font-medium">Video</span>
             </button>
           </div>
+
+          {/* START/END Toggle - Only visible in Image mode */}
+          {mode === 'image' && (
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={() => setImageTarget('start')}
+                className={`px-3 py-2 rounded-lg text-[10px] font-semibold transition-all ${
+                  imageTarget === 'start'
+                    ? 'bg-[#e8ff00] text-black'
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}
+              >
+                START
+              </button>
+              <button
+                onClick={() => setImageTarget('end')}
+                className={`px-3 py-2 rounded-lg text-[10px] font-semibold transition-all ${
+                  imageTarget === 'end'
+                    ? 'bg-[#e8ff00] text-black'
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}
+              >
+                END
+              </button>
+              {imageTarget === 'end' && !currentShot.startFrame && (
+                <div className="text-[9px] text-orange-400 mt-1">
+                  Generate START first!
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Main Content Area */}
           <div className="flex-1 flex flex-col gap-2">
