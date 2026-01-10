@@ -463,7 +463,8 @@ export default function CinemaStudio() {
             prompt: fullPrompt,
             aspect_ratio: aspectRatio,
             resolution: resolution,
-            reference_image: referenceImage || undefined
+            // CHAINING FIX: Use extracted last frame (startFrame) if available, else original reference
+            reference_image: currentShot.startFrame || referenceImage || undefined
           })
         });
 
@@ -595,30 +596,29 @@ export default function CinemaStudio() {
     }
   };
 
-  // Chain current shot to next - extract last frame as next start
+  // Chain current shot to next - use generated image as reference for next
   const handleChainToNext = async () => {
+    // IMPORTANT: Capture the startFrame (nano-banana generated image) BEFORE saving
+    // This is the image we generated that was used for this video
+    const generatedImageForNextRef = currentShot.startFrame;
+
     // Save the current prompt for context
     const currentPromptText = promptText;
     setPreviousPrompt(currentPromptText);
 
-    // Save current shot to timeline
+    // Save current shot to timeline (this resets currentShot!)
     saveCurrentAsShot();
 
-    // Extract last frame from current video
-    if (currentShot.videoUrl) {
-      const lastFrame = await extractLastFrame(currentShot.videoUrl);
-      if (lastFrame) {
-        setStartFrame(lastFrame);
-        // Clear prompt but keep context hint
-        setPromptText('');
-      }
-    } else if (currentShot.endFrame) {
-      // Fallback: use end frame if no video
-      setStartFrame(currentShot.endFrame);
+    // Use the generated image from this shot as the reference for next shot
+    // This keeps visual consistency without needing ffmpeg frame extraction
+    if (generatedImageForNextRef) {
+      setStartFrame(generatedImageForNextRef);
+      // Clear prompt but keep context hint
+      setPromptText('');
     }
 
     setChainPrompt(false);
-    setMode('video'); // Stay in video mode - we have start frame now
+    setMode('image'); // Switch to image mode to generate next frame based on reference
   };
 
   // Play a shot from timeline
