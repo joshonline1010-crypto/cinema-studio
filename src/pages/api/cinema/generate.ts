@@ -3,18 +3,18 @@ import type { APIRoute } from 'astro';
 // Direct FAL.AI integration - no n8n needed
 const FAL_API_KEY = 'Key 30048d83-df50-41fa-9c2f-61be8fcdb719:8bb12ec91651bf9dc7ee420b44895305';
 
-// FAL endpoints
+// FAL endpoints - use queue.fal.run for video (async with polling)
 const FAL_ENDPOINTS = {
-  'video-kling': 'https://fal.run/fal-ai/kling-video/v2.6/pro/image-to-video',
-  'video-kling-o1': 'https://fal.run/fal-ai/kling-video/o1/pro/image-to-video', // O1 uses start + tail_image_url
-  'video-seedance': 'https://fal.run/fal-ai/seedance-1-lite/image-to-video',
+  'video-kling': 'https://queue.fal.run/fal-ai/kling-video/v2.6/pro/image-to-video',
+  'video-kling-o1': 'https://queue.fal.run/fal-ai/kling-video/o1/image-to-video', // O1 with tail_image_url for end frame
+  'video-seedance': 'https://queue.fal.run/fal-ai/seedance-1-lite/image-to-video',
   'image': 'https://fal.run/fal-ai/nano-banana-pro',
   'image-edit': 'https://fal.run/fal-ai/nano-banana-pro/edit',
   'face-adapter': 'https://fal.run/fal-ai/ip-adapter-face-id'
 };
 
 async function callFal(endpoint: string, body: any): Promise<any> {
-  console.log('Calling FAL:', endpoint, body);
+  console.log('Calling FAL:', endpoint, JSON.stringify(body, null, 2));
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -31,7 +31,60 @@ async function callFal(endpoint: string, body: any): Promise<any> {
     throw new Error(`FAL API error: ${response.status} - ${errorText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // If queue endpoint, poll for result
+  if (endpoint.includes('queue.fal.run') && data.request_id) {
+    console.log('Queue request submitted, polling for result:', data.request_id);
+    return await pollFalResult(data.request_id, endpoint);
+  }
+
+  return data;
+}
+
+// Poll for queue result - modelPath like "fal-ai/kling-video/v2.6/pro/image-to-video"
+async function pollFalResult(requestId: string, endpoint: string, maxAttempts = 120): Promise<any> {
+  // Extract model path from endpoint: https://queue.fal.run/fal-ai/model/path -> fal-ai/model/path
+  const modelPath = endpoint.replace('https://queue.fal.run/', '').split('/image-to-video')[0];
+  const statusUrl = `https://queue.fal.run/${modelPath}/requests/${requestId}/status`;
+  const resultUrl = `https://queue.fal.run/${modelPath}/requests/${requestId}`;
+
+  console.log('Polling URLs:', { statusUrl, resultUrl });
+
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+
+    try {
+      const statusRes = await fetch(statusUrl, {
+        headers: { 'Authorization': FAL_API_KEY }
+      });
+
+      if (!statusRes.ok) {
+        const errText = await statusRes.text();
+        console.log(`Status check failed (${statusRes.status}): ${errText}`);
+        continue;
+      }
+
+      const status = await statusRes.json();
+      console.log(`Poll ${i + 1}/${maxAttempts}: ${status.status}`);
+
+      if (status.status === 'COMPLETED') {
+        // Get full result
+        const resultRes = await fetch(resultUrl, {
+          headers: { 'Authorization': FAL_API_KEY }
+        });
+        return await resultRes.json();
+      }
+
+      if (status.status === 'FAILED') {
+        throw new Error(`FAL request failed: ${JSON.stringify(status)}`);
+      }
+    } catch (err) {
+      console.log('Poll error:', err);
+    }
+  }
+
+  throw new Error('FAL request timed out after polling');
 }
 
 export const POST: APIRoute = async ({ request }) => {
