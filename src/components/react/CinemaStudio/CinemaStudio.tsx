@@ -266,6 +266,8 @@ export default function CinemaStudio() {
   const [cameraPanelTab, setCameraPanelTab] = useState<'all' | 'recommended'>('all');
   const [mode, setMode] = useState<'image' | 'video'>('video');
   const [imageTarget, setImageTarget] = useState<'start' | 'end' | null>(null); // null = normal image, 'start'/'end' = transition workflow
+  const [includeCameraSettings, setIncludeCameraSettings] = useState(true); // Toggle camera/lens info in prompt
+  const [showPromptPreview, setShowPromptPreview] = useState(false); // Show what will be sent
   const [shotCount, setShotCount] = useState(1);
 
   // Independent state for each column
@@ -355,12 +357,15 @@ export default function CinemaStudio() {
     const baseMotion = promptText || currentShot.motionPrompt ||
       selectedPresets.map(p => p.prompt.split(',')[0]).join(', ') || '';
 
-    const cameraPart = cameras[cameraIndex] ? `shot on ${cameras[cameraIndex].name}` : '';
-    const lensPart = lenses[lensIndex] ? lenses[lensIndex].name : '';
-    const focalPart = `${focalLengths[focalIndex]}mm`;
-    const aperturePart = apertures[apertureIndex];
-
-    const cinematographyPrompt = [cameraPart, lensPart, focalPart, aperturePart].filter(Boolean).join(', ');
+    // Only include camera settings if toggle is ON
+    let cinematographyPrompt = '';
+    if (includeCameraSettings) {
+      const cameraPart = cameras[cameraIndex] ? `shot on ${cameras[cameraIndex].name}` : '';
+      const lensPart = lenses[lensIndex] ? lenses[lensIndex].name : '';
+      const focalPart = `${focalLengths[focalIndex]}mm`;
+      const aperturePart = apertures[apertureIndex];
+      cinematographyPrompt = [cameraPart, lensPart, focalPart, aperturePart].filter(Boolean).join(', ');
+    }
 
     const extraParts: string[] = [];
     if (directorIndex !== null) extraParts.push(directors[directorIndex].prompt.split(',')[0]);
@@ -1598,18 +1603,43 @@ export default function CinemaStudio() {
               </div>
             )}
             {/* Prompt Input - Larger */}
-            <input
-              type="text"
-              value={promptText}
-              onChange={(e) => {
-                setPromptText(e.target.value);
-                setMotionPrompt(e.target.value);
-              }}
-              placeholder={previousPrompt && currentShot.startFrame
-                ? "What happens next in the scene..."
-                : "Describe the scene you imagine..."}
-              className="w-full px-5 py-3.5 bg-[#2a2a2a] border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 text-sm"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={promptText}
+                onChange={(e) => {
+                  setPromptText(e.target.value);
+                  setMotionPrompt(e.target.value);
+                }}
+                placeholder={previousPrompt && currentShot.startFrame
+                  ? "What happens next in the scene..."
+                  : "Describe the scene you imagine..."}
+                className="w-full px-5 py-3.5 bg-[#2a2a2a] border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 text-sm pr-20"
+              />
+              {/* Preview Toggle */}
+              <button
+                onClick={() => setShowPromptPreview(!showPromptPreview)}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded text-[9px] font-medium transition-all ${
+                  showPromptPreview
+                    ? 'bg-[#e8ff00] text-black'
+                    : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                }`}
+              >
+                {showPromptPreview ? 'HIDE' : 'PREVIEW'}
+              </button>
+            </div>
+            {/* Full Prompt Preview */}
+            {showPromptPreview && (
+              <div className="px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-lg">
+                <div className="text-[9px] text-gray-500 uppercase mb-1">Full prompt being sent:</div>
+                <div className="text-[11px] text-gray-300 break-words">
+                  {buildFullPrompt() || <span className="text-gray-600 italic">Enter a prompt above</span>}
+                </div>
+                {!includeCameraSettings && (
+                  <div className="text-[9px] text-orange-400 mt-1">Camera settings OFF</div>
+                )}
+              </div>
+            )}
 
             {/* Control Pills - Clean Row */}
             <div className="flex items-center gap-2 flex-wrap">
@@ -1915,19 +1945,43 @@ export default function CinemaStudio() {
             </label>
           </div>
 
-          {/* Camera Settings Button */}
-          <button
-            onClick={() => setShowCameraPanel(true)}
-            className="h-16 px-4 bg-[#2a2a2a] rounded-xl flex items-center gap-3 hover:bg-gray-700 transition-colors"
-          >
-            <div className="w-8 h-8 rounded-lg bg-gray-700 flex items-center justify-center">
-              {Icons.camera}
-            </div>
-            <div className="text-left">
-              <div className="text-xs text-white font-medium">{cameras[cameraIndex]?.name || 'Camera'}</div>
-              <div className="text-[10px] text-gray-500">{focalLengths[focalIndex]}mm, {apertures[apertureIndex]}</div>
-            </div>
-          </button>
+          {/* Camera Settings Button - Click to open panel, has ON/OFF toggle */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowCameraPanel(true)}
+              className={`h-16 px-4 rounded-xl flex items-center gap-3 transition-all ${
+                includeCameraSettings
+                  ? 'bg-[#2a2a2a] hover:bg-gray-700'
+                  : 'bg-[#1a1a1a] opacity-50 hover:opacity-70'
+              }`}
+            >
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                includeCameraSettings ? 'bg-gray-700' : 'bg-gray-800'
+              }`}>
+                {Icons.camera}
+              </div>
+              <div className="text-left">
+                <div className={`text-xs font-medium ${includeCameraSettings ? 'text-white' : 'text-gray-500'}`}>
+                  {cameras[cameraIndex]?.name || 'Camera'}
+                </div>
+                <div className="text-[10px] text-gray-500">
+                  {includeCameraSettings ? `${focalLengths[focalIndex]}mm, ${apertures[apertureIndex]}` : 'OFF - not in prompt'}
+                </div>
+              </div>
+            </button>
+            {/* ON/OFF Toggle */}
+            <button
+              onClick={() => setIncludeCameraSettings(!includeCameraSettings)}
+              className={`h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-bold transition-all ${
+                includeCameraSettings
+                  ? 'bg-green-600 text-white hover:bg-green-500'
+                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+              }`}
+              title={includeCameraSettings ? 'Camera settings ON - click to disable' : 'Camera settings OFF - click to enable'}
+            >
+              {includeCameraSettings ? 'ON' : 'OFF'}
+            </button>
+          </div>
 
           {/* Generate Button - Bright Yellow */}
           <button
