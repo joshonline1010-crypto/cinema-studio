@@ -1658,11 +1658,11 @@ export default function CinemaStudio() {
               </div>
             )}
 
-            {/* Control Pills - Clean Row */}
-            <div className="flex items-center gap-2 flex-wrap">
+            {/* Control Pills - Horizontal scroll, no wrap */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
               <button
                 onClick={() => { setShowMovements(true); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); }}
-                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all flex-shrink-0 ${
                   selectedPresets.length > 0
                     ? 'bg-gray-700 text-white'
                     : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
@@ -1674,7 +1674,7 @@ export default function CinemaStudio() {
 
               <button
                 onClick={() => { setShowDirectors(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowEmotions(false); setShowShotSetups(false); }}
-                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all flex-shrink-0 ${
                   directorIndex !== null
                     ? 'bg-gray-700 text-white'
                     : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
@@ -1686,7 +1686,7 @@ export default function CinemaStudio() {
 
               <button
                 onClick={() => { setShowEmotions(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowShotSetups(false); }}
-                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all flex-shrink-0 ${
                   emotionIndex !== null
                     ? 'bg-gray-700 text-white'
                     : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
@@ -1698,7 +1698,7 @@ export default function CinemaStudio() {
 
               <button
                 onClick={() => { setShowShotSetups(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); }}
-                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all flex-shrink-0 ${
                   shotSetupIndex !== null
                     ? 'bg-gray-700 text-white'
                     : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
@@ -1712,7 +1712,7 @@ export default function CinemaStudio() {
 
               <button
                 onClick={() => { setShowStyles(true); setShowMovements(false); setShowCameraPanel(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); }}
-                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all flex-shrink-0 ${
                   styleIndex !== null
                     ? 'bg-gray-700 text-white'
                     : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
@@ -1724,7 +1724,7 @@ export default function CinemaStudio() {
 
               <button
                 onClick={() => { setShowLighting(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); }}
-                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all flex-shrink-0 ${
                   lightingIndex !== null
                     ? 'bg-gray-700 text-white'
                     : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
@@ -1736,7 +1736,7 @@ export default function CinemaStudio() {
 
               <button
                 onClick={() => { setShowAtmosphere(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); setShowFraming(false); setShowSetDesign(false); setShowColorPalette(false); setShowCharacterStyle(false); }}
-                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all flex-shrink-0 ${
                   atmosphereIndex !== null
                     ? 'bg-gray-700 text-white'
                     : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
@@ -1751,7 +1751,7 @@ export default function CinemaStudio() {
               {/* Visual Design Controls */}
               <button
                 onClick={() => { setShowFraming(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); setShowSetDesign(false); setShowColorPalette(false); setShowCharacterStyle(false); }}
-                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all flex-shrink-0 ${
                   framingIndex !== null
                     ? 'bg-gray-700 text-white'
                     : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
@@ -1763,7 +1763,7 @@ export default function CinemaStudio() {
 
               <button
                 onClick={() => { setShowSetDesign(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); setShowFraming(false); setShowColorPalette(false); setShowCharacterStyle(false); }}
-                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all flex-shrink-0 ${
                   setDesignIndex !== null
                     ? 'bg-gray-700 text-white'
                     : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
@@ -1775,7 +1775,7 @@ export default function CinemaStudio() {
 
               <button
                 onClick={() => { setShowColorPalette(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); setShowFraming(false); setShowSetDesign(false); setShowCharacterStyle(false); }}
-                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all flex-shrink-0 ${
                   colorPaletteIndex !== null
                     ? 'bg-gray-700 text-white'
                     : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
@@ -1787,7 +1787,7 @@ export default function CinemaStudio() {
 
               <button
                 onClick={() => { setShowCharacterStyle(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); setShowFraming(false); setShowSetDesign(false); setShowColorPalette(false); }}
-                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all flex-shrink-0 ${
                   characterStyleIndex !== null
                     ? 'bg-gray-700 text-white'
                     : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
@@ -2019,6 +2019,31 @@ export default function CinemaStudio() {
               </>
             )}
           </button>
+
+          {/* Next Shot Button - shows when video complete or shots exist */}
+          {(currentShot.videoUrl || shots.length > 0) && !isGenerating && (
+            <button
+              onClick={() => {
+                if (currentShot.videoUrl) {
+                  setChainPrompt(true);
+                } else if (shots.length > 0) {
+                  const lastShot = shots[shots.length - 1];
+                  if (lastShot.startFrame) {
+                    setStartFrame(lastShot.startFrame);
+                    setMode('image');
+                    setPreviousPrompt(promptText || lastShot.motionPrompt);
+                    setPromptText('');
+                  }
+                }
+              }}
+              className="h-16 px-6 rounded-xl font-semibold text-sm transition-all flex items-center gap-2 bg-[#2a2a2a] text-white hover:bg-gray-700 border border-gray-700"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+              <span>NEXT SHOT</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
