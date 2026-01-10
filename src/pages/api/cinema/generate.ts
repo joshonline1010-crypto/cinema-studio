@@ -6,7 +6,7 @@ const FAL_API_KEY = 'Key 30048d83-df50-41fa-9c2f-61be8fcdb719:8bb12ec91651bf9dc7
 // FAL endpoints
 const FAL_ENDPOINTS = {
   'video-kling': 'https://fal.run/fal-ai/kling-video/v2.6/pro/image-to-video',
-  'video-kling-o1': 'https://fal.run/fal-ai/kling-video/v1/pro/image-to-video', // O1 uses start/end
+  'video-kling-o1': 'https://fal.run/fal-ai/kling-video/o1/pro/image-to-video', // O1 uses start + tail_image_url
   'video-seedance': 'https://fal.run/fal-ai/seedance-1-lite/image-to-video',
   'image': 'https://fal.run/fal-ai/nano-banana-pro',
   'image-edit': 'https://fal.run/fal-ai/nano-banana-pro/edit',
