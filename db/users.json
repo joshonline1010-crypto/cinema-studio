@@ -1,0 +1,16 @@
+{
+  "users": [
+    {
+      "id": "user_001",
+      "username": "admin",
+      "email": "admin@videostudio.local",
+      "passwordHash": "$2a$10$ekRwXpUoAuS5xH7esn4MDOlp7X2s0xHOiXQk2VX3Q03XaKzGgbqg2",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "lastLogin": "2026-01-08T11:17:11.785Z",
+      "preferences": {
+        "theme": "dark",
+        "defaultAgent": "chip-agent-v4"
+      }
+    }
+  ]
+}

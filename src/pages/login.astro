@@ -1,0 +1,98 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Login">
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+      <!-- Logo -->
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-vs-accent mb-2">Video Studio</h1>
+        <p class="text-white/50">AI-powered video generation</p>
+      </div>
+
+      <!-- Login Form -->
+      <div class="bg-vs-card border border-vs-border rounded-xl p-8">
+        <h2 class="text-xl font-semibold mb-6">Sign In</h2>
+
+        <form id="loginForm" class="space-y-4">
+          <div>
+            <label for="username" class="block text-sm text-white/70 mb-2">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              required
+              class="w-full px-4 py-3 bg-vs-dark border border-vs-border rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-vs-accent transition-colors"
+              placeholder="Enter your username"
+            />
+          </div>
+
+          <div>
+            <label for="password" class="block text-sm text-white/70 mb-2">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              class="w-full px-4 py-3 bg-vs-dark border border-vs-border rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-vs-accent transition-colors"
+              placeholder="Enter your password"
+            />
+          </div>
+
+          <div id="errorMessage" class="hidden text-red-400 text-sm py-2"></div>
+
+          <button
+            type="submit"
+            class="w-full py-3 bg-vs-accent hover:bg-vs-accent-hover text-white font-medium rounded-lg transition-colors"
+          >
+            Sign In
+          </button>
+        </form>
+
+        <div class="mt-6 text-center text-white/50">
+          Don't have an account?
+          <a href="/register" class="text-vs-accent hover:underline">Create one</a>
+        </div>
+      </div>
+
+      <!-- Demo credentials -->
+      <div class="mt-4 text-center text-white/40 text-sm">
+        Demo: admin / admin123
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  const form = document.getElementById('loginForm') as HTMLFormElement;
+  const errorMessage = document.getElementById('errorMessage') as HTMLDivElement;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorMessage.classList.add('hidden');
+
+    const username = (document.getElementById('username') as HTMLInputElement).value;
+    const password = (document.getElementById('password') as HTMLInputElement).value;
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        window.location.href = '/dashboard';
+      } else {
+        errorMessage.textContent = data.error || 'Login failed';
+        errorMessage.classList.remove('hidden');
+      }
+    } catch (error) {
+      errorMessage.textContent = 'Network error. Please try again.';
+      errorMessage.classList.remove('hidden');
+    }
+  });
+</script>

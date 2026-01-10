@@ -1,0 +1,10 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { CinemaStudio } from '../components/react/CinemaStudio';
+
+const user = Astro.locals.user;
+---
+
+<BaseLayout title="Cinema Studio">
+  <CinemaStudio client:load />
+</BaseLayout>

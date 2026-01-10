@@ -1,0 +1,33 @@
+{
+  "name": "video-studio",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Video Studio - Multi-User AI Video Generation System",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "start": "node ./dist/server/entry.mjs",
+    "start-all": "concurrently \"npx n8n start\" \"astro dev\""
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.0.0",
+    "@astrojs/react": "^4.0.0",
+    "@astrojs/tailwind": "^5.1.0",
+    "astro": "^5.0.0",
+    "bcryptjs": "^2.4.3",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-markdown": "^10.1.0",
+    "tailwindcss": "^3.4.0",
+    "undici": "^7.16.0",
+    "zustand": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "concurrently": "^9.0.0",
+    "typescript": "^5.7.0"
+  }
+}

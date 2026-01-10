@@ -1,0 +1,12 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import InsightsPanel from '../components/react/InsightsPanel';
+
+const user = Astro.locals.user;
+---
+
+<DashboardLayout title="Insights">
+  <div class="h-[calc(100vh-73px)] overflow-y-auto">
+    <InsightsPanel client:load userId={user?.id || 'anonymous'} />
+  </div>
+</DashboardLayout>

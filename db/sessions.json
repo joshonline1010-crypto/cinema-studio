@@ -1,0 +1,28 @@
+{
+  "sessions": [
+    {
+      "sessionId": "sess_4b8b13309e7d482182f86f368b67b704",
+      "userId": "user_001",
+      "createdAt": "2025-12-28T20:40:45.885Z",
+      "expiresAt": "2025-12-29T20:40:45.885Z"
+    },
+    {
+      "sessionId": "sess_1f9c1110f66f4b55b42363db2fbe1981",
+      "userId": "user_001",
+      "createdAt": "2025-12-30T20:14:21.550Z",
+      "expiresAt": "2025-12-31T20:14:21.550Z"
+    },
+    {
+      "sessionId": "sess_0d7a71502af04607a41418138d101e7b",
+      "userId": "user_001",
+      "createdAt": "2026-01-01T19:47:25.030Z",
+      "expiresAt": "2026-01-02T19:47:25.030Z"
+    },
+    {
+      "sessionId": "sess_122a62580b5843fd9166524a826656c2",
+      "userId": "user_001",
+      "createdAt": "2026-01-08T11:17:11.780Z",
+      "expiresAt": "2026-01-09T11:17:11.780Z"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+---
+// Redirect to dashboard if logged in, otherwise to login
+const user = Astro.locals.user;
+
+if (user) {
+  return Astro.redirect('/dashboard');
+} else {
+  return Astro.redirect('/login');
+}
+---
