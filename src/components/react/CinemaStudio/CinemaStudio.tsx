@@ -689,7 +689,17 @@ export default function CinemaStudio() {
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-5xl">
           <div className="relative aspect-video bg-[#151515] rounded-xl overflow-hidden border border-gray-800/30">
-            {currentShot.videoUrl ? (
+            {/* If playing a shot from timeline, show that video */}
+            {playingShot && shots.find(s => s.id === playingShot)?.videoUrl ? (
+              <video
+                key={playingShot}
+                src={shots.find(s => s.id === playingShot)?.videoUrl}
+                controls
+                autoPlay
+                loop
+                className="w-full h-full object-contain"
+              />
+            ) : currentShot.videoUrl ? (
               <video src={currentShot.videoUrl} controls autoPlay loop className="w-full h-full object-contain" />
             ) : currentShot.startFrame ? (
               <img src={currentShot.startFrame} alt="Preview" className="w-full h-full object-contain" />
@@ -1612,7 +1622,7 @@ export default function CinemaStudio() {
           )}
 
           {/* Main Content Area */}
-          <div className="flex-1 flex flex-col gap-2">
+          <div className="flex-1 min-w-[280px] flex flex-col gap-2">
             {/* Previous shot context */}
             {previousPrompt && currentShot.startFrame && !promptText && (
               <div className="text-[10px] text-gray-500 px-1">
@@ -1658,8 +1668,8 @@ export default function CinemaStudio() {
               </div>
             )}
 
-            {/* Control Pills - Wrap with max height */}
-            <div className="flex items-center gap-2 flex-wrap max-h-24 overflow-y-auto">
+            {/* Control Pills */}
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => { setShowMovements(true); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); }}
                 className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${

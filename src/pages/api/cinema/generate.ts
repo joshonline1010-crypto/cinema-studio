@@ -3,13 +3,13 @@ import type { APIRoute } from 'astro';
 // Direct FAL.AI integration - no n8n needed
 const FAL_API_KEY = 'Key 30048d83-df50-41fa-9c2f-61be8fcdb719:8bb12ec91651bf9dc7ee420b44895305';
 
-// FAL endpoints - use queue.fal.run for video (async with polling)
+// FAL endpoints - use queue.fal.run for async with polling (more reliable)
 const FAL_ENDPOINTS = {
   'video-kling': 'https://queue.fal.run/fal-ai/kling-video/v2.6/pro/image-to-video',
-  'video-kling-o1': 'https://queue.fal.run/fal-ai/kling-video/o1/image-to-video', // O1 with tail_image_url for end frame
+  'video-kling-o1': 'https://queue.fal.run/fal-ai/kling-video/o1/image-to-video',
   'video-seedance': 'https://queue.fal.run/fal-ai/seedance-1-lite/image-to-video',
-  'image': 'https://fal.run/fal-ai/nano-banana-pro',
-  'image-edit': 'https://fal.run/fal-ai/nano-banana-pro/edit',
+  'image': 'https://queue.fal.run/fal-ai/nano-banana-pro',
+  'image-edit': 'https://queue.fal.run/fal-ai/nano-banana-pro/edit',
   'face-adapter': 'https://fal.run/fal-ai/ip-adapter-face-id'
 };
 
@@ -45,10 +45,12 @@ async function callFal(endpoint: string, body: any): Promise<any> {
 // Poll for queue result
 // IMPORTANT: Kling polling uses fal-ai/kling-video/requests/{id} (NOT /o1/ or /v2.6/)
 async function pollFalResult(requestId: string, endpoint: string, maxAttempts = 120): Promise<any> {
-  // For Kling models, always use base path: fal-ai/kling-video
+  // Determine base path for polling based on endpoint
   let basePath = 'fal-ai/kling-video';
   if (endpoint.includes('seedance')) {
     basePath = 'fal-ai/seedance-1-lite';
+  } else if (endpoint.includes('nano-banana')) {
+    basePath = 'fal-ai/nano-banana-pro';
   }
 
   const statusUrl = `https://queue.fal.run/${basePath}/requests/${requestId}/status`;
