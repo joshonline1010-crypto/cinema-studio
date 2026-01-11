@@ -44,7 +44,7 @@ import {
 // Multi-Angle Studio Components
 import Camera3DControl from './Camera3DControl';
 import BatchGenerator from './BatchGenerator';
-import MovieShotsBrowser from './MovieShotsBrowser';
+import MovieShotsBrowser, { type MovieShot, type UserAsset } from './MovieShotsBrowser';
 import { buildQwenPromptContinuous, type BatchAngle } from './promptVocabulary';
 
 // AI Prompt Assistant
@@ -330,6 +330,8 @@ export default function CinemaStudio() {
   const [show3DCamera, setShow3DCamera] = useState(false); // 3D Camera Control panel
   const [showBatchGenerator, setShowBatchGenerator] = useState(false); // Batch angle generator
   const [showMovieShots, setShowMovieShots] = useState(false); // Movie Shots browser
+  const [userAssets, setUserAssets] = useState<UserAsset[]>([]); // User's custom character/item assets
+  const [selectedAssetForSwap, setSelectedAssetForSwap] = useState<UserAsset | null>(null); // Asset to swap into prompts
   const [cameraAzimuth, setCameraAzimuth] = useState(0); // 3D camera azimuth (0-360)
   const [cameraElevation, setCameraElevation] = useState(0); // 3D camera elevation (-30 to 60)
   const [cameraDistance, setCameraDistance] = useState(1.0); // 3D camera distance (0.6-1.8)
@@ -830,22 +832,44 @@ export default function CinemaStudio() {
     setAiRefImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Handle selecting a movie shot as reference
-  const handleSelectMovieShot = (shot: any, imageUrl: string) => {
-    // Set as reference image
-    setReferenceImage(imageUrl);
-    setStartFrame(imageUrl);
+  // Handle selecting multiple movie shots as references
+  const handleSelectMovieShots = (shots: Array<{ shot: MovieShot; imageUrl: string }>) => {
+    if (shots.length === 0) return;
 
-    // Apply shot metadata to prompt
-    if (shot.prompt) {
-      setPromptText(shot.prompt);
+    // First shot becomes the main reference
+    const primaryShot = shots[0];
+    setReferenceImage(primaryShot.imageUrl);
+    setStartFrame(primaryShot.imageUrl);
+
+    // Additional shots (2-7) become AI reference images
+    if (shots.length > 1) {
+      const additionalRefs = shots.slice(1).map(s => ({
+        url: s.imageUrl,
+        description: s.shot.prompt
+      }));
+      setAiRefImages(prev => {
+        // Merge with existing, up to 7 total
+        const combined = [...prev, ...additionalRefs];
+        return combined.slice(0, 7);
+      });
     }
 
-    // Apply 3D camera if available
-    if (shot.camera3d) {
-      setCameraAzimuth(shot.camera3d.azimuth || 0);
-      setCameraElevation(shot.camera3d.elevation || 0);
-      setCameraDistance(shot.camera3d.distance || 1.0);
+    // Build prompt from primary shot, with asset swap if selected
+    let finalPrompt = primaryShot.shot.prompt || '';
+    if (selectedAssetForSwap && finalPrompt) {
+      // Replace subject description with user's asset description
+      // Insert asset description at the beginning and mark consistency
+      finalPrompt = `${selectedAssetForSwap.description}. ${finalPrompt}. THIS EXACT CHARACTER, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE.`;
+    }
+    if (finalPrompt) {
+      setPromptText(finalPrompt);
+    }
+
+    // Apply 3D camera from primary shot if available
+    if (primaryShot.shot.camera3d) {
+      setCameraAzimuth(primaryShot.shot.camera3d.azimuth || 0);
+      setCameraElevation(primaryShot.shot.camera3d.elevation || 0);
+      setCameraDistance(primaryShot.shot.camera3d.distance || 1.0);
     }
 
     // Apply director style if matches our presets
@@ -859,8 +883,8 @@ export default function CinemaStudio() {
       'wes-anderson': 6,
       'terrence-malick': 10,
     };
-    if (shot.director && directorMap[shot.director] !== undefined) {
-      setDirectorIndex(directorMap[shot.director]);
+    if (primaryShot.shot.director && directorMap[primaryShot.shot.director] !== undefined) {
+      setDirectorIndex(directorMap[primaryShot.shot.director]);
     }
 
     // Apply emotion if available
@@ -868,13 +892,44 @@ export default function CinemaStudio() {
       'awe': 0, 'melancholy': 1, 'tense': 2, 'love': 3, 'fear': 4, 'loneliness': 5,
       'mysterious': 6, 'hope': 7, 'sadness': 8, 'contemplative': 9, 'peaceful': 10,
     };
-    if (shot.emotion && emotionMap[shot.emotion] !== undefined) {
-      setEmotionIndex(emotionMap[shot.emotion]);
+    if (primaryShot.shot.emotion && emotionMap[primaryShot.shot.emotion] !== undefined) {
+      setEmotionIndex(emotionMap[primaryShot.shot.emotion]);
     }
 
     // Close the panel
     setShowMovieShots(false);
   };
+
+  // Asset management handlers
+  const handleAddAsset = (asset: UserAsset) => {
+    setUserAssets(prev => [...prev, asset]);
+    // Persist to localStorage
+    localStorage.setItem('cinema-user-assets', JSON.stringify([...userAssets, asset]));
+  };
+
+  const handleRemoveAsset = (assetId: string) => {
+    setUserAssets(prev => {
+      const updated = prev.filter(a => a.id !== assetId);
+      localStorage.setItem('cinema-user-assets', JSON.stringify(updated));
+      return updated;
+    });
+    // Clear selection if removed asset was selected
+    if (selectedAssetForSwap?.id === assetId) {
+      setSelectedAssetForSwap(null);
+    }
+  };
+
+  // Load assets from localStorage on mount
+  useEffect(() => {
+    const savedAssets = localStorage.getItem('cinema-user-assets');
+    if (savedAssets) {
+      try {
+        setUserAssets(JSON.parse(savedAssets));
+      } catch (e) {
+        console.error('Failed to load saved assets:', e);
+      }
+    }
+  }, []);
 
   // ============================================
   // SHOT PLAN PARSING & AUTO-EXECUTE
@@ -2567,8 +2622,13 @@ export default function CinemaStudio() {
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowMovieShots(false)}>
           <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800/50 p-6 shadow-2xl max-w-6xl w-full mx-4 h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <MovieShotsBrowser
-              onSelectShot={handleSelectMovieShot}
+              onSelectShots={handleSelectMovieShots}
               onClose={() => setShowMovieShots(false)}
+              userAssets={userAssets}
+              onAddAsset={handleAddAsset}
+              onRemoveAsset={handleRemoveAsset}
+              selectedAsset={selectedAssetForSwap}
+              onSelectAsset={setSelectedAssetForSwap}
             />
           </div>
         </div>
