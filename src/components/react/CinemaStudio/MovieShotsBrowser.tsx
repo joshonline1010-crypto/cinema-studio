@@ -127,6 +127,13 @@ export default function MovieShotsBrowser({
   const [newAssetImage, setNewAssetImage] = useState<string | null>(null);
   const assetInputRef = useRef<HTMLInputElement>(null);
 
+  // AI Generation mode
+  const [assetMode, setAssetMode] = useState<'upload' | 'generate'>('upload');
+  const [assetRefImages, setAssetRefImages] = useState<string[]>([]); // Reference images for generation
+  const [assetGenerating, setAssetGenerating] = useState(false);
+  const [assetGenError, setAssetGenError] = useState<string | null>(null);
+  const refImageInputRef = useRef<HTMLInputElement>(null);
+
   // Tab state
   const [activeTab, setActiveTab] = useState<'shots' | 'assets'>('shots');
 
@@ -218,6 +225,107 @@ export default function MovieShotsBrowser({
     e.target.value = '';
   };
 
+  // Handle reference image upload for AI generation
+  const handleRefImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Upload to Catbox
+    const formData = new FormData();
+    formData.append('reqtype', 'fileupload');
+    formData.append('fileToUpload', file);
+
+    try {
+      const response = await fetch('https://catbox.moe/user/api.php', {
+        method: 'POST',
+        body: formData
+      });
+      const url = await response.text();
+      if (url && url.startsWith('https://')) {
+        setAssetRefImages(prev => [...prev.slice(0, 6), url.trim()]); // Max 7 refs
+      }
+    } catch (err) {
+      console.error('Ref upload failed:', err);
+    }
+    e.target.value = '';
+  };
+
+  // Remove reference image
+  const removeRefImage = (index: number) => {
+    setAssetRefImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Generate asset with AI
+  const generateAsset = async () => {
+    if (!newAssetDescription || !onAddAsset) return;
+
+    setAssetGenerating(true);
+    setAssetGenError(null);
+
+    try {
+      // Build prompt based on asset type
+      const typePrompts: Record<string, string> = {
+        character: 'Character portrait, centered composition, full detail, clean background.',
+        item: 'Product shot, centered, clean white background, studio lighting.',
+        vehicle: 'Vehicle showcase, 3/4 angle, clean studio environment.',
+        creature: 'Fantasy creature portrait, detailed, clean background, concept art style.'
+      };
+
+      const fullPrompt = `${newAssetDescription}. ${typePrompts[newAssetType]} High quality, 4K, detailed.`;
+
+      // Call generate API with optional refs
+      const requestBody: any = {
+        type: assetRefImages.length > 0 ? 'edit' : 'image',
+        prompt: fullPrompt,
+        aspect_ratio: '1:1'
+      };
+
+      if (assetRefImages.length > 0) {
+        requestBody.image_urls = assetRefImages;
+      }
+
+      const response = await fetch('/api/cinema/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      const data = await response.json();
+
+      if (data.image_url) {
+        // Auto-add to assets
+        const asset: UserAsset = {
+          id: `asset-${Date.now()}`,
+          name: newAssetName || `Generated ${newAssetType}`,
+          type: newAssetType,
+          imageUrl: data.image_url,
+          description: newAssetDescription
+        };
+        onAddAsset(asset);
+
+        // Reset form
+        resetAssetForm();
+      } else {
+        setAssetGenError(data.error || 'Generation failed');
+      }
+    } catch (err) {
+      setAssetGenError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setAssetGenerating(false);
+    }
+  };
+
+  // Reset asset form
+  const resetAssetForm = () => {
+    setNewAssetName('');
+    setNewAssetDescription('');
+    setNewAssetImage(null);
+    setAssetRefImages([]);
+    setAssetMode('upload');
+    setAssetGenError(null);
+    setShowAssetUpload(false);
+  };
+
   // Save new asset
   const saveNewAsset = () => {
     if (!newAssetName || !newAssetDescription || !newAssetImage || !onAddAsset) return;
@@ -229,11 +337,7 @@ export default function MovieShotsBrowser({
       description: newAssetDescription
     };
     onAddAsset(asset);
-    // Reset form
-    setNewAssetName('');
-    setNewAssetDescription('');
-    setNewAssetImage(null);
-    setShowAssetUpload(false);
+    resetAssetForm();
   };
 
   if (loading) {
@@ -492,47 +596,112 @@ export default function MovieShotsBrowser({
               </button>
             )}
 
-            {/* Asset Upload Form */}
+            {/* Asset Upload/Generate Form */}
             {showAssetUpload && (
               <div className="p-4 bg-[#1f1f1f] rounded-lg border border-green-500/30 mb-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm text-green-400 font-medium">New Asset</span>
-                  <button onClick={() => setShowAssetUpload(false)} className="text-gray-400 hover:text-white">
+                  <button onClick={resetAssetForm} className="text-gray-400 hover:text-white">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
                       <path d="M18 6L6 18M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
 
-                {/* Image Upload */}
-                <div className="mb-3">
-                  {newAssetImage ? (
-                    <div className="relative">
-                      <img src={newAssetImage} alt="Asset preview" className="w-full h-32 object-contain bg-[#2a2a2a] rounded-lg" />
-                      <button
-                        onClick={() => setNewAssetImage(null)}
-                        className="absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-3 h-3">
-                          <path d="M18 6L6 18M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => assetInputRef.current?.click()}
-                      className="w-full h-24 border-2 border-dashed border-gray-700 hover:border-green-500/50 rounded-lg flex flex-col items-center justify-center text-gray-500 hover:text-green-400 transition-colors"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 mb-1">
-                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <path d="M21 15l-5-5L5 21" />
-                      </svg>
-                      <span className="text-xs">Upload Image</span>
-                    </button>
-                  )}
-                  <input ref={assetInputRef} type="file" accept="image/*" onChange={handleAssetImageUpload} className="hidden" />
+                {/* Mode Toggle */}
+                <div className="flex mb-3 bg-[#2a2a2a] rounded-lg p-1">
+                  <button
+                    onClick={() => setAssetMode('upload')}
+                    className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      assetMode === 'upload' ? 'bg-green-500 text-white' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Upload Image
+                  </button>
+                  <button
+                    onClick={() => setAssetMode('generate')}
+                    className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      assetMode === 'generate' ? 'bg-purple-500 text-white' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Generate with AI
+                  </button>
                 </div>
+
+                {/* Error Display */}
+                {assetGenError && (
+                  <div className="mb-3 px-3 py-2 bg-red-500/20 border border-red-500/50 rounded-lg text-xs text-red-300">
+                    {assetGenError}
+                  </div>
+                )}
+
+                {/* UPLOAD MODE */}
+                {assetMode === 'upload' && (
+                  <div className="mb-3">
+                    {newAssetImage ? (
+                      <div className="relative">
+                        <img src={newAssetImage} alt="Asset preview" className="w-full h-32 object-contain bg-[#2a2a2a] rounded-lg" />
+                        <button
+                          onClick={() => setNewAssetImage(null)}
+                          className="absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-3 h-3">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => assetInputRef.current?.click()}
+                        className="w-full h-24 border-2 border-dashed border-gray-700 hover:border-green-500/50 rounded-lg flex flex-col items-center justify-center text-gray-500 hover:text-green-400 transition-colors"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 mb-1">
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <path d="M21 15l-5-5L5 21" />
+                        </svg>
+                        <span className="text-xs">Upload Image</span>
+                      </button>
+                    )}
+                    <input ref={assetInputRef} type="file" accept="image/*" onChange={handleAssetImageUpload} className="hidden" />
+                  </div>
+                )}
+
+                {/* GENERATE MODE */}
+                {assetMode === 'generate' && (
+                  <div className="mb-3">
+                    <div className="text-[10px] text-gray-500 uppercase mb-2">Reference Images (Optional)</div>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {assetRefImages.map((url, idx) => (
+                        <div key={idx} className="relative w-14 h-14">
+                          <img src={url} alt={`Ref ${idx + 1}`} className="w-full h-full object-cover rounded-lg border border-purple-500/50" />
+                          <button
+                            onClick={() => removeRefImage(idx)}
+                            className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" className="w-2 h-2">
+                              <path d="M18 6L6 18M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                      {assetRefImages.length < 7 && (
+                        <button
+                          onClick={() => refImageInputRef.current?.click()}
+                          className="w-14 h-14 border-2 border-dashed border-gray-700 hover:border-purple-500/50 rounded-lg flex items-center justify-center text-gray-500 hover:text-purple-400 transition-colors"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                            <path d="M12 5v14M5 12h14" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    <input ref={refImageInputRef} type="file" accept="image/*" onChange={handleRefImageUpload} className="hidden" />
+                    <div className="text-[9px] text-gray-500">
+                      Add reference images for style/character consistency. Leave empty to generate from description only.
+                    </div>
+                  </div>
+                )}
 
                 {/* Name */}
                 <input
@@ -559,22 +728,47 @@ export default function MovieShotsBrowser({
                 <textarea
                   value={newAssetDescription}
                   onChange={(e) => setNewAssetDescription(e.target.value)}
-                  placeholder="Detailed description for AI (e.g., 'Fluffy yellow chipmunk with green headphones, red jacket, blue pants, cute cartoon style')"
+                  placeholder={assetMode === 'generate'
+                    ? "Describe what to generate (e.g., 'Fluffy yellow chipmunk with green headphones, red jacket, blue pants, cute cartoon style, 8K')"
+                    : "Detailed description for AI swapping (e.g., 'Fluffy yellow chipmunk with green headphones, red jacket, blue pants')"
+                  }
                   rows={3}
                   className="w-full bg-[#2a2a2a] border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 mb-3 resize-none"
                 />
 
-                <button
-                  onClick={saveNewAsset}
-                  disabled={!newAssetName || !newAssetDescription || !newAssetImage}
-                  className={`w-full py-2 rounded-lg text-sm font-medium transition-colors ${
-                    newAssetName && newAssetDescription && newAssetImage
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:opacity-90'
-                      : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  Save Asset
-                </button>
+                {/* Action Button */}
+                {assetMode === 'upload' ? (
+                  <button
+                    onClick={saveNewAsset}
+                    disabled={!newAssetName || !newAssetDescription || !newAssetImage}
+                    className={`w-full py-2 rounded-lg text-sm font-medium transition-colors ${
+                      newAssetName && newAssetDescription && newAssetImage
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:opacity-90'
+                        : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    Save Asset
+                  </button>
+                ) : (
+                  <button
+                    onClick={generateAsset}
+                    disabled={!newAssetDescription || assetGenerating}
+                    className={`w-full py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                      newAssetDescription && !assetGenerating
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90'
+                        : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {assetGenerating ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>✨ Generate & Add to Assets</>
+                    )}
+                  </button>
+                )}
               </div>
             )}
           </div>

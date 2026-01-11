@@ -846,72 +846,143 @@ export default function CinemaStudio() {
     setAiRefImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Upload local image to Catbox and return public URL
+  const uploadLocalImageToCatbox = async (localPath: string): Promise<string | null> => {
+    try {
+      // Fetch the local image
+      const response = await fetch(localPath);
+      if (!response.ok) return null;
+
+      const blob = await response.blob();
+
+      // Upload to Catbox
+      const formData = new FormData();
+      formData.append('reqtype', 'fileupload');
+      formData.append('fileToUpload', blob, 'movie-shot.jpg');
+
+      const uploadResponse = await fetch('https://catbox.moe/user/api.php', {
+        method: 'POST',
+        body: formData
+      });
+
+      const url = await uploadResponse.text();
+      if (url && url.startsWith('https://')) {
+        return url.trim();
+      }
+      return null;
+    } catch (err) {
+      console.error('Failed to upload movie shot to Catbox:', err);
+      return null;
+    }
+  };
+
   // Handle selecting multiple movie shots as references
-  const handleSelectMovieShots = (shots: Array<{ shot: MovieShot; imageUrl: string }>) => {
+  const handleSelectMovieShots = async (shots: Array<{ shot: MovieShot; imageUrl: string }>) => {
     if (shots.length === 0) return;
 
-    // First shot becomes the main reference
-    const primaryShot = shots[0];
-    setReferenceImage(primaryShot.imageUrl);
-    setStartFrame(primaryShot.imageUrl);
-
-    // Additional shots (2-7) become AI reference images
-    if (shots.length > 1) {
-      const additionalRefs = shots.slice(1).map(s => ({
-        url: s.imageUrl,
-        description: s.shot.prompt
-      }));
-      setAiRefImages(prev => {
-        // Merge with existing, up to 7 total
-        const combined = [...prev, ...additionalRefs];
-        return combined.slice(0, 7);
-      });
-    }
-
-    // Build prompt from primary shot, with asset swap if selected
-    let finalPrompt = primaryShot.shot.prompt || '';
-    if (selectedAssetForSwap && finalPrompt) {
-      // Replace subject description with user's asset description
-      // Insert asset description at the beginning and mark consistency
-      finalPrompt = `${selectedAssetForSwap.description}. ${finalPrompt}. THIS EXACT CHARACTER, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE.`;
-    }
-    if (finalPrompt) {
-      setPromptText(finalPrompt);
-    }
-
-    // Apply 3D camera from primary shot if available
-    if (primaryShot.shot.camera3d) {
-      setCameraAzimuth(primaryShot.shot.camera3d.azimuth || 0);
-      setCameraElevation(primaryShot.shot.camera3d.elevation || 0);
-      setCameraDistance(primaryShot.shot.camera3d.distance || 1.0);
-    }
-
-    // Apply director style if matches our presets
-    const directorMap: Record<string, number> = {
-      'stanley-kubrick': 0,
-      'steven-spielberg': 1,
-      'quentin-tarantino': 2,
-      'david-fincher': 3,
-      'christopher-nolan': 4,
-      'denis-villeneuve': 5,
-      'wes-anderson': 6,
-      'terrence-malick': 10,
-    };
-    if (primaryShot.shot.director && directorMap[primaryShot.shot.director] !== undefined) {
-      setDirectorIndex(directorMap[primaryShot.shot.director]);
-    }
-
-    // Apply emotion if available
-    const emotionMap: Record<string, number> = {
-      'awe': 0, 'melancholy': 1, 'tense': 2, 'love': 3, 'fear': 4, 'loneliness': 5,
-      'mysterious': 6, 'hope': 7, 'sadness': 8, 'contemplative': 9, 'peaceful': 10,
-    };
-    if (primaryShot.shot.emotion && emotionMap[primaryShot.shot.emotion] !== undefined) {
-      setEmotionIndex(emotionMap[primaryShot.shot.emotion]);
-    }
-
-    // Close the panel
+    // Close the panel immediately for better UX
     setShowMovieShots(false);
+
+    // Show uploading status
+    setIsGenerating(true);
+    setProgress(0);
+    setStatusMessage('Uploading movie shot references...');
+
+    try {
+      // First shot becomes the main reference - upload to Catbox
+      const primaryShot = shots[0];
+      setProgress(10);
+
+      const primaryUrl = await uploadLocalImageToCatbox(primaryShot.imageUrl);
+      if (!primaryUrl) {
+        throw new Error('Failed to upload primary shot');
+      }
+
+      setReferenceImage(primaryUrl);
+      setStartFrame(primaryUrl);
+      setProgress(40);
+
+      // Additional shots (2-7) become AI reference images - upload each
+      if (shots.length > 1) {
+        const additionalRefs: Array<{ url: string; description: string }> = [];
+
+        for (let i = 1; i < shots.length; i++) {
+          setProgress(40 + (i / shots.length) * 50);
+          setStatusMessage(`Uploading reference ${i + 1}/${shots.length}...`);
+
+          const url = await uploadLocalImageToCatbox(shots[i].imageUrl);
+          if (url) {
+            additionalRefs.push({
+              url,
+              description: shots[i].shot.prompt
+            });
+          }
+        }
+
+        if (additionalRefs.length > 0) {
+          setAiRefImages(prev => {
+            // Merge with existing, up to 7 total
+            const combined = [...prev, ...additionalRefs];
+            return combined.slice(0, 7);
+          });
+        }
+      }
+
+      // Build prompt from primary shot, with asset swap if selected
+      let finalPrompt = primaryShot.shot.prompt || '';
+      if (selectedAssetForSwap && finalPrompt) {
+        // Replace subject description with user's asset description
+        // Insert asset description at the beginning and mark consistency
+        finalPrompt = `${selectedAssetForSwap.description}. ${finalPrompt}. THIS EXACT CHARACTER, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE.`;
+      }
+      if (finalPrompt) {
+        setPromptText(finalPrompt);
+      }
+
+      // Apply 3D camera from primary shot if available
+      if (primaryShot.shot.camera3d) {
+        setCameraAzimuth(primaryShot.shot.camera3d.azimuth || 0);
+        setCameraElevation(primaryShot.shot.camera3d.elevation || 0);
+        setCameraDistance(primaryShot.shot.camera3d.distance || 1.0);
+      }
+
+      // Apply director style if matches our presets
+      const directorMap: Record<string, number> = {
+        'stanley-kubrick': 0,
+        'steven-spielberg': 1,
+        'quentin-tarantino': 2,
+        'david-fincher': 3,
+        'christopher-nolan': 4,
+        'denis-villeneuve': 5,
+        'wes-anderson': 6,
+        'terrence-malick': 10,
+      };
+      if (primaryShot.shot.director && directorMap[primaryShot.shot.director] !== undefined) {
+        setDirectorIndex(directorMap[primaryShot.shot.director]);
+      }
+
+      // Apply emotion if available
+      const emotionMap: Record<string, number> = {
+        'awe': 0, 'melancholy': 1, 'tense': 2, 'love': 3, 'fear': 4, 'loneliness': 5,
+        'mysterious': 6, 'hope': 7, 'sadness': 8, 'contemplative': 9, 'peaceful': 10,
+      };
+      if (primaryShot.shot.emotion && emotionMap[primaryShot.shot.emotion] !== undefined) {
+        setEmotionIndex(emotionMap[primaryShot.shot.emotion]);
+      }
+
+      setStatusMessage('Movie shot references ready!');
+      setProgress(100);
+    } catch (err) {
+      console.error('Failed to process movie shots:', err);
+      setStatusMessage('Failed to upload movie shots');
+    } finally {
+      // Clear status after a short delay
+      setTimeout(() => {
+        setIsGenerating(false);
+        setStatusMessage(null);
+        setProgress(0);
+      }, 1500);
+    }
   };
 
   // Asset management handlers
