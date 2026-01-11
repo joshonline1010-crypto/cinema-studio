@@ -26,6 +26,10 @@ interface CinemaState {
   // All shots in timeline
   shots: Shot[];
 
+  // Character DNA - consistent character description across all shots
+  // This ensures the same character details are used in every prompt
+  characterDNA: string | null;
+
   // UI state
   selectedPresets: CameraPreset[];
   selectedLens: LensPreset | null;
@@ -36,6 +40,7 @@ interface CinemaState {
   error: string | null;
 
   // Actions
+  setCharacterDNA: (dna: string | null) => void;
   setStartFrame: (url: string | null) => void;
   setEndFrame: (url: string | null) => void;
   togglePreset: (preset: CameraPreset) => void;
@@ -81,6 +86,7 @@ const createEmptyShot = (): Shot => ({
 export const useCinemaStore = create<CinemaState>((set, get) => ({
   currentShot: createEmptyShot(),
   shots: [],
+  characterDNA: null,
   selectedPresets: [],
   selectedLens: null,
   selectedCamera: null,
@@ -88,6 +94,8 @@ export const useCinemaStore = create<CinemaState>((set, get) => ({
   isGenerating: false,
   generationProgress: 0,
   error: null,
+
+  setCharacterDNA: (dna) => set({ characterDNA: dna }),
 
   setStartFrame: (url) => set((state) => ({
     currentShot: { ...state.currentShot, startFrame: url }

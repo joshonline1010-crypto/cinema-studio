@@ -270,6 +270,8 @@ export default function CinemaStudio() {
     failGeneration,
     saveCurrentAsShot,
     resetCurrent,
+    characterDNA,
+    setCharacterDNA,
   } = useCinemaStore();
 
   const [promptText, setPromptText] = useState('');
@@ -286,6 +288,7 @@ export default function CinemaStudio() {
   const [showSetDesign, setShowSetDesign] = useState(false);
   const [showColorPalette, setShowColorPalette] = useState(false);
   const [showCharacterStyle, setShowCharacterStyle] = useState(false);
+  const [showCharacterDNA, setShowCharacterDNA] = useState(false); // Character DNA panel for shot chaining
   const [showVideoMotion, setShowVideoMotion] = useState(false); // Video prompt builder panel
   const [cameraPanelTab, setCameraPanelTab] = useState<'all' | 'recommended'>('all');
 
@@ -809,9 +812,19 @@ export default function CinemaStudio() {
   // Chain current shot to next - pass generated image as reference for next IMAGE
   // NOTE: This is for CHAINING shots (sequential), NOT for start→end single videos
   const handleChainToNext = async () => {
-    // Capture the generated image BEFORE saving (which resets currentShot)
-    // This image becomes the REFERENCE for generating the NEXT shot's image
-    const previousGeneratedImage = currentShot.startFrame;
+    // SHOT CHAINING FIX: Use video's last frame for color consistency
+    // The Golden Rule: Never generate from original base image.
+    // Always chain from the LAST FRAME of the previous video.
+    let previousGeneratedImage: string | null = null;
+
+    if (currentShot.videoUrl) {
+      // Extract last frame from video for color-consistent chaining
+      const extractedFrame = await extractLastFrame(currentShot.videoUrl);
+      previousGeneratedImage = extractedFrame || currentShot.startFrame;
+    } else {
+      // Fallback to startFrame if no video exists
+      previousGeneratedImage = currentShot.startFrame;
+    }
 
     // Save the current prompt for context
     const currentPromptText = promptText;
@@ -1574,6 +1587,91 @@ export default function CinemaStudio() {
         </div>
       )}
 
+      {/* Character DNA Panel - for shot chaining consistency */}
+      {showCharacterDNA && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowCharacterDNA(false)}>
+          <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800/50 p-6 shadow-2xl max-w-2xl w-full mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <span className="px-4 py-1.5 bg-gradient-to-r from-teal-500/20 to-cyan-500/20 border border-teal-500/30 rounded-lg text-xs font-medium text-teal-300">Character DNA</span>
+                <span className="text-xs text-gray-500">Consistent character for shot chaining</span>
+              </div>
+              <button onClick={() => setShowCharacterDNA(false)} className="w-9 h-9 rounded-lg bg-[#2a2a2a] hover:bg-gray-700 flex items-center justify-center text-gray-400 transition-colors">
+                {Icons.close}
+              </button>
+            </div>
+
+            {/* Info Box */}
+            <div className="bg-[#2a2a2a] rounded-xl p-4 mb-5 border border-gray-700/50">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center flex-shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-teal-400">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 16v-4M12 8h.01" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-300 font-medium mb-1">Why Character DNA?</div>
+                  <div className="text-xs text-gray-500 leading-relaxed">
+                    When chaining multiple shots, AI can drift character features (face, clothing, colors).
+                    Character DNA is your reusable description that stays constant across ALL shots.
+                    Copy-paste this exact text into every prompt for consistent characters.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Character DNA Input */}
+            <div className="space-y-3">
+              <label className="text-xs text-gray-400 block">Character Description (copy-paste this into all prompts)</label>
+              <textarea
+                value={characterDNA || ''}
+                onChange={(e) => setCharacterDNA(e.target.value || null)}
+                placeholder="Example: Asian man in his 40s, weathered face, salt-pepper stubble, worn tan flight suit with mission patches, determined eyes, short cropped black hair"
+                className="w-full h-32 bg-[#252525] rounded-xl border border-gray-700/50 px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-teal-500/50 resize-none"
+              />
+            </div>
+
+            {/* Template Examples */}
+            <div className="mt-5 pt-5 border-t border-gray-700">
+              <div className="text-xs text-gray-400 mb-3">Quick Templates (click to use)</div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  'Young woman, mid-20s, long dark hair, casual outfit, confident expression',
+                  'Elderly man, white beard, weathered face, warm eyes, comfortable sweater',
+                  'Child, about 8 years old, curious expression, colorful clothes, messy hair',
+                  'Professional in suit, sharp features, glasses, serious demeanor'
+                ].map((template, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCharacterDNA(template)}
+                    className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-gray-700 rounded-lg text-[10px] text-gray-400 hover:text-gray-200 transition-colors"
+                  >
+                    {template.substring(0, 40)}...
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setCharacterDNA(null)}
+                className="px-4 py-2.5 bg-[#2a2a2a] hover:bg-gray-700 rounded-xl text-xs text-gray-400 transition-colors"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => setShowCharacterDNA(false)}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-black rounded-xl text-xs font-semibold hover:opacity-90 transition-opacity"
+              >
+                Save Character DNA
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Emotions Panel */}
       {showEmotions && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowEmotions(false)}>
@@ -2247,6 +2345,24 @@ export default function CinemaStudio() {
               >
                 {Icons.director}
                 <span>{directorIndex !== null ? directors[directorIndex].name : 'Director'}</span>
+              </button>
+
+              {/* Character DNA Button - for shot chaining consistency */}
+              <button
+                onClick={() => { setShowCharacterDNA(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); }}
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                  characterDNA
+                    ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white'
+                    : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
+                }`}
+                title="Character DNA - consistent character description for shot chaining"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                  <path d="M12 6v2M12 16v2M8 12H6M18 12h-2" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                <span>{characterDNA ? 'DNA Set' : 'Character'}</span>
               </button>
 
               <button

@@ -580,15 +580,103 @@ export function buildPrompt(config: PromptConfig): string {
 }
 
 // ============================================================================
+// COLOR LOCK PHRASES (For shot chaining - prevents color/character drift)
+// ============================================================================
+
+/**
+ * Color lock phrases that MUST be used when generating from reference images
+ * to maintain color consistency across multi-shot sequences.
+ *
+ * THE PROBLEM: AI image generators introduce subtle variations with each call
+ * - Hue shifts
+ * - Saturation changes
+ * - White balance drift
+ * - Character feature drift
+ *
+ * THE SOLUTION: Use these phrases when editing from a reference
+ */
+export const COLOR_LOCK_PHRASES = {
+  character: 'THIS EXACT CHARACTER',
+  lighting: 'THIS EXACT LIGHTING',
+  colorGrade: 'THIS EXACT COLOR GRADE',
+  costume: 'Same costume',
+  lightingDirection: 'same lighting direction',
+  environment: 'same environment',
+  mood: 'same mood'
+};
+
+/**
+ * Build a full color lock prefix for edit prompts
+ * @param options - Which elements to lock
+ */
+export function buildColorLockPrefix(options: {
+  lockCharacter?: boolean;
+  lockLighting?: boolean;
+  lockColorGrade?: boolean;
+  lockCostume?: boolean;
+  lockLightingDirection?: boolean;
+} = {}): string {
+  const defaults = {
+    lockCharacter: true,
+    lockLighting: true,
+    lockColorGrade: true,
+    lockCostume: true,
+    lockLightingDirection: true
+  };
+  const opts = { ...defaults, ...options };
+
+  const phrases: string[] = [];
+  if (opts.lockCharacter) phrases.push(COLOR_LOCK_PHRASES.character);
+  if (opts.lockLighting) phrases.push(COLOR_LOCK_PHRASES.lighting);
+  if (opts.lockColorGrade) phrases.push(COLOR_LOCK_PHRASES.colorGrade);
+
+  // Secondary locks
+  const secondary: string[] = [];
+  if (opts.lockCostume) secondary.push(COLOR_LOCK_PHRASES.costume);
+  if (opts.lockLightingDirection) secondary.push(COLOR_LOCK_PHRASES.lightingDirection);
+
+  let result = phrases.join(', ');
+  if (secondary.length > 0) {
+    result += '. ' + secondary.join(', ');
+  }
+
+  return result;
+}
+
+/**
+ * Build a color-locked edit prompt for shot chaining
+ * This ensures color and character consistency across shots
+ *
+ * @param angleChange - The new angle or camera position
+ * @param basePrompt - Additional prompt elements (optional)
+ * @param options - Color lock options
+ */
+export function buildColorLockedEditPrompt(
+  angleChange: string,
+  basePrompt?: string,
+  options?: Parameters<typeof buildColorLockPrefix>[0]
+): string {
+  const colorLock = buildColorLockPrefix(options);
+
+  const parts = [colorLock, angleChange];
+  if (basePrompt) {
+    parts.push(basePrompt);
+  }
+
+  return parts.join('. ') + '.';
+}
+
+// ============================================================================
 // EDIT PROMPT BUILDER (For "Next Shot" / Reference-based editing)
 // ============================================================================
 
 /**
  * Build an edit prompt for reference-based generation
- * Always starts with "THIS EXACT SETUP"
+ * Now includes full color lock phrases for shot chaining
  */
 export function buildEditPrompt(config: Omit<PromptConfig, 'character' | 'environment'>): string {
-  const parts: string[] = ['THIS EXACT SETUP'];
+  // Use full color lock for sequences
+  const parts: string[] = [buildColorLockPrefix()];
 
   // What CHANGES - action/expression
   if (config.characterAction) {
