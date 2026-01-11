@@ -106,6 +106,7 @@ export const POST: APIRoute = async ({ request }) => {
       start_image_url,
       end_image_url,
       reference_image,
+      image_urls,  // Array of reference images (takes priority over single reference_image)
       duration = '5',
       aspect_ratio = '16:9',
       resolution = '2K'
@@ -157,7 +158,8 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       case 'image':
-      case 'image-video': {
+      case 'image-video':
+      case 'edit': {
         // Generate image with nano-banana - always 4K
         const imageBody: any = {
           prompt,
@@ -165,11 +167,19 @@ export const POST: APIRoute = async ({ request }) => {
           resolution: '4K'
         };
 
-        // Use different endpoint based on whether reference image is provided
-        if (reference_image) {
+        // Combine all reference sources: image_urls array > single reference_image
+        const allRefs: string[] = [];
+        if (image_urls && Array.isArray(image_urls) && image_urls.length > 0) {
+          allRefs.push(...image_urls);
+        } else if (reference_image) {
+          allRefs.push(reference_image);
+        }
+
+        // Use different endpoint based on whether reference images are provided
+        if (allRefs.length > 0) {
           // Image-to-image: use /edit endpoint with image_urls array
-          imageBody.image_urls = [reference_image];
-          console.log('Using EDIT endpoint with reference:', reference_image);
+          imageBody.image_urls = allRefs;
+          console.log('Using EDIT endpoint with', allRefs.length, 'reference(s):', allRefs.map(u => u.substring(0, 50) + '...'));
           result = await callFal(FAL_ENDPOINTS['image-edit'], imageBody);
         } else {
           // Text-to-image: use regular endpoint

@@ -1,0 +1,44 @@
+# AI Chat Memory - Session: cinema-1768131709909
+# Created: 2026-01-11T11:43:22.963Z
+
+[USER]: MAKE BRAND DEAL DIALOG for this shot
+
+
+=== CURRENT SHOT ===
+MOTION PROMPT: "Extreme close-up, direct eye contact. Confident expression, one eyebrow raised. Slight lean toward camera. He asks: "[DIALOGUE]". Punchy rhythm, immediate engagement."
+MODEL: kling-2.6
+MODE: Video
+ASPECT: 16:9 | RES: 2K
+CHARACTER DNA: Professional in suit, sharp features, glasses, serious demeanor
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: **DIALOGUE SHOT (TRIGGERING SEEDANCE 1.5 PRO)**  
+**[SHOT TYPE]**: Extreme close-up, direct eye contact.  
+**[CHARACTER DESCRIPTION]**: Professional in tailored suit, sharp features, rectangular glasses, slight smirk.  
+**[CAMERA MOVEMENT]**: Static, focus on eyes. He speaks confidently: "We have an opportunity that's too significant to ignore—let's make it happen."  
+**[STYLE]**: Cinematic corporate aesthetic, clean minimalism.  
+**[LIGHTING]**: Soft key light from the left, highlighting the Rolex on his wrist and the intensity of his gaze.  
+**[AUDIO]**: Natural room tone, slight hum of ambient city noise through a window.  
+
+---
+
+**CINEMATOGRAPHY DETAILS**  
+- **Lens**: 50mm prime (shallow depth of field, sharp focus on face).  
+- **Color Grade**: Desaturated corporate blue tones with a touch of gold for the Rolex.  
+- **Environment**: Sleek office background with a cityscape blurred through a window, emphasizing isolation and power.  
+- **Subtle Motion**: A single leaf drifts past the window, symbolizing fleeting opportunities.  
+
+---
+
+**NEXT SHOT SUGGESTION (SEQUENCE PLANNING)**  
+**SHOT 2 (MEDIUM)**: THIS EXACT CHARACTER, THIS EXACT LIGHTING, medium shot. He speaks authoritatively: "This isn’t just a deal—it’s a legacy." Camera tracks his hand gesturing toward the window, then settles.  
+**MODEL**: Kling-2.6 (smooth tracking motion).  
+**COLOR GRADE**: Same desaturated blue, with the cityscape now in focus.  
+
+---
+
+**NOTE**: The dialogue mirrors the character’s confidence and urgency, while the cinematography reinforces authority and strategic thinking. The Rolex and cityscape tie into the brand’s luxury/innovation ethos.
+---

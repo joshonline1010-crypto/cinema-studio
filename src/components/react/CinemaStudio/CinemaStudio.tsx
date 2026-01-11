@@ -1307,6 +1307,14 @@ export default function CinemaStudio() {
       setProgress(10);
 
       try {
+        // Collect ALL reference images: startFrame/referenceImage + aiRefImages
+        const allRefUrls: string[] = [];
+        const primaryRef = currentShot.startFrame || referenceImage;
+        if (primaryRef) allRefUrls.push(primaryRef);
+        if (aiRefImages.length > 0) {
+          allRefUrls.push(...aiRefImages.map(r => r.url));
+        }
+
         const response = await fetch('/api/cinema/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1315,8 +1323,8 @@ export default function CinemaStudio() {
             prompt: fullPrompt,
             aspect_ratio: aspectRatio,
             resolution: resolution,
-            // CHAINING FIX: Use extracted last frame (startFrame) if available, else original reference
-            reference_image: currentShot.startFrame || referenceImage || undefined
+            // Send all refs as array (primary ref + aiRefImages)
+            image_urls: allRefUrls.length > 0 ? allRefUrls : undefined
           })
         });
 
@@ -2622,6 +2630,81 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                 ))}
               </div>
             </div>
+
+            {/* Generate Character from DNA */}
+            {characterDNA && (
+              <div className="mt-5 pt-5 border-t border-gray-700">
+                <div className="text-xs text-gray-400 mb-3">Generate Character Image from DNA</div>
+                <div className="flex gap-2">
+                  <select
+                    value={aspectRatio}
+                    onChange={(e) => setAspectRatio(e.target.value)}
+                    className="bg-[#2a2a2a] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white"
+                  >
+                    <option value="1:1">1:1 (Square)</option>
+                    <option value="16:9">16:9 (Wide)</option>
+                    <option value="21:9">21:9 (Cinema)</option>
+                    <option value="9:16">9:16 (Portrait)</option>
+                  </select>
+                  <button
+                    onClick={async () => {
+                      if (!characterDNA) return;
+                      setShowCharacterDNA(false);
+                      startGeneration();
+                      setProgress(10);
+                      setStatusMessage('Generating character from DNA...');
+
+                      try {
+                        const characterPrompt = `${characterDNA}. Character portrait, high quality, 4K, detailed, clean background, centered composition.`;
+                        const response = await fetch('/api/cinema/generate', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            type: 'image',
+                            prompt: characterPrompt,
+                            aspect_ratio: aspectRatio,
+                            resolution: '4K'
+                          })
+                        });
+
+                        setProgress(50);
+                        const data = await response.json();
+
+                        if (data.image_url) {
+                          setProgress(100);
+                          // Set as reference image for future shots
+                          setReferenceImage(data.image_url);
+                          setStartFrame(data.image_url);
+                          setStatusMessage('Character generated! Set as reference.');
+                          setTimeout(() => {
+                            failGeneration('');
+                            setStatusMessage(null);
+                          }, 2000);
+                        } else {
+                          throw new Error(data.error || 'Generation failed');
+                        }
+                      } catch (err) {
+                        failGeneration(err instanceof Error ? err.message : 'Unknown error');
+                      }
+                    }}
+                    disabled={isGenerating}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>Generate Character Image</>
+                    )}
+                  </button>
+                </div>
+                <div className="text-[10px] text-gray-500 mt-2">
+                  Creates a character image from your DNA description and sets it as the reference for all shots.
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex gap-3 mt-6">
