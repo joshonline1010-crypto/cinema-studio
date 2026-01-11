@@ -2518,6 +2518,73 @@ export function generateDirectorSuggestion(
   return result;
 }
 
+/**
+ * Generate an EDIT prompt for reference-based image generation
+ * Use this when chaining shots - describes CHANGES ONLY, not full scene
+ *
+ * Format: "THIS EXACT SETUP, character [action/emotion], [camera movement], 8K high detail"
+ *
+ * Why: nano-banana /edit uses the reference image for everything else
+ * We only need to tell it what's DIFFERENT
+ */
+export function generateEditPrompt(
+  director: DirectorPreset | null,
+  previousPrompt: string,
+  shotNumber: number
+): string {
+  const prompt = previousPrompt.toLowerCase();
+
+  // 1. Detect what story beat the previous shot was
+  let detectedBeat = 'journey'; // default
+  for (const [beat, keywords] of Object.entries(STORY_BEATS)) {
+    if (keywords.some(keyword => prompt.includes(keyword))) {
+      detectedBeat = beat;
+      break;
+    }
+  }
+
+  // 2. Get possible story progressions for this beat
+  const progressions = STORY_PROGRESSIONS[detectedBeat] || STORY_PROGRESSIONS.journey;
+
+  // 3. Pick a progression (cycle through based on shot number for variety)
+  const progressionIndex = (shotNumber - 1) % progressions.length;
+  const storyProgression = progressions[progressionIndex];
+
+  // 4. Build the EDIT prompt - CHANGES ONLY
+  const parts: string[] = [];
+
+  // Start with "THIS EXACT SETUP" to maintain reference
+  parts.push('THIS EXACT SETUP');
+
+  // What CHARACTER does differently
+  parts.push(`character ${storyProgression}`);
+
+  // Optional: Camera movement if director has signature moves
+  if (director?.sceneResponses) {
+    const beatToSceneMap: Record<string, string> = {
+      'danger': 'horror_corridor',
+      'chase': 'horror_corridor',
+      'emotion': 'character_madness',
+      'confrontation': 'dialogue_tension',
+      'calm': 'establishing',
+      'journey': 'establishing',
+      'discovery': 'establishing',
+      'defeat': 'character_madness',
+      'victory': 'establishing'
+    };
+    const sceneType = beatToSceneMap[detectedBeat];
+    const sceneResponse = director.sceneResponses[sceneType];
+    if (sceneResponse?.movement && sceneResponse.movement !== 'static') {
+      parts.push(sceneResponse.movement);
+    }
+  }
+
+  // End with quality tag
+  parts.push('8K high detail');
+
+  return parts.join(', ');
+}
+
 // Helper to get a director's signature shot by scene context
 export function getDirectorSignatureShot(
   director: DirectorPreset,

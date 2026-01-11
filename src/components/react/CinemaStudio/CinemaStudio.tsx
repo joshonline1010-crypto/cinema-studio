@@ -18,8 +18,28 @@ import {
   CHARACTER_STYLE_PRESETS,
   buildCinemaPrompt,
   generateDirectorSuggestion,
+  generateEditPrompt,
   type DirectorShotPreset,
 } from './cameraPresets';
+import { validatePrompt, LIGHTING_SOURCES } from './promptBuilder';
+import {
+  validateVideoPrompt,
+  buildVideoPrompt,
+  buildObjectMotion,
+  selectVideoModel,
+  CAMERA_MOVEMENTS,
+  SUBJECT_MOTIONS,
+  BACKGROUND_MOTIONS,
+  NATURAL_ELEMENTS,
+  FALLING_OBJECTS,
+  VEHICLES,
+  MECHANICAL,
+  LIGHT_EFFECTS,
+  WEATHER,
+  VIDEO_TEMPLATES,
+  MOTION_ENDPOINTS,
+  type VideoModel as VideoModelType,
+} from './videoPromptBuilder';
 
 // Clean SVG Icons
 const Icons = {
@@ -253,6 +273,7 @@ export default function CinemaStudio() {
   } = useCinemaStore();
 
   const [promptText, setPromptText] = useState('');
+  const [promptWarnings, setPromptWarnings] = useState<string[]>([]); // Nano Banana prompting warnings
   const [showCameraPanel, setShowCameraPanel] = useState(false);
   const [showMovements, setShowMovements] = useState(false);
   const [showStyles, setShowStyles] = useState(false);
@@ -265,7 +286,17 @@ export default function CinemaStudio() {
   const [showSetDesign, setShowSetDesign] = useState(false);
   const [showColorPalette, setShowColorPalette] = useState(false);
   const [showCharacterStyle, setShowCharacterStyle] = useState(false);
+  const [showVideoMotion, setShowVideoMotion] = useState(false); // Video prompt builder panel
   const [cameraPanelTab, setCameraPanelTab] = useState<'all' | 'recommended'>('all');
+
+  // Video Prompt Builder State
+  const [videoCameraMovement, setVideoCameraMovement] = useState<string | null>(null);
+  const [videoSubjectMotion, setVideoSubjectMotion] = useState<string | null>(null);
+  const [videoBackgroundMotion, setVideoBackgroundMotion] = useState<string | null>(null);
+  const [videoObjectMotion, setVideoObjectMotion] = useState<string | null>(null);
+  const [videoPromptWarnings, setVideoPromptWarnings] = useState<string[]>([]);
+  const [showVideoPromptPreview, setShowVideoPromptPreview] = useState(false);
+  const [videoMotionTab, setVideoMotionTab] = useState<'camera' | 'subject' | 'background' | 'objects' | 'templates'>('camera');
   const [mode, setMode] = useState<'image' | 'video'>('video');
   const [imageTarget, setImageTarget] = useState<'start' | 'end' | null>(null); // null = normal image, 'start'/'end' = transition workflow
   const [includeCameraSettings, setIncludeCameraSettings] = useState(true); // Toggle camera/lens info in prompt
@@ -386,6 +417,61 @@ export default function CinemaStudio() {
       customPrompt: [...extraParts, cinematographyPrompt, baseMotion].filter(Boolean).join(', ') || 'cinematic'
     });
   };
+
+  // Build VIDEO motion prompt from selections (motion only, no scene description!)
+  const buildVideoMotionPrompt = () => {
+    const parts: string[] = [];
+
+    // Camera movement
+    if (videoCameraMovement) {
+      const movement = CAMERA_MOVEMENTS[videoCameraMovement as keyof typeof CAMERA_MOVEMENTS] || videoCameraMovement;
+      parts.push(movement);
+    }
+
+    // Subject motion
+    if (videoSubjectMotion) {
+      const motion = SUBJECT_MOTIONS[videoSubjectMotion as keyof typeof SUBJECT_MOTIONS] || videoSubjectMotion;
+      parts.push(motion);
+    }
+
+    // Background motion
+    if (videoBackgroundMotion) {
+      const bgMotion = BACKGROUND_MOTIONS[videoBackgroundMotion as keyof typeof BACKGROUND_MOTIONS] || videoBackgroundMotion;
+      parts.push(bgMotion);
+    }
+
+    // Object motion
+    if (videoObjectMotion) {
+      parts.push(videoObjectMotion);
+    }
+
+    // If no selections but has prompt text, use that
+    if (parts.length === 0 && promptText) {
+      return promptText;
+    }
+
+    // Auto-add endpoint if needed
+    const prompt = parts.join(', ');
+    const hasEndpoint = MOTION_ENDPOINTS.some(e => prompt.toLowerCase().includes(e.replace('then ', '').replace('comes to ', '')));
+    if (prompt && !hasEndpoint) {
+      return prompt + ', then settles';
+    }
+
+    return prompt;
+  };
+
+  // Validate video prompt and update warnings
+  useEffect(() => {
+    if (mode === 'video') {
+      const videoPrompt = buildVideoMotionPrompt() || promptText;
+      if (videoPrompt) {
+        const validation = validateVideoPrompt(videoPrompt);
+        setVideoPromptWarnings(validation.warnings);
+      } else {
+        setVideoPromptWarnings([]);
+      }
+    }
+  }, [mode, videoCameraMovement, videoSubjectMotion, videoBackgroundMotion, videoObjectMotion, promptText]);
 
   // Auto-detect best model based on current settings
   const autoSelectModel = (): VideoModel => {
@@ -606,6 +692,16 @@ export default function CinemaStudio() {
     setDirectorSuggestion(null);
   }, [directorIndex]);
 
+  // Validate prompt for Nano Banana best practices (real-time warnings)
+  useEffect(() => {
+    if (promptText.length > 10) {
+      const validation = validatePrompt(promptText);
+      setPromptWarnings(validation.warnings);
+    } else {
+      setPromptWarnings([]);
+    }
+  }, [promptText]);
+
   // Extract last frame from video
   const extractLastFrame = async (videoUrl: string): Promise<string | null> => {
     try {
@@ -625,6 +721,88 @@ export default function CinemaStudio() {
       return null;
     } finally {
       setIsExtractingFrame(false);
+    }
+  };
+
+  // Call Vision Agent to generate smart edit prompt
+  const callVisionAgent = async (
+    referenceImageUrl: string,
+    previousPrompt: string,
+    director: typeof DIRECTOR_PRESETS[0] | null,
+    storyBeat: string,
+    shotNumber: number,
+    shotHistory: Array<{ prompt: string; startFrame?: string }> = []
+  ): Promise<string | null> => {
+    console.log('🎬 Calling Vision Agent...', {
+      hasDirector: !!director,
+      directorName: director?.name || 'NONE',
+      storyBeat,
+      shotNumber,
+      historyLength: shotHistory.length
+    });
+    try {
+      const response = await fetch('http://localhost:5678/webhook/vision-edit-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference_image_url: referenceImageUrl,
+          previous_prompt: previousPrompt,
+          // Send full shot history for story context
+          shot_history: shotHistory.map((shot, idx) => ({
+            shot_number: idx + 1,
+            prompt: shot.prompt,
+            image_url: shot.startFrame
+          })),
+          // Send ALL director data so AI has full context
+          director: director ? {
+            // Basic info
+            name: director.name,
+            director: director.director,
+            description: director.description,
+            prompt: director.prompt,
+            // Rules and behaviors
+            rules: director.rules,
+            sceneResponses: director.sceneResponses,
+            avoidPrompts: director.avoidPrompts,
+            // Shot library (signature shots)
+            shotLibrary: director.shotLibrary,
+            // Visual recommendations
+            colorPalette: director.colorPalette,
+            recommendedCamera: director.recommendedCamera,
+            recommendedLens: director.recommendedLens,
+            recommendedMovement: director.recommendedMovement,
+            recommendedLighting: director.recommendedLighting,
+            recommendedFraming: director.recommendedFraming,
+            recommendedStyle: director.recommendedStyle,
+            recommendedAtmosphere: director.recommendedAtmosphere,
+            recommendedSetDesign: director.recommendedSetDesign,
+            recommendedColorPalette: director.recommendedColorPalette,
+            recommendedCharacterStyle: director.recommendedCharacterStyle
+          } : null,
+          story_beat: storyBeat,
+          shot_number: shotNumber
+        })
+      });
+
+      if (!response.ok) {
+        console.warn('❌ Vision agent returned non-OK status:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      console.log('📥 Vision Agent Response:', data);
+      if (data.success && data.edit_prompt) {
+        console.log('✅ VISION AGENT SUCCESS!');
+        console.log('🔍 Detected in image:', data.detected_in_image);
+        console.log('📝 Changes from original:', data.changes_from_original);
+        console.log('🎬 Director reasoning:', data.director_reasoning);
+        return `🤖 ${data.edit_prompt}`; // Prefix to show it came from Vision Agent
+      }
+      console.warn('⚠️ Vision agent response missing data:', data);
+      return null;
+    } catch (err) {
+      console.error('❌ Vision agent FAILED:', err);
+      return null;
     }
   };
 
@@ -655,18 +833,49 @@ export default function CinemaStudio() {
     setChainPrompt(false);
     setMode('image'); // Switch to image mode to generate next image with reference
 
-    // Generate director suggestion if a director is selected
-    if (directorIndex !== null) {
-      const director = DIRECTOR_PRESETS[directorIndex];
-      const suggestion = generateDirectorSuggestion(
-        director,
-        currentPromptText,
-        shots.length + 1
-      );
-      setDirectorSuggestion(suggestion);
-    } else {
-      setDirectorSuggestion(null);
+    // Get director for edit prompt generation
+    const director = directorIndex !== null ? DIRECTOR_PRESETS[directorIndex] : null;
+    const shotNum = shots.length + 1;
+
+    // Detect story beat from previous prompt
+    const promptLower = currentPromptText.toLowerCase();
+    let storyBeat = 'journey';
+    const beatKeywords: Record<string, string[]> = {
+      danger: ['danger', 'threat', 'enemy', 'attack', 'chase', 'run'],
+      emotion: ['cry', 'sad', 'happy', 'love', 'fear', 'angry'],
+      confrontation: ['face', 'confront', 'argue', 'fight', 'stand'],
+      calm: ['rest', 'peace', 'quiet', 'sit', 'think', 'look']
+    };
+    for (const [beat, keywords] of Object.entries(beatKeywords)) {
+      if (keywords.some(k => promptLower.includes(k))) {
+        storyBeat = beat;
+        break;
+      }
     }
+
+    // Try Vision Agent first (GPT-4 Vision analyzes image)
+    // Falls back to local generateEditPrompt if vision agent is unavailable
+    let suggestion: string | null = null;
+
+    if (previousGeneratedImage) {
+      // Pass full shot history so AI knows the complete story progression
+      suggestion = await callVisionAgent(
+        previousGeneratedImage,
+        currentPromptText,
+        director,
+        storyBeat,
+        shotNum,
+        shots // All previous shots for story context
+      );
+    }
+
+    // Fallback to local function if vision agent failed
+    if (!suggestion) {
+      console.log('⚠️ Using LOCAL fallback (generateEditPrompt) - Vision Agent did not respond');
+      suggestion = `📋 ${generateEditPrompt(director, currentPromptText, shotNum)}`; // Prefix to show fallback
+    }
+
+    setDirectorSuggestion(suggestion);
   };
 
   // Play a shot from timeline
@@ -1566,6 +1775,239 @@ export default function CinemaStudio() {
         </div>
       )}
 
+      {/* VIDEO MOTION PANEL - For video mode prompts */}
+      {showVideoMotion && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowVideoMotion(false)}>
+          <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800/50 p-6 shadow-2xl max-w-5xl w-full mx-4 max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <span className="px-4 py-1.5 bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg text-xs font-medium text-white">Video Motion Builder</span>
+                <span className="text-[10px] text-gray-500">Motion only - image has all visual info!</span>
+              </div>
+              <button onClick={() => setShowVideoMotion(false)} className="w-9 h-9 rounded-lg bg-[#2a2a2a] hover:bg-gray-700 flex items-center justify-center text-gray-400 transition-colors">
+                {Icons.close}
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 mb-4 border-b border-gray-800 pb-3">
+              {(['camera', 'subject', 'background', 'objects', 'templates'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setVideoMotionTab(tab)}
+                  className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                    videoMotionTab === tab
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="overflow-y-auto max-h-[50vh] pr-2">
+              {/* Camera Movements */}
+              {videoMotionTab === 'camera' && (
+                <div className="grid grid-cols-4 gap-2">
+                  {Object.entries(CAMERA_MOVEMENTS).map(([key, value]) => (
+                    <button
+                      key={key}
+                      onClick={() => setVideoCameraMovement(videoCameraMovement === key ? null : key)}
+                      className={`rounded-lg p-3 text-left transition-all ${
+                        videoCameraMovement === key
+                          ? 'bg-purple-600 text-white ring-2 ring-purple-400'
+                          : 'bg-[#2a2a2a] text-gray-300 hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className="text-xs font-medium">{key.replace(/_/g, ' ')}</div>
+                      <div className={`text-[9px] mt-1 ${videoCameraMovement === key ? 'text-purple-200' : 'text-gray-500'}`}>
+                        {value.substring(0, 50)}...
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Subject Motions */}
+              {videoMotionTab === 'subject' && (
+                <div className="grid grid-cols-4 gap-2">
+                  {Object.entries(SUBJECT_MOTIONS).map(([key, value]) => (
+                    <button
+                      key={key}
+                      onClick={() => setVideoSubjectMotion(videoSubjectMotion === key ? null : key)}
+                      className={`rounded-lg p-3 text-left transition-all ${
+                        videoSubjectMotion === key
+                          ? 'bg-blue-600 text-white ring-2 ring-blue-400'
+                          : 'bg-[#2a2a2a] text-gray-300 hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className="text-xs font-medium">{key.replace(/_/g, ' ')}</div>
+                      <div className={`text-[9px] mt-1 ${videoSubjectMotion === key ? 'text-blue-200' : 'text-gray-500'}`}>
+                        {value.substring(0, 50)}...
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Background Motions */}
+              {videoMotionTab === 'background' && (
+                <div className="grid grid-cols-4 gap-2">
+                  {Object.entries(BACKGROUND_MOTIONS).map(([key, value]) => (
+                    <button
+                      key={key}
+                      onClick={() => setVideoBackgroundMotion(videoBackgroundMotion === key ? null : key)}
+                      className={`rounded-lg p-3 text-left transition-all ${
+                        videoBackgroundMotion === key
+                          ? 'bg-green-600 text-white ring-2 ring-green-400'
+                          : 'bg-[#2a2a2a] text-gray-300 hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className="text-xs font-medium">{key.replace(/_/g, ' ')}</div>
+                      <div className={`text-[9px] mt-1 ${videoBackgroundMotion === key ? 'text-green-200' : 'text-gray-500'}`}>
+                        {value}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Object Motions */}
+              {videoMotionTab === 'objects' && (
+                <div className="space-y-4">
+                  {/* Natural Elements */}
+                  <div>
+                    <div className="text-[10px] text-gray-500 uppercase mb-2 font-medium">Natural Elements</div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {Object.entries(NATURAL_ELEMENTS).map(([category, motions]) => (
+                        Object.entries(motions).map(([key, value]) => (
+                          <button
+                            key={`${category}-${key}`}
+                            onClick={() => setVideoObjectMotion(videoObjectMotion === value ? null : value)}
+                            className={`rounded-lg p-2 text-left transition-all ${
+                              videoObjectMotion === value
+                                ? 'bg-orange-600 text-white ring-2 ring-orange-400'
+                                : 'bg-[#2a2a2a] text-gray-300 hover:bg-gray-700'
+                            }`}
+                          >
+                            <div className="text-[10px] font-medium">{category}: {key}</div>
+                          </button>
+                        ))
+                      ))}
+                    </div>
+                  </div>
+                  {/* Weather */}
+                  <div>
+                    <div className="text-[10px] text-gray-500 uppercase mb-2 font-medium">Weather</div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {Object.entries(WEATHER).map(([category, motions]) => (
+                        Object.entries(motions).map(([key, value]) => (
+                          <button
+                            key={`weather-${category}-${key}`}
+                            onClick={() => setVideoObjectMotion(videoObjectMotion === value ? null : value)}
+                            className={`rounded-lg p-2 text-left transition-all ${
+                              videoObjectMotion === value
+                                ? 'bg-cyan-600 text-white ring-2 ring-cyan-400'
+                                : 'bg-[#2a2a2a] text-gray-300 hover:bg-gray-700'
+                            }`}
+                          >
+                            <div className="text-[10px] font-medium">{category}: {key}</div>
+                          </button>
+                        ))
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Templates */}
+              {videoMotionTab === 'templates' && (
+                <div className="space-y-4">
+                  <div>
+                    <div className="text-[10px] text-gray-500 uppercase mb-2 font-medium">Quick Templates (click to use)</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {Object.entries(VIDEO_TEMPLATES.full).map(([key, value]) => (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            setPromptText(value);
+                            setShowVideoMotion(false);
+                          }}
+                          className="rounded-lg p-4 bg-[#2a2a2a] text-gray-300 hover:bg-purple-900/30 hover:border-purple-500/50 border border-gray-700 text-left transition-all"
+                        >
+                          <div className="text-xs font-medium text-purple-400 mb-1">{key}</div>
+                          <div className="text-[10px] text-gray-400">{value}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-500 uppercase mb-2 font-medium">Simple Presets</div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {Object.entries(VIDEO_TEMPLATES.simple).map(([key, value]) => (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            setPromptText(value);
+                            setShowVideoMotion(false);
+                          }}
+                          className="rounded-lg p-3 bg-[#2a2a2a] text-gray-300 hover:bg-gray-700 text-left transition-all"
+                        >
+                          <div className="text-[10px] font-medium">{key}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Preview */}
+            <div className="mt-4 pt-4 border-t border-gray-800">
+              <div className="text-[9px] text-gray-500 uppercase mb-2">Video Motion Prompt Preview:</div>
+              <div className="px-3 py-2 bg-[#0a0a0a] rounded-lg text-xs text-gray-300 min-h-[40px]">
+                {buildVideoMotionPrompt() || <span className="text-gray-600 italic">Select motions above...</span>}
+              </div>
+              {videoPromptWarnings.length > 0 && (
+                <div className="mt-2 px-3 py-2 bg-orange-950/50 border border-orange-700/50 rounded-lg">
+                  {videoPromptWarnings.map((warning, idx) => (
+                    <div key={idx} className="text-[10px] text-orange-300">⚠ {warning}</div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => {
+                    setVideoCameraMovement(null);
+                    setVideoSubjectMotion(null);
+                    setVideoBackgroundMotion(null);
+                    setVideoObjectMotion(null);
+                  }}
+                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs text-gray-400 transition-colors"
+                >
+                  Clear All
+                </button>
+                <button
+                  onClick={() => {
+                    const prompt = buildVideoMotionPrompt();
+                    if (prompt) {
+                      setPromptText(prompt);
+                      setMotionPrompt(prompt);
+                    }
+                    setShowVideoMotion(false);
+                  }}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-xs text-white font-medium transition-colors"
+                >
+                  Apply to Prompt
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Toolbar - Clean Higgsfield Style */}
       <div className="border-t border-gray-800/50 bg-[#1a1a1a] px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center gap-4">
@@ -1725,6 +2167,31 @@ export default function CinemaStudio() {
                 {showPromptPreview ? 'HIDE' : 'PREVIEW'}
               </button>
             </div>
+            {/* Nano Banana Prompting Warnings (Image mode) */}
+            {mode === 'image' && promptWarnings.length > 0 && (
+              <div className="px-3 py-2 bg-orange-950/50 border border-orange-700/50 rounded-lg">
+                <div className="text-[9px] text-orange-400 uppercase mb-1 font-medium">Image Prompt Tips:</div>
+                {promptWarnings.map((warning, idx) => (
+                  <div key={idx} className="text-[10px] text-orange-300">• {warning}</div>
+                ))}
+              </div>
+            )}
+            {/* Video Prompt Warnings (Video mode) */}
+            {mode === 'video' && videoPromptWarnings.length > 0 && (
+              <div className="px-3 py-2 bg-purple-950/50 border border-purple-700/50 rounded-lg">
+                <div className="text-[9px] text-purple-400 uppercase mb-1 font-medium">Video Prompt Tips:</div>
+                {videoPromptWarnings.map((warning, idx) => (
+                  <div key={idx} className="text-[10px] text-purple-300">• {warning}</div>
+                ))}
+              </div>
+            )}
+            {/* Video Motion Preview (Video mode) */}
+            {mode === 'video' && (videoCameraMovement || videoSubjectMotion || videoBackgroundMotion || videoObjectMotion) && (
+              <div className="px-3 py-2 bg-purple-950/30 border border-purple-800/50 rounded-lg">
+                <div className="text-[9px] text-purple-400 uppercase mb-1 font-medium">Video Motion:</div>
+                <div className="text-[10px] text-purple-200">{buildVideoMotionPrompt()}</div>
+              </div>
+            )}
             {/* Full Prompt Preview */}
             {showPromptPreview && (
               <div className="px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded-lg">
@@ -1751,6 +2218,24 @@ export default function CinemaStudio() {
                 {Icons.movement}
                 <span>Motion</span>
               </button>
+
+              {/* Video Motion Builder - Only in video mode */}
+              {mode === 'video' && (
+                <button
+                  onClick={() => setShowVideoMotion(true)}
+                  className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                    videoCameraMovement || videoSubjectMotion || videoBackgroundMotion || videoObjectMotion
+                      ? 'bg-purple-700 text-white'
+                      : 'bg-gradient-to-r from-purple-900/50 to-blue-900/50 text-purple-300 hover:from-purple-800/50 hover:to-blue-800/50 border border-purple-700/50'
+                  }`}
+                >
+                  {Icons.video}
+                  <span>Video Motion</span>
+                  {(videoCameraMovement || videoSubjectMotion || videoBackgroundMotion || videoObjectMotion) && (
+                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
+                  )}
+                </button>
+              )}
 
               <button
                 onClick={() => { setShowDirectors(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowEmotions(false); setShowShotSetups(false); }}
