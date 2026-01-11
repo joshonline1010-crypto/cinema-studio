@@ -7,26 +7,94 @@ import * as os from 'os';
 
 const execAsync = promisify(exec);
 
-// Catbox upload for compressed images
-async function uploadToCatbox(filePath: string): Promise<string> {
+// Catbox upload for compressed images with retry
+async function uploadToCatbox(filePath: string, retries = 3): Promise<string> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const formData = new FormData();
+      formData.append('reqtype', 'fileupload');
+
+      const fileBuffer = fs.readFileSync(filePath);
+      const blob = new Blob([fileBuffer], { type: 'image/jpeg' });
+      formData.append('fileToUpload', blob, path.basename(filePath));
+
+      const response = await fetch('https://catbox.moe/user/api.php', {
+        method: 'POST',
+        body: formData
+      });
+
+      const url = await response.text();
+
+      // Check for valid URL
+      if (url && url.startsWith('https://')) {
+        return url.trim();
+      }
+
+      // Log the actual response for debugging
+      console.log(`Catbox attempt ${attempt} response:`, url);
+
+      if (attempt < retries) {
+        console.log(`Retrying catbox upload... (${attempt}/${retries})`);
+        await new Promise(r => setTimeout(r, 1000 * attempt)); // Wait longer each retry
+      }
+    } catch (err) {
+      console.error(`Catbox attempt ${attempt} error:`, err);
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
+    }
+  }
+
+  throw new Error('Catbox upload failed after ' + retries + ' attempts');
+}
+
+// Litterbox upload (temporary, 1 hour expiry) - MORE RELIABLE than Catbox
+async function uploadToLitterbox(filePath: string): Promise<string> {
   const formData = new FormData();
   formData.append('reqtype', 'fileupload');
+  formData.append('time', '1h');
 
   const fileBuffer = fs.readFileSync(filePath);
   const blob = new Blob([fileBuffer], { type: 'image/jpeg' });
   formData.append('fileToUpload', blob, path.basename(filePath));
 
-  const response = await fetch('https://catbox.moe/user/api.php', {
+  const response = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
     method: 'POST',
     body: formData
   });
 
   const url = await response.text();
-  if (!url.startsWith('https://')) {
-    throw new Error('Catbox upload failed: ' + url);
+  console.log('Litterbox response:', url);
+
+  if (!url || !url.startsWith('https://')) {
+    throw new Error('Litterbox upload failed: ' + url);
   }
 
-  return url;
+  return url.trim();
+}
+
+// Smart upload - tries Litterbox first (more reliable), then Catbox
+async function uploadCompressedImage(filePath: string): Promise<string> {
+  // Try Litterbox first (temporary but more reliable)
+  try {
+    console.log('Trying Litterbox upload...');
+    const url = await uploadToLitterbox(filePath);
+    console.log('Litterbox upload success:', url);
+    return url;
+  } catch (err) {
+    console.log('Litterbox failed, trying Catbox:', err);
+  }
+
+  // Fallback to Catbox
+  try {
+    console.log('Trying Catbox upload...');
+    const url = await uploadToCatbox(filePath, 2);
+    console.log('Catbox upload success:', url);
+    return url;
+  } catch (err) {
+    console.log('Catbox also failed:', err);
+    throw new Error('All upload methods failed');
+  }
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -76,8 +144,8 @@ export const POST: APIRoute = async ({ request }) => {
         const outputSize = fs.statSync(expectedOutput).size;
         console.log(`Output size: ${(outputSize / 1024).toFixed(0)} KB`);
 
-        // Upload to catbox
-        const catboxUrl = await uploadToCatbox(expectedOutput);
+        // Smart upload (Litterbox first, then Catbox)
+        const uploadUrl = await uploadCompressedImage(expectedOutput);
 
         // Cleanup
         fs.unlinkSync(inputPath);
@@ -85,7 +153,7 @@ export const POST: APIRoute = async ({ request }) => {
 
         return new Response(JSON.stringify({
           success: true,
-          image_url: catboxUrl,
+          image_url: uploadUrl,
           original_size: inputSize,
           compressed_size: outputSize
         }), {
@@ -113,8 +181,8 @@ export const POST: APIRoute = async ({ request }) => {
       await execAsync(`"${magickPath}" "${inputPath}" -resize "3840x2160>" -quality 70 "${outputPath}"`);
     }
 
-    // Upload to catbox
-    const catboxUrl = await uploadToCatbox(outputPath);
+    // Smart upload (Litterbox first, then Catbox)
+    const catboxUrl = await uploadCompressedImage(outputPath);
 
     // Cleanup
     fs.unlinkSync(inputPath);

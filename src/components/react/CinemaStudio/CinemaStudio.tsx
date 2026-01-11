@@ -328,6 +328,10 @@ export default function CinemaStudio() {
   const [aiSessionId] = useState(() => `cinema-${Date.now()}`); // Unique session ID
   const aiChatRef = useRef<HTMLDivElement>(null); // For auto-scroll
   const [aiMode, setAiMode] = useState<'quick' | 'chat'>('quick'); // Toggle between quick prompt and chat mode
+  const [aiCopiedIndex, setAiCopiedIndex] = useState<number | null>(null); // Track which message was copied
+  const [aiRefImages, setAiRefImages] = useState<Array<{ url: string; description: string | null }>>([]);  // Up to 7 ref images
+  const [aiRefLoading, setAiRefLoading] = useState<number | null>(null); // Which image is being analyzed
+  const aiRefInputRef = useRef<HTMLInputElement>(null);
 
   // Video Prompt Builder State
   const [videoCameraMovement, setVideoCameraMovement] = useState<string | null>(null);
@@ -666,11 +670,17 @@ export default function CinemaStudio() {
     }, 100);
 
     try {
+      // Always include current session context (prompt, image, settings, ref images)
+      const sessionContext = buildChatContext();
+      const messageWithContext = sessionContext
+        ? `${userMessage}\n${sessionContext}`
+        : userMessage;
+
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: userMessage,
+          message: messageWithContext,
           sessionId: aiSessionId,
           model: 'qwen3:8b'
         })
@@ -702,24 +712,158 @@ export default function CinemaStudio() {
     }
   };
 
-  // Use prompt from chat (copy to prompt field)
-  const usePromptFromChat = (content: string) => {
-    if (mode === 'image') {
-      setPromptText(content);
-    } else {
+  // Use prompt from chat (copy to prompt field) - keeps chat open so you can see it
+  const usePromptFromChat = (content: string, index: number) => {
+    // Always set promptText so it shows in the textarea
+    setPromptText(content);
+    // Also set motion prompt for video mode
+    if (mode === 'video') {
       setMotionPrompt(content);
     }
-    setShowAIPrompt(false);
+    // Show "Copied!" feedback
+    setAiCopiedIndex(index);
+    setTimeout(() => setAiCopiedIndex(null), 2000);
   };
 
   // Clear chat history
   const clearAIChatHistory = async () => {
     setAiChatHistory([]);
+    setAiRefImages([]); // Also clear ref images
     try {
       await fetch(`/api/ai/chat?sessionId=${aiSessionId}`, { method: 'DELETE' });
     } catch (err) {
       console.error('Failed to clear chat history:', err);
     }
+  };
+
+  // Add reference image to AI chat
+  const handleAiRefImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Check limit
+    if (aiRefImages.length >= 7) {
+      setAiError('Maximum 7 reference images allowed');
+      return;
+    }
+
+    const file = files[0];
+    const reader = new FileReader();
+
+    reader.onload = async (event) => {
+      const dataUrl = event.target?.result as string;
+
+      // Add image with null description (will be analyzed)
+      const newIndex = aiRefImages.length;
+      setAiRefImages(prev => [...prev, { url: dataUrl, description: null }]);
+      setAiRefLoading(newIndex);
+
+      try {
+        // Call Vision Agent to get description
+        const response = await fetch('/api/cinema/vision', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image_url: dataUrl,
+            prompt: 'Describe this image in detail for a cinematographer. Include: subject, composition, lighting, colors, mood, camera angle, and any notable visual elements.'
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Update the image with its description
+          setAiRefImages(prev => prev.map((img, i) =>
+            i === newIndex ? { ...img, description: data.description || 'Image uploaded' } : img
+          ));
+        } else {
+          // Just mark as uploaded without description
+          setAiRefImages(prev => prev.map((img, i) =>
+            i === newIndex ? { ...img, description: 'Reference image ' + (newIndex + 1) } : img
+          ));
+        }
+      } catch (err) {
+        console.error('Vision analysis failed:', err);
+        setAiRefImages(prev => prev.map((img, i) =>
+          i === newIndex ? { ...img, description: 'Reference image ' + (newIndex + 1) } : img
+        ));
+      } finally {
+        setAiRefLoading(null);
+      }
+    };
+
+    reader.readAsDataURL(file);
+    e.target.value = ''; // Reset input
+  };
+
+  // Remove reference image
+  const removeAiRefImage = (index: number) => {
+    setAiRefImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Build context with current shot info, shot history, and reference images for chat
+  const buildChatContext = (): string => {
+    let context = '';
+
+    // Always include current shot info if available
+    if (currentShot.startFrame || promptText || currentShot.motionPrompt) {
+      context += '\n\n=== CURRENT SHOT ===\n';
+
+      if (currentShot.startFrame) {
+        context += `HAS IMAGE: Yes\n`;
+      }
+
+      if (promptText) {
+        context += `IMAGE PROMPT: "${promptText}"\n`;
+      }
+
+      if (currentShot.motionPrompt) {
+        context += `MOTION PROMPT: "${currentShot.motionPrompt}"\n`;
+      }
+
+      if (currentShot.model) {
+        context += `MODEL: ${currentShot.model}\n`;
+      }
+
+      context += `MODE: ${mode === 'image' ? 'Image' : 'Video'}\n`;
+      context += `ASPECT: ${aspectRatio} | RES: ${resolution}\n`;
+
+      if (characterDNA) {
+        context += `CHARACTER DNA: ${characterDNA}\n`;
+      }
+    }
+
+    // Include shot history for sequence planning
+    if (shots.length > 0) {
+      context += '\n=== SHOT HISTORY (for sequence planning) ===\n';
+      shots.slice(-5).forEach((shot, i) => {
+        context += `Shot ${i + 1}: ${shot.motionPrompt || 'No prompt'}\n`;
+      });
+      context += `Total shots: ${shots.length}\n`;
+      context += '\nYou can plan the NEXT shot in the sequence. Use consistency phrases!\n';
+    }
+
+    // Include sequence plan if active
+    if (sequencePlan.length > 0) {
+      context += '\n=== PLANNED SEQUENCE ===\n';
+      sequencePlan.forEach((planned, i) => {
+        const status = i < currentSequenceIndex ? 'DONE' : i === currentSequenceIndex ? 'CURRENT' : 'PENDING';
+        context += `[${status}] Shot ${i + 1}: ${planned.description || planned.angle}\n`;
+      });
+    }
+
+    // Add reference images if any
+    if (aiRefImages.length > 0) {
+      context += '\n=== REFERENCE IMAGES ===\n';
+      aiRefImages.forEach((img, i) => {
+        context += `[Ref ${i + 1}]: ${img.description || 'No description'}\n`;
+      });
+    }
+
+    if (context) {
+      context += '\n---\nYou can: modify prompts, plan sequences, suggest next shots, explain cinematography.\n';
+    }
+
+    return context;
   };
 
   // ============================================
@@ -2315,10 +2459,14 @@ export default function CinemaStudio() {
                           <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
                           {msg.role === 'assistant' && (
                             <button
-                              onClick={() => usePromptFromChat(msg.content)}
-                              className="mt-2 px-2 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded text-xs transition-colors"
+                              onClick={() => usePromptFromChat(msg.content, idx)}
+                              className={`mt-2 px-2 py-1 rounded text-xs transition-colors ${
+                                aiCopiedIndex === idx
+                                  ? 'bg-green-500/30 text-green-400'
+                                  : 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400'
+                              }`}
                             >
-                              Use as Prompt
+                              {aiCopiedIndex === idx ? 'Copied to Prompt!' : 'Use as Prompt'}
                             </button>
                           )}
                         </div>
@@ -2339,9 +2487,72 @@ export default function CinemaStudio() {
                   )}
                 </div>
 
+                {/* Reference Images */}
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-500">Reference Images ({aiRefImages.length}/7)</span>
+                    {aiRefImages.length < 7 && (
+                      <button
+                        onClick={() => aiRefInputRef.current?.click()}
+                        className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors flex items-center gap-1"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3">
+                          <path d="M12 5v14M5 12h14" />
+                        </svg>
+                        Add Image
+                      </button>
+                    )}
+                    <input
+                      ref={aiRefInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAiRefImageUpload}
+                      className="hidden"
+                    />
+                  </div>
+                  {aiRefImages.length > 0 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {aiRefImages.map((img, idx) => (
+                        <div key={idx} className="relative group">
+                          <img
+                            src={img.url}
+                            alt={`Ref ${idx + 1}`}
+                            className={`w-16 h-16 object-cover rounded-lg border ${
+                              aiRefLoading === idx ? 'border-yellow-500 animate-pulse' : 'border-gray-700'
+                            }`}
+                          />
+                          <div className="absolute -top-1 -left-1 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold">
+                            {idx + 1}
+                          </div>
+                          <button
+                            onClick={() => removeAiRefImage(idx)}
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3">
+                              <path d="M18 6L6 18M6 6l12 12" />
+                            </svg>
+                          </button>
+                          {aiRefLoading === idx && (
+                            <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                              <svg className="w-4 h-4 animate-spin text-yellow-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                              </svg>
+                            </div>
+                          )}
+                          {img.description && !aiRefLoading && (
+                            <div className="absolute inset-0 bg-black/70 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity p-1 overflow-hidden">
+                              <div className="text-[8px] text-gray-300 line-clamp-4">{img.description}</div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Error */}
                 {aiError && (
-                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">
+                  <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">
                     {aiError}
                   </div>
                 )}
@@ -2377,9 +2588,18 @@ export default function CinemaStudio() {
                   </button>
                 </div>
 
-                {/* Info */}
+                {/* Info - show active context */}
                 <div className="mt-3 text-[10px] text-gray-500 text-center">
-                  Chat mode: Qwen3 with memory saved to <code className="text-purple-400">ai-memory/</code> folder
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
+                    <span>Qwen3 sees:</span>
+                    {promptText && <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded">Prompt</span>}
+                    {currentShot.startFrame && <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded">Image</span>}
+                    {currentShot.motionPrompt && <span className="px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded">Motion</span>}
+                    {shots.length > 0 && <span className="px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 rounded">{shots.length} Shots</span>}
+                    {sequencePlan.length > 0 && <span className="px-1.5 py-0.5 bg-pink-500/20 text-pink-400 rounded">Sequence</span>}
+                    {aiRefImages.length > 0 && <span className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">{aiRefImages.length} Refs</span>}
+                    {!promptText && !currentShot.startFrame && shots.length === 0 && aiRefImages.length === 0 && <span className="text-gray-600">No context yet</span>}
+                  </div>
                 </div>
               </>
             )}
