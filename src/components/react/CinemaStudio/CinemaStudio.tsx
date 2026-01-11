@@ -883,13 +883,18 @@ export default function CinemaStudio() {
 
     if (previousGeneratedImage) {
       // Pass full shot history so AI knows the complete story progression
+      // Map shots to the format expected by callVisionAgent
+      const shotHistory = shots.map(s => ({
+        prompt: s.motionPrompt,
+        startFrame: s.startFrame || undefined
+      }));
       suggestion = await callVisionAgent(
         previousGeneratedImage,
         currentPromptText,
         director,
         storyBeat,
         shotNum,
-        shots // All previous shots for story context
+        shotHistory
       );
     }
 
@@ -950,7 +955,7 @@ export default function CinemaStudio() {
             {playingShot && shots.find(s => s.id === playingShot)?.videoUrl ? (
               <video
                 key={playingShot}
-                src={shots.find(s => s.id === playingShot)?.videoUrl}
+                src={shots.find(s => s.id === playingShot)?.videoUrl || undefined}
                 controls
                 autoPlay
                 loop
