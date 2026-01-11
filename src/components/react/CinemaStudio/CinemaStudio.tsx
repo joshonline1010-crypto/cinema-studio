@@ -344,6 +344,8 @@ export default function CinemaStudio() {
   const [continueStep, setContinueStep] = useState<1 | 2 | 3 | 4>(1); // Current workflow step
   const [continueLoading, setContinueLoading] = useState(false); // Loading state
   const [continueError, setContinueError] = useState<string | null>(null); // Error message
+  const [continueLocalFileName, setContinueLocalFileName] = useState<string | null>(null); // Local file name for display
+  const continueVideoInputRef = useRef<HTMLInputElement>(null); // File input ref
   const [cameraAzimuth, setCameraAzimuth] = useState(0); // 3D camera azimuth (0-360)
   const [cameraElevation, setCameraElevation] = useState(0); // 3D camera elevation (-30 to 60)
   const [cameraDistance, setCameraDistance] = useState(1.0); // 3D camera distance (0.6-1.8)
@@ -1564,6 +1566,59 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
     setContinueStep(1);
     setContinueError(null);
     setContinueLoading(false);
+    setContinueLocalFileName(null);
+    if (continueVideoInputRef.current) {
+      continueVideoInputRef.current.value = '';
+    }
+  };
+
+  // Handle local video file upload
+  const handleContinueLocalVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('video/')) {
+      setContinueError('Please select a video file');
+      return;
+    }
+
+    // Check file size (max 200MB for Catbox)
+    if (file.size > 200 * 1024 * 1024) {
+      setContinueError('Video file too large (max 200MB)');
+      return;
+    }
+
+    setContinueLoading(true);
+    setContinueError(null);
+    setContinueLocalFileName(file.name);
+
+    try {
+      // Upload to Catbox
+      const formData = new FormData();
+      formData.append('reqtype', 'fileupload');
+      formData.append('fileToUpload', file);
+
+      const response = await fetch('https://catbox.moe/user/api.php', {
+        method: 'POST',
+        body: formData
+      });
+
+      const url = await response.text();
+
+      if (url && url.startsWith('https://')) {
+        setContinueVideoUrl(url.trim());
+        setContinueError(null);
+      } else {
+        setContinueError('Upload failed: ' + url);
+        setContinueLocalFileName(null);
+      }
+    } catch (err) {
+      setContinueError('Upload error: ' + (err instanceof Error ? err.message : 'Unknown'));
+      setContinueLocalFileName(null);
+    } finally {
+      setContinueLoading(false);
+    }
   };
 
   // Call Vision Agent to generate smart edit prompt
@@ -2851,20 +2906,73 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
             {/* Step 1: Video URL Input */}
             {continueStep === 1 && (
               <div className="space-y-4">
-                <div className="text-sm text-gray-300 mb-2">Step 1: Paste your video URL</div>
+                <div className="text-sm text-gray-300 mb-2">Step 1: Choose your video</div>
+
+                {/* Local File Upload */}
+                <div className="space-y-2">
+                  <div className="text-[10px] text-gray-500 uppercase">Upload from computer</div>
+                  <label className="block">
+                    <input
+                      ref={continueVideoInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={handleContinueLocalVideoUpload}
+                      className="hidden"
+                    />
+                    <div
+                      onClick={() => continueVideoInputRef.current?.click()}
+                      className={`w-full px-4 py-4 border-2 border-dashed rounded-lg cursor-pointer transition-all flex items-center justify-center gap-3 ${
+                        continueLocalFileName
+                          ? 'border-green-500/50 bg-green-500/10'
+                          : 'border-gray-600 hover:border-purple-500 hover:bg-purple-500/5'
+                      }`}
+                    >
+                      {continueLoading && !continueVideoUrl ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+                          <span className="text-sm text-gray-400">Uploading {continueLocalFileName}...</span>
+                        </>
+                      ) : continueLocalFileName ? (
+                        <>
+                          <span className="text-green-400">✓</span>
+                          <span className="text-sm text-gray-300">{continueLocalFileName}</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-gray-500">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                          </svg>
+                          <span className="text-sm text-gray-400">Click to select video file</span>
+                        </>
+                      )}
+                    </div>
+                  </label>
+                </div>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-gray-700" />
+                  <span className="text-xs text-gray-500">or paste URL</span>
+                  <div className="flex-1 h-px bg-gray-700" />
+                </div>
+
+                {/* URL Input */}
                 <input
                   type="text"
                   value={continueVideoUrl}
-                  onChange={e => setContinueVideoUrl(e.target.value)}
+                  onChange={e => { setContinueVideoUrl(e.target.value); setContinueLocalFileName(null); }}
                   placeholder="https://example.com/video.mp4"
                   className="w-full px-4 py-3 bg-[#0a0a0a] border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500"
                 />
+
                 <button
                   onClick={continueStep1ExtractFrame}
                   disabled={continueLoading || !continueVideoUrl}
                   className="w-full py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
                 >
-                  {continueLoading ? (
+                  {continueLoading && continueVideoUrl ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       Extracting last frame...
