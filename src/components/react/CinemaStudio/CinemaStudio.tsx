@@ -46,6 +46,9 @@ import Camera3DControl from './Camera3DControl';
 import BatchGenerator from './BatchGenerator';
 import { buildQwenPromptContinuous, type BatchAngle } from './promptVocabulary';
 
+// AI Prompt Assistant
+import type { AIPromptContext } from './aiPromptSystem';
+
 // Clean SVG Icons
 const Icons = {
   image: (
@@ -315,6 +318,13 @@ export default function CinemaStudio() {
   const [cameraElevation, setCameraElevation] = useState(0); // 3D camera elevation (-30 to 60)
   const [cameraDistance, setCameraDistance] = useState(1.0); // 3D camera distance (0.6-1.8)
 
+  // AI Prompt Assistant State
+  const [showAIPrompt, setShowAIPrompt] = useState(false); // AI Prompt panel
+  const [aiInput, setAiInput] = useState(''); // User's simple description
+  const [aiGenerating, setAiGenerating] = useState(false); // Loading state
+  const [aiError, setAiError] = useState<string | null>(null); // Error message
+  const [ollamaStatus, setOllamaStatus] = useState<'unknown' | 'ok' | 'error'>('unknown');
+
   // Video Prompt Builder State
   const [videoCameraMovement, setVideoCameraMovement] = useState<string | null>(null);
   const [videoSubjectMotion, setVideoSubjectMotion] = useState<string | null>(null);
@@ -555,6 +565,75 @@ export default function CinemaStudio() {
       console.error('Compression failed:', err);
       // DON'T silently fallback - that sends 20MB to Kling which fails!
       throw new Error('Image compression failed. Cannot send to Kling without compressing first.');
+    }
+  };
+
+  // ============================================
+  // AI PROMPT ASSISTANT FUNCTION
+  // ============================================
+  const handleAIGenerate = async () => {
+    if (!aiInput.trim()) {
+      setAiError('Please enter a description');
+      return;
+    }
+
+    setAiGenerating(true);
+    setAiError(null);
+
+    try {
+      const context: AIPromptContext = {
+        mode: mode,
+        model: currentShot.model,
+        aspectRatio: aspectRatio,
+        resolution: resolution,
+        characterDNA: characterDNA,
+        isSequenceContinuation: sequencePlan.length > 0,
+        currentPrompt: mode === 'image' ? promptText : currentShot.motionPrompt
+      };
+
+      const response = await fetch('/api/ai/prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userInput: aiInput,
+          context: context,
+          model: 'mistral'
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.details || 'AI generation failed');
+      }
+
+      // Put the generated prompt into the appropriate field
+      if (mode === 'image') {
+        setPromptText(data.prompt);
+      } else {
+        setMotionPrompt(data.prompt);
+      }
+
+      // Clear input and close panel
+      setAiInput('');
+      setShowAIPrompt(false);
+
+    } catch (err) {
+      console.error('AI prompt error:', err);
+      setAiError(err instanceof Error ? err.message : 'Failed to generate prompt');
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  // Check Ollama status when AI panel opens
+  const checkOllamaStatus = async () => {
+    try {
+      const response = await fetch('/api/ai/prompt', { method: 'GET' });
+      const data = await response.json();
+      setOllamaStatus(data.status === 'ok' ? 'ok' : 'error');
+    } catch {
+      setOllamaStatus('error');
     }
   };
 
@@ -1973,6 +2052,126 @@ export default function CinemaStudio() {
         </div>
       )}
 
+      {/* AI Prompt Assistant Panel */}
+      {showAIPrompt && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowAIPrompt(false)}>
+          <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800/50 p-6 shadow-2xl max-w-xl w-full mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <span className="px-4 py-1.5 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-lg text-xs font-medium text-yellow-300 flex items-center gap-1.5">
+                  {Icons.sparkle}
+                  AI Prompt Assistant
+                </span>
+                <span className="text-xs text-gray-500">Describe in simple terms</span>
+              </div>
+              <button onClick={() => setShowAIPrompt(false)} className="w-9 h-9 rounded-lg bg-[#2a2a2a] hover:bg-gray-700 flex items-center justify-center text-gray-400 transition-colors">
+                {Icons.close}
+              </button>
+            </div>
+
+            {/* Mode indicator */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className={`px-3 py-1 rounded-lg text-xs font-medium ${
+                mode === 'image'
+                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                  : 'bg-green-500/20 text-green-300 border border-green-500/30'
+              }`}>
+                {mode === 'image' ? 'Image Mode' : 'Video Mode'}
+              </span>
+              <span className="text-xs text-gray-500">
+                {mode === 'image' ? 'Will generate an image prompt' : 'Will generate a motion/video prompt'}
+              </span>
+            </div>
+
+            {/* Ollama Status */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className={`w-2 h-2 rounded-full ${
+                ollamaStatus === 'ok' ? 'bg-green-500' :
+                ollamaStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+              }`} />
+              <span className="text-xs text-gray-400">
+                {ollamaStatus === 'ok' ? 'Ollama connected (Mistral)' :
+                 ollamaStatus === 'error' ? 'Ollama not running - start with: ollama serve' :
+                 'Checking Ollama...'}
+              </span>
+            </div>
+
+            {/* Input */}
+            <div className="mb-4">
+              <textarea
+                value={aiInput}
+                onChange={(e) => setAiInput(e.target.value)}
+                placeholder={mode === 'image'
+                  ? "e.g., \"woman in cafe, lonely, Fincher style\" or \"epic battle, Nolan, IMAX\""
+                  : "e.g., \"slow push in, eyes widen\" or \"orbit around, hair blows in wind\""
+                }
+                className="w-full h-24 bg-[#2a2a2a] border border-gray-700 rounded-xl p-4 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
+                disabled={aiGenerating}
+              />
+            </div>
+
+            {/* Error */}
+            {aiError && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">
+                {aiError}
+              </div>
+            )}
+
+            {/* Examples */}
+            <div className="mb-4">
+              <div className="text-xs text-gray-500 mb-2">Examples (click to try):</div>
+              <div className="flex flex-wrap gap-2">
+                {mode === 'image' ? (
+                  <>
+                    <button onClick={() => setAiInput('woman in cafe, lonely, Fincher style')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">lonely cafe, Fincher</button>
+                    <button onClick={() => setAiInput('epic battle scene, Nolan, IMAX')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">epic battle, Nolan</button>
+                    <button onClick={() => setAiInput('romantic scene, Wong Kar-wai, neon rain')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">romantic, Wong Kar-wai</button>
+                    <button onClick={() => setAiInput('symmetrical hotel, Kubrick stare')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">hotel, Kubrick</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => setAiInput('slow push in, subject turns head')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">push in + head turn</button>
+                    <button onClick={() => setAiInput('orbit around, hair blows in wind')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">orbit + wind</button>
+                    <button onClick={() => setAiInput('static shot, rain falls, eyes blink')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">static + rain</button>
+                    <button onClick={() => setAiInput('dolly out reveal, smoke rises')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">dolly out reveal</button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Generate Button */}
+            <button
+              onClick={handleAIGenerate}
+              disabled={aiGenerating || !aiInput.trim() || ollamaStatus === 'error'}
+              className={`w-full py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all ${
+                aiGenerating || !aiInput.trim() || ollamaStatus === 'error'
+                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-yellow-500 to-orange-500 text-black hover:from-yellow-400 hover:to-orange-400'
+              }`}
+            >
+              {aiGenerating ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                  </svg>
+                  Generating with Mistral...
+                </>
+              ) : (
+                <>
+                  {Icons.sparkle}
+                  Generate {mode === 'image' ? 'Image' : 'Motion'} Prompt
+                </>
+              )}
+            </button>
+
+            {/* Info */}
+            <div className="mt-4 text-[10px] text-gray-500 text-center">
+              AI knows: 12 directors (Kubrick, Spielberg, Fincher, Nolan, etc.), lenses, camera movements, lighting, and more
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Emotions Panel */}
       {showEmotions && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowEmotions(false)}>
@@ -2721,6 +2920,20 @@ export default function CinemaStudio() {
                   <line x1="12" y1="22.08" x2="12" y2="12" />
                 </svg>
                 <span>Batch</span>
+              </button>
+
+              {/* AI Prompt Assistant Button */}
+              <button
+                onClick={() => { setShowAIPrompt(true); checkOllamaStatus(); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); setShowCharacterDNA(false); setShowSequencePlanner(false); setShow3DCamera(false); setShowBatchGenerator(false); }}
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                  showAIPrompt
+                    ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-black'
+                    : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
+                }`}
+                title="AI Prompt Assistant - describe what you want in simple terms"
+              >
+                {Icons.sparkle}
+                <span>AI</span>
               </button>
 
               <button
