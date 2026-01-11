@@ -1,0 +1,60 @@
+# AI Chat Memory - Session: cinema-1768128520997
+# Created: 2026-01-11T10:58:47.094Z
+
+[USER]: GIVE ME PROMBT FOR CMAERA CHANGING IN THIS START AND END SHOT
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+IMAGE PROMPT: "<sks> left profile view eye-level shot medium shot"
+MOTION PROMPT: "<sks> left profile view eye-level shot medium shot"
+MODEL: kling-o1
+MODE: Video
+ASPECT: 16:9 | RES: 2K
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: "Camera slowly dollies forward along the floorboards, tracking the subject's left profile as the lens compresses the space, shallow depth of field blurring the background, then settles on a close-up of the subject's eye reflecting the ambient light"
+---
+[USER]: the shot is girl with flame thrower this then side
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+IMAGE PROMPT: ""Camera slowly dollies forward along the floorboards, tracking the subject's left profile as the lens compresses the space, shallow depth of field blurring the background, then settles on a close-up of the subject's eye reflecting the ambient light""
+MOTION PROMPT: ""Camera slowly dollies forward along the floorboards, tracking the subject's left profile as the lens compresses the space, shallow depth of field blurring the background, then settles on a close-up of the subject's eye reflecting the ambient light""
+MODEL: kling-o1
+MODE: Video
+ASPECT: 16:9 | RES: 2K
+
+=== REFERENCE IMAGES ===
+[Ref 1]: Reference image 1
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: "Camera smoothly tracks laterally to the subject's right side, capturing the flamethrower's heat haze distorting the air, shallow depth of field blurring the background while maintaining focus on the girl's side profile and the weapon's glowing tip, then settles on a dynamic side view revealing her determined expression and the fiery trail behind her"
+---
+[USER]: MAKE IT MORE EPIC MORE SPEED FLAMES EPIC more movment smiling happy ECT zoom
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+IMAGE PROMPT: ""Camera smoothly tracks laterally to the subject's right side, capturing the flamethrower's heat haze distorting the air, shallow depth of field blurring the background while maintaining focus on the girl's side profile and the weapon's glowing tip, then settles on a dynamic side view revealing her determined expression and the fiery trail behind her""
+MOTION PROMPT: ""Camera smoothly tracks laterally to the subject's right side, capturing the flamethrower's heat haze distorting the air, shallow depth of field blurring the background while maintaining focus on the girl's side profile and the weapon's glowing tip, then settles on a dynamic side view revealing her determined expression and the fiery trail behind her""
+MODEL: kling-o1
+MODE: Video
+ASPECT: 16:9 | RES: 2K
+
+=== REFERENCE IMAGES ===
+[Ref 1]: Reference image 1
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: "Camera executes a high-speed lateral dolly along the floorboards, tracking the girl's right side as the flamethrower erupts in a fiery explosion, heat haze warping the air with glowing embers trailing behind. The shot transitions to a dynamic crane lift, revealing the girl’s triumphant smile as she channels the flames, slow-motion fire bursts illuminating her determined face. The camera then zooms in for a close-up of her glowing eyes reflecting the inferno, then pulls back to an epic wide shot capturing the full scale of the flames and her exhilarated expression, 65mm anamorphic lens flaring with heat distortion, then settles on a dramatic wide shot of the flaming battlefield."
+---

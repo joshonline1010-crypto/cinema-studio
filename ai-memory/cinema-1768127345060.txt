@@ -1,0 +1,45 @@
+# AI Chat Memory - Session: cinema-1768127345060
+# Created: 2026-01-11T10:30:32.088Z
+
+[USER]: MAKE end frame photo based off first shot something way diffrent like emotion lens MICO ZOOM AND SEEING LIKE THE UNVERSE IN HER EYES
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+MOTION PROMPT: "dolly in, <sks> back view eye-level shot wide shot"
+MODEL: kling-2.6
+MODE: Image
+ASPECT: 16:9 | RES: 2K
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: woman in close-up, eyes centered in frame, 135mm telephoto lens with shallow depth of field, background softly blurred into creamy bokeh, single practical light source casting dramatic shadows across her face, tears glistening in irises reflecting fractured light, symmetrical composition with faint geometric patterns in the background, desaturated color grade with teal undertones, Wong Kar-Wai style melancholic romance, 2.39:1 aspect ratio, micro zoom focus shift from wide to intimate, then settles
+---
+[USER]: now make video prombt for this as its start and end make sure theres flicking lights and her eyes you can see the stars moving
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+IMAGE PROMPT: "woman in close-up, eyes centered in frame, 135mm telephoto lens with shallow depth of field, background softly blurred into creamy bokeh, single practical light source casting dramatic shadows across her face, tears glistening in irises reflecting fractured light, symmetrical composition with faint geometric patterns in the background, desaturated color grade with teal undertones, Wong Kar-Wai style melancholic romance, 2.39:1 aspect ratio, micro zoom focus shift from wide to intimate, then settles"
+MOTION PROMPT: "dolly in, <sks> back view eye-level shot wide shot"
+MODEL: kling-o1
+MODE: Video
+ASPECT: 16:9 | RES: 2K
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: **Video Prompt:**  
+"Subject's gaze slowly lifts from the table to the window, eyes catching flickering light sources that pulse rhythmically, creating starbursts in her irises. As the camera dollys in from a wide back-view eye-level shot, the practical light source stutters with uneven intensity, casting shifting shadows across her face. The background blurs into creamy bokeh, revealing faint geometric patterns that pulse in sync with the light. During the micro zoom focus shift from wide to intimate, her tears glisten, refracting fractured light into constellations that appear to move independently—stars swirling like galaxies in her pupils. The camera holds on the close-up, then slowly zooms out to a wide shot, maintaining the flickering lights and star-like motion in her eyes, before settling."  
+
+---  
+**Key Elements:**  
+- **Motion:** Dolly in + micro zoom, then slow zoom out.  
+- **Lighting:** Flickering practical light source with uneven pulses.  
+- **Stars:** Refracted light in her eyes creates dynamic, moving constellations.  
+- **Consistency:** Same desaturated teal tones, Wong Kar-Wai melancholy, and 2.39:1 aspect ratio.  
+- **End Frame:** Wide shot with the same flickering lights and stars in her eyes, but now framed as a cosmic reflection.
+---

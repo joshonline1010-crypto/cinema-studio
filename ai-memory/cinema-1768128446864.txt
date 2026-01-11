@@ -1,0 +1,18 @@
+# AI Chat Memory - Session: cinema-1768128446864
+# Created: 2026-01-11T10:47:53.130Z
+
+[USER]: make video prombt for this start end shot imax BIG ANIMORIC LENS
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+MODEL: kling-o1
+MODE: Video
+ASPECT: 16:9 | RES: 2K
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: Camera slowly dollies forward through a narrow alley, anamorphic 2.39:1 lens flaring horizontally across the frame, horizontal light streaks from a distant streetlamp, subject's head slowly turns toward the camera, eyes reflecting the flares, then settles
+---

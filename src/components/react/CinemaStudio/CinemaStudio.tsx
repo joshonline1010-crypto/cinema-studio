@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useCinemaStore, detectBestModel, type VideoModel } from './cinemaStore';
+import { useCinemaStore, detectBestModel, explainModelSelection, type VideoModel } from './cinemaStore';
 import {
   CAMERA_PRESETS,
   LENS_PRESETS,
@@ -27,6 +27,7 @@ import {
   buildVideoPrompt,
   buildObjectMotion,
   selectVideoModel,
+  buildSeedanceDialoguePrompt,
   CAMERA_MOVEMENTS,
   SUBJECT_MOTIONS,
   BACKGROUND_MOTIONS,
@@ -364,7 +365,7 @@ export default function CinemaStudio() {
   const [videoObjectMotion, setVideoObjectMotion] = useState<string | null>(null);
   const [videoPromptWarnings, setVideoPromptWarnings] = useState<string[]>([]);
   const [showVideoPromptPreview, setShowVideoPromptPreview] = useState(false);
-  const [videoMotionTab, setVideoMotionTab] = useState<'camera' | 'subject' | 'background' | 'objects' | 'templates'>('camera');
+  const [videoMotionTab, setVideoMotionTab] = useState<'camera' | 'subject' | 'background' | 'objects' | 'templates' | 'dialogue'>('camera');
   const [mode, setMode] = useState<'image' | 'video'>('video');
   const [imageTarget, setImageTarget] = useState<'start' | 'end' | null>(null); // null = normal image, 'start'/'end' = transition workflow
   const [includeCameraSettings, setIncludeCameraSettings] = useState(true); // Toggle camera/lens info in prompt
@@ -3319,17 +3320,17 @@ export default function CinemaStudio() {
 
             {/* Tabs */}
             <div className="flex gap-2 mb-4 border-b border-gray-800 pb-3">
-              {(['camera', 'subject', 'background', 'objects', 'templates'] as const).map(tab => (
+              {(['camera', 'subject', 'background', 'objects', 'templates', 'dialogue'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setVideoMotionTab(tab)}
                   className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
                     videoMotionTab === tab
-                      ? 'bg-purple-600 text-white'
+                      ? tab === 'dialogue' ? 'bg-purple-600 text-white' : 'bg-purple-600 text-white'
                       : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
                   }`}
                 >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === 'dialogue' ? '🗣️ Dialogue' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
             </div>
@@ -3487,6 +3488,140 @@ export default function CinemaStudio() {
                         </button>
                       ))}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Dialogue / Seedance Templates */}
+              {videoMotionTab === 'dialogue' && (
+                <div className="space-y-4">
+                  <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                    <div className="text-xs text-purple-400 font-medium mb-1">Seedance 1.5 Pro - Dialogue & Lip Sync</div>
+                    <div className="text-[10px] text-gray-400">
+                      These templates use Seedance for perfect lip-sync and audio generation.
+                      Replace [DIALOGUE] with your actual spoken text.
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] text-gray-500 uppercase mb-2 font-medium">UGC / Talking Head</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => {
+                          setMotionPrompt(VIDEO_TEMPLATES.seedance.ugc_basic);
+                          setShowVideoMotion(false);
+                        }}
+                        className="rounded-lg p-4 bg-[#2a2a2a] text-gray-300 hover:bg-purple-900/30 hover:border-purple-500/50 border border-gray-700 text-left transition-all"
+                      >
+                        <div className="text-xs font-medium text-purple-400 mb-1">Basic UGC</div>
+                        <div className="text-[10px] text-gray-400">Confident presenter, soft bokeh, push-in</div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMotionPrompt(VIDEO_TEMPLATES.seedance.ugc_energetic);
+                          setShowVideoMotion(false);
+                        }}
+                        className="rounded-lg p-4 bg-[#2a2a2a] text-gray-300 hover:bg-purple-900/30 hover:border-purple-500/50 border border-gray-700 text-left transition-all"
+                      >
+                        <div className="text-xs font-medium text-purple-400 mb-1">Energetic Creator</div>
+                        <div className="text-[10px] text-gray-400">High energy, handheld movement, excited</div>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] text-gray-500 uppercase mb-2 font-medium">Scene Types</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => {
+                          setMotionPrompt(VIDEO_TEMPLATES.seedance.product_demo);
+                          setShowVideoMotion(false);
+                        }}
+                        className="rounded-lg p-3 bg-[#2a2a2a] text-gray-300 hover:bg-purple-900/30 text-left transition-all"
+                      >
+                        <div className="text-[10px] font-medium text-amber-400">Product Demo</div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMotionPrompt(VIDEO_TEMPLATES.seedance.emotional);
+                          setShowVideoMotion(false);
+                        }}
+                        className="rounded-lg p-3 bg-[#2a2a2a] text-gray-300 hover:bg-purple-900/30 text-left transition-all"
+                      >
+                        <div className="text-[10px] font-medium text-red-400">Emotional</div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMotionPrompt(VIDEO_TEMPLATES.seedance.interview);
+                          setShowVideoMotion(false);
+                        }}
+                        className="rounded-lg p-3 bg-[#2a2a2a] text-gray-300 hover:bg-purple-900/30 text-left transition-all"
+                      >
+                        <div className="text-[10px] font-medium text-blue-400">Interview</div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMotionPrompt(VIDEO_TEMPLATES.seedance.dialogue_two);
+                          setShowVideoMotion(false);
+                        }}
+                        className="rounded-lg p-3 bg-[#2a2a2a] text-gray-300 hover:bg-purple-900/30 text-left transition-all"
+                      >
+                        <div className="text-[10px] font-medium text-green-400">Two Characters</div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMotionPrompt(VIDEO_TEMPLATES.seedance.social_hook);
+                          setShowVideoMotion(false);
+                        }}
+                        className="rounded-lg p-3 bg-[#2a2a2a] text-gray-300 hover:bg-purple-900/30 text-left transition-all"
+                      >
+                        <div className="text-[10px] font-medium text-pink-400">Social Hook</div>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] text-gray-500 uppercase mb-2 font-medium">Multi-Language</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => {
+                          setMotionPrompt(VIDEO_TEMPLATES.seedance.mandarin);
+                          setShowVideoMotion(false);
+                        }}
+                        className="rounded-lg p-3 bg-[#2a2a2a] text-gray-300 hover:bg-purple-900/30 text-left transition-all"
+                      >
+                        <div className="text-[10px] font-medium">🇨🇳 Mandarin</div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMotionPrompt(VIDEO_TEMPLATES.seedance.spanish);
+                          setShowVideoMotion(false);
+                        }}
+                        className="rounded-lg p-3 bg-[#2a2a2a] text-gray-300 hover:bg-purple-900/30 text-left transition-all"
+                      >
+                        <div className="text-[10px] font-medium">🇪🇸 Spanish</div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMotionPrompt(VIDEO_TEMPLATES.seedance.japanese);
+                          setShowVideoMotion(false);
+                        }}
+                        className="rounded-lg p-3 bg-[#2a2a2a] text-gray-300 hover:bg-purple-900/30 text-left transition-all"
+                      >
+                        <div className="text-[10px] font-medium">🇯🇵 Japanese</div>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-[#1a1a1a] border border-gray-700 rounded-lg">
+                    <div className="text-[10px] text-gray-500 uppercase mb-2">Seedance Tips</div>
+                    <ul className="text-[10px] text-gray-400 space-y-1">
+                      <li>• Replace [DIALOGUE] with actual speech</li>
+                      <li>• Specify emotion: "speaks warmly", "exclaims excitedly"</li>
+                      <li>• Add language: "speaks in Mandarin with professional tone"</li>
+                      <li>• Include camera: "slow push-in", "handheld slight movement"</li>
+                      <li>• Audio is generated automatically - no separate TTS needed!</li>
+                    </ul>
                   </div>
                 </div>
               )}
@@ -4048,6 +4183,38 @@ export default function CinemaStudio() {
                   {Icons.clock}
                   <span>{currentShot.duration}s</span>
                 </button>
+              )}
+
+              {/* Video Model Auto-Selection Indicator */}
+              {mode === 'video' && (
+                <div className="relative group">
+                  <button
+                    className={`h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                      autoSelectModel() === 'seedance-1.5'
+                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                        : autoSelectModel() === 'kling-o1'
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    }`}
+                  >
+                    {autoSelectModel() === 'seedance-1.5' ? '🗣️ Seedance' :
+                     autoSelectModel() === 'kling-o1' ? '🎬 Kling O1' : '🎥 Kling 2.6'}
+                  </button>
+                  {/* Tooltip with explanation */}
+                  <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#1a1a1a] border border-gray-700 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                    <div className="font-medium text-white mb-1">Model Auto-Selection</div>
+                    <div className="text-gray-400">{explainModelSelection({
+                      startFrame: currentShot.startFrame,
+                      endFrame: currentShot.endFrame,
+                      motionPrompt: currentShot.motionPrompt
+                    })}</div>
+                    <div className="mt-2 pt-2 border-t border-gray-700 text-gray-500">
+                      <div>• <span className="text-purple-400">Seedance</span>: Dialogue/Lip-sync</div>
+                      <div>• <span className="text-blue-400">Kling O1</span>: Start→End transitions</div>
+                      <div>• <span className="text-amber-400">Kling 2.6</span>: General action</div>
+                    </div>
+                  </div>
+                </div>
               )}
 
               <button

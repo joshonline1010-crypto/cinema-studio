@@ -1,0 +1,36 @@
+# AI Chat Memory - Session: cinema-1768127344586
+# Created: 2026-01-11T10:29:41.673Z
+
+[USER]: prombt for this shot her walking slowy looking up while lights flicker and shot goes up and tilts upside down and goes down
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+MOTION PROMPT: "<sks> back view eye-level shot wide shot LIGHTS F"
+MODEL: kling-2.6
+MODE: Video
+ASPECT: 16:9 | RES: 2K
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: Subject walks slowly forward, gaze directed upward, head tilts slightly, lights flicker in background, camera slowly dollies up along her path, then tilts 180 degrees inverting perspective, camera movement stops, then slowly dollies back down to original position, then settles
+---
+[USER]: MAKE LIGHTS FLCIKING EPIC LIKE GOING OFF ON LIKE STRANFGER THINGS
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+IMAGE PROMPT: "Subject walks slowly forward, gaze directed upward, head tilts slightly, lights flicker in background, camera slowly dollies up along her path, then tilts 180 degrees inverting perspective, camera movement stops, then slowly dollies back down to original position, then settles"
+MOTION PROMPT: "Subject walks slowly forward, gaze directed upward, head tilts slightly, lights flicker in background, camera slowly dollies up along her path, then tilts 180 degrees inverting perspective, camera movement stops, then slowly dollies back down to original position, then settles"
+MODEL: kling-2.6
+MODE: Video
+ASPECT: 16:9 | RES: 2K
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: Subject walks slowly forward, gaze fixed upward, head tilts slightly, sinister green light pulses behind, electric blue flickers in background, camera slowly dollies up along her path with low-angle tilt, then tilts 180 degrees inverting perspective while lights erupt in synchronized bursts, camera zooms out slowly, then settles
+---

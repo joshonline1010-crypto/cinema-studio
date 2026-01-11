@@ -298,19 +298,58 @@ export const useCinemaStore = create<CinemaState>((set, get) => ({
   }))
 }));
 
+// Comprehensive dialogue/speech detection keywords from Seedance guide
+const DIALOGUE_KEYWORDS = [
+  // Direct speech indicators
+  'says', 'speaks', 'talking', 'dialogue', 'voice', 'speech', 'says:', 'speaks:',
+  // Quoted dialogue markers
+  '"', "'", ':', 'exclaims', 'whispers', 'shouts', 'murmurs', 'announces',
+  'declares', 'pleads', 'asks', 'responds', 'replies', 'explains',
+  // Lip sync indicators
+  'lip sync', 'lipsync', 'lip-sync', 'mouthing', 'mouth moves',
+  // Emotional speech
+  'warmly', 'excitedly', 'calmly', 'confidently', 'enthusiastically',
+  'passionately', 'angrily', 'sadly', 'playfully', 'seriously',
+  // UGC/talking head indicators
+  'ugc', 'talking head', 'talking-head', 'presenter', 'host', 'creator',
+  'vlog', 'interview', 'testimonial', 'direct to camera', 'eye contact',
+  // Language specifications
+  'in english', 'in mandarin', 'in japanese', 'in korean', 'in spanish',
+  'in portuguese', 'in indonesian', 'in cantonese',
+  // Multi-speaker
+  'conversation', 'discusse', 'chat', 'banter'
+];
+
 // Auto-detect best model based on current state
 export function detectBestModel(state: Pick<Shot, 'startFrame' | 'endFrame' | 'motionPrompt'>): VideoModel {
+  const prompt = state.motionPrompt.toLowerCase();
+
   // Has end frame? -> Kling O1 for transitions
   if (state.endFrame) {
     return 'kling-o1';
   }
 
-  // Contains dialogue keywords? -> Seedance
-  const dialogueKeywords = ['says', 'speaks', 'talking', 'dialogue', 'voice', 'speech'];
-  if (dialogueKeywords.some(kw => state.motionPrompt.toLowerCase().includes(kw))) {
+  // Contains dialogue/speech keywords? -> Seedance 1.5
+  if (DIALOGUE_KEYWORDS.some(kw => prompt.includes(kw.toLowerCase()))) {
     return 'seedance-1.5';
   }
 
   // Default -> Kling 2.6 for general action
   return 'kling-2.6';
+}
+
+// Explain why a model was selected
+export function explainModelSelection(state: Pick<Shot, 'startFrame' | 'endFrame' | 'motionPrompt'>): string {
+  const prompt = state.motionPrompt.toLowerCase();
+
+  if (state.endFrame) {
+    return 'Kling O1: Start→End frame transition';
+  }
+
+  const matchedKeyword = DIALOGUE_KEYWORDS.find(kw => prompt.includes(kw.toLowerCase()));
+  if (matchedKeyword) {
+    return `Seedance 1.5: Detected dialogue ("${matchedKeyword}")`;
+  }
+
+  return 'Kling 2.6: General motion/action';
 }

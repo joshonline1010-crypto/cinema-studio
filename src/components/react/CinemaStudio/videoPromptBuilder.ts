@@ -416,8 +416,73 @@ export const VIDEO_TEMPLATES = {
     nextShot: '@Video Create the next shot, extremely detailed, narrow depth of field, cinematic',
     keepMotion: 'KEEP THE MOTION THE SAME, [new description]',
     transferMotion: 'Animate the character in @Image1 using the exact movement from @Video'
+  },
+
+  // SEEDANCE 1.5 - Dialogue & Lip Sync Templates
+  seedance: {
+    // Basic UGC talking head
+    ugc_basic: 'Medium close-up, eye level, soft bokeh background. Subject speaks directly to camera with natural expressions. Slow push-in, focus on eyes. She speaks confidently: "[DIALOGUE]". Cinematic UGC style, clean audio.',
+
+    // Energetic creator
+    ugc_energetic: 'Close-up, slightly low angle for confidence. Animated expressions, casual outfit. Handheld slight movement, dynamic energy. He speaks excitedly: "[DIALOGUE]". High energy, bright natural light.',
+
+    // Product presenter
+    product_demo: 'Medium shot, presenter slightly off-center, product prominent. Professional appearance, warm genuine smile. Camera slowly pushes in. She explains: "[DIALOGUE]". Clean commercial lighting.',
+
+    // Emotional close-up
+    emotional: 'Close-up on face, soft focus on eyes. Subtle micro-expressions, emotional depth. Static camera with slight handheld warmth. She whispers: "[DIALOGUE]". Quiet, contemplative atmosphere.',
+
+    // Interview style
+    interview: 'Medium close-up, subject slightly off-center, soft bokeh. Professional, natural pauses, thoughtful expression. Slow subtle push-in during emotional moments. She reflects: "[DIALOGUE]". Documentary lighting.',
+
+    // Two characters dialogue
+    dialogue_two: 'Medium shot, two people facing each other. Character on left speaks first: "[DIALOGUE1]". Camera slowly dollies right to capture reaction. Second character responds: "[DIALOGUE2]". Natural room ambience.',
+
+    // Social media hook
+    social_hook: 'Extreme close-up, direct eye contact. Confident expression, one eyebrow raised. Slight lean toward camera. He asks: "[DIALOGUE]". Punchy rhythm, immediate engagement.',
+
+    // Multi-language
+    mandarin: 'Medium close-up, professional setting. Subject speaks in fluent Mandarin with professional tone: "[DIALOGUE]". Clean audio, subtle office ambience.',
+    spanish: 'Close-up, vibrant colorful background. Animated expressions, expressive gestures. She speaks enthusiastically in Spanish: "[DIALOGUE]". Warm lighting.',
+    japanese: 'Medium shot, minimal modern setting. Calm demeanor, measured pacing. He speaks in polite Japanese: "[DIALOGUE]". Serene atmosphere.'
   }
 };
+
+// SEEDANCE DIALOGUE HELPER
+export function buildSeedanceDialoguePrompt(
+  template: keyof typeof VIDEO_TEMPLATES.seedance,
+  dialogue: string,
+  options?: {
+    dialogue2?: string;
+    characterDescription?: string;
+    emotion?: 'warm' | 'excited' | 'calm' | 'sad' | 'angry' | 'playful';
+    cameraMovement?: 'static' | 'push-in' | 'orbit' | 'handheld';
+  }
+): string {
+  let prompt = VIDEO_TEMPLATES.seedance[template];
+
+  // Replace dialogue placeholder
+  prompt = prompt.replace('[DIALOGUE]', dialogue);
+  if (options?.dialogue2) {
+    prompt = prompt.replace('[DIALOGUE1]', dialogue);
+    prompt = prompt.replace('[DIALOGUE2]', options.dialogue2);
+  }
+
+  // Add emotion modifier
+  if (options?.emotion) {
+    const emotionMap: Record<string, string> = {
+      warm: 'speaks warmly with genuine affection',
+      excited: 'exclaims enthusiastically',
+      calm: 'says calmly with measured pacing',
+      sad: 'whispers with barely contained emotion',
+      angry: 'states firmly with controlled intensity',
+      playful: 'teases with mischievous tone'
+    };
+    prompt = prompt.replace('speaks', emotionMap[options.emotion] || 'speaks');
+  }
+
+  return prompt;
+}
 
 // ============================================================================
 // WHAT WORKS / WHAT FAILS

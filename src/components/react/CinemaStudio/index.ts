@@ -2,7 +2,7 @@
 export { default as CinemaStudio } from './CinemaStudio';
 export { default as CameraGrid } from './CameraGrid';
 export { default as FrameCanvas } from './FrameCanvas';
-export { useCinemaStore, detectBestModel } from './cinemaStore';
+export { useCinemaStore, detectBestModel, explainModelSelection } from './cinemaStore';
 export {
   CAMERA_PRESETS,
   PRESET_CATEGORIES,
