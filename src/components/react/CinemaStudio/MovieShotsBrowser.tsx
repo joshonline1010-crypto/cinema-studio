@@ -230,19 +230,20 @@ export default function MovieShotsBrowser({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Upload to Catbox
+    // Upload via server proxy to avoid CORS
     const formData = new FormData();
-    formData.append('reqtype', 'fileupload');
-    formData.append('fileToUpload', file);
+    formData.append('file', file);
 
     try {
-      const response = await fetch('https://catbox.moe/user/api.php', {
+      const response = await fetch('/api/cinema/upload', {
         method: 'POST',
         body: formData
       });
-      const url = await response.text();
-      if (url && url.startsWith('https://')) {
-        setAssetRefImages(prev => [...prev.slice(0, 6), url.trim()]); // Max 7 refs
+      const data = await response.json();
+      if (data.url) {
+        setAssetRefImages(prev => [...prev.slice(0, 6), data.url]); // Max 7 refs
+      } else {
+        console.error('Upload failed:', data.error);
       }
     } catch (err) {
       console.error('Ref upload failed:', err);

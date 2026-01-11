@@ -4997,22 +4997,24 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
               <input type="file" accept="image/*" className="hidden" ref={refInputRef} onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
-                // Upload to Catbox for public URL
+                // Upload via server proxy to avoid CORS
                 setStatusMessage('Uploading reference...');
                 const formData = new FormData();
-                formData.append('reqtype', 'fileupload');
-                formData.append('fileToUpload', file);
+                formData.append('file', file);
                 try {
-                  const res = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: formData });
-                  const url = await res.text();
-                  if (url?.startsWith('https://')) {
-                    setReferenceImage(url.trim());
+                  const res = await fetch('/api/cinema/upload', { method: 'POST', body: formData });
+                  const data = await res.json();
+                  if (data.url) {
+                    setReferenceImage(data.url);
                     setStatusMessage('Reference uploaded!');
+                  } else {
+                    setStatusMessage('Upload failed: ' + (data.error || 'Unknown'));
                   }
                 } catch (err) {
+                  console.error('Upload error:', err);
                   setStatusMessage('Upload failed');
                 }
-                setTimeout(() => setStatusMessage(null), 1500);
+                setTimeout(() => setStatusMessage(null), 2000);
                 e.target.value = '';
               }} />
             </label>
@@ -5050,19 +5052,21 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                 if (!file || aiRefImages.length >= 7) return;
                 setStatusMessage('Uploading ref image...');
                 const formData = new FormData();
-                formData.append('reqtype', 'fileupload');
-                formData.append('fileToUpload', file);
+                formData.append('file', file);
                 try {
-                  const res = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: formData });
-                  const url = await res.text();
-                  if (url?.startsWith('https://')) {
-                    setAiRefImages(prev => [...prev, { url: url.trim(), description: null }]);
+                  const res = await fetch('/api/cinema/upload', { method: 'POST', body: formData });
+                  const data = await res.json();
+                  if (data.url) {
+                    setAiRefImages(prev => [...prev, { url: data.url, description: null }]);
                     setStatusMessage('Reference added!');
+                  } else {
+                    setStatusMessage('Upload failed: ' + (data.error || 'Unknown'));
                   }
                 } catch (err) {
+                  console.error('Upload error:', err);
                   setStatusMessage('Upload failed');
                 }
-                setTimeout(() => setStatusMessage(null), 1500);
+                setTimeout(() => setStatusMessage(null), 2000);
                 e.target.value = '';
               }} />
             </label>
