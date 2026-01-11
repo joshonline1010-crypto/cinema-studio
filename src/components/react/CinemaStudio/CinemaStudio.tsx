@@ -41,6 +41,11 @@ import {
   type VideoModel as VideoModelType,
 } from './videoPromptBuilder';
 
+// Multi-Angle Studio Components
+import Camera3DControl from './Camera3DControl';
+import BatchGenerator from './BatchGenerator';
+import { buildQwenPromptContinuous, type BatchAngle } from './promptVocabulary';
+
 // Clean SVG Icons
 const Icons = {
   image: (
@@ -302,6 +307,13 @@ export default function CinemaStudio() {
   const [showSequencePlanner, setShowSequencePlanner] = useState(false); // Sequence Planner panel
   const [showVideoMotion, setShowVideoMotion] = useState(false); // Video prompt builder panel
   const [cameraPanelTab, setCameraPanelTab] = useState<'all' | 'recommended'>('all');
+
+  // Multi-Angle Studio State
+  const [show3DCamera, setShow3DCamera] = useState(false); // 3D Camera Control panel
+  const [showBatchGenerator, setShowBatchGenerator] = useState(false); // Batch angle generator
+  const [cameraAzimuth, setCameraAzimuth] = useState(0); // 3D camera azimuth (0-360)
+  const [cameraElevation, setCameraElevation] = useState(0); // 3D camera elevation (-30 to 60)
+  const [cameraDistance, setCameraDistance] = useState(1.0); // 3D camera distance (0.6-1.8)
 
   // Video Prompt Builder State
   const [videoCameraMovement, setVideoCameraMovement] = useState<string | null>(null);
@@ -1877,6 +1889,90 @@ export default function CinemaStudio() {
         </div>
       )}
 
+      {/* 3D Camera Control Panel */}
+      {show3DCamera && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShow3DCamera(false)}>
+          <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800/50 p-6 shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <span className="px-4 py-1.5 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-lg text-xs font-medium text-cyan-300">3D Camera Control</span>
+                <span className="text-xs text-gray-500">Drag handles to set angle</span>
+              </div>
+              <button onClick={() => setShow3DCamera(false)} className="w-9 h-9 rounded-lg bg-[#2a2a2a] hover:bg-gray-700 flex items-center justify-center text-gray-400 transition-colors">
+                {Icons.close}
+              </button>
+            </div>
+
+            <Camera3DControl
+              azimuth={cameraAzimuth}
+              setAzimuth={setCameraAzimuth}
+              elevation={cameraElevation}
+              setElevation={setCameraElevation}
+              distance={cameraDistance}
+              setDistance={setCameraDistance}
+              subjectImage={currentShot.startFrame}
+            />
+
+            <div className="flex gap-3 mt-5 pt-5 border-t border-gray-700">
+              <button
+                onClick={() => {
+                  // Apply Qwen prompt to motion prompt
+                  const qwenPrompt = buildQwenPromptContinuous(cameraAzimuth, cameraElevation, cameraDistance);
+                  const currentPrompt = currentShot.motionPrompt;
+                  setMotionPrompt(currentPrompt ? `${currentPrompt}, ${qwenPrompt}` : qwenPrompt);
+                  setShow3DCamera(false);
+                }}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity"
+              >
+                Apply Angle to Prompt
+              </button>
+              <button
+                onClick={() => setShow3DCamera(false)}
+                className="px-4 py-2 bg-[#2a2a2a] hover:bg-gray-700 rounded-lg text-xs text-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Generator Panel */}
+      {showBatchGenerator && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowBatchGenerator(false)}>
+          <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800/50 p-6 shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <span className="px-4 py-1.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-lg text-xs font-medium text-purple-300">Batch Generator</span>
+                <span className="text-xs text-gray-500">Generate multiple angles at once</span>
+              </div>
+              <button onClick={() => setShowBatchGenerator(false)} className="w-9 h-9 rounded-lg bg-[#2a2a2a] hover:bg-gray-700 flex items-center justify-center text-gray-400 transition-colors">
+                {Icons.close}
+              </button>
+            </div>
+
+            <BatchGenerator
+              sourceImage={currentShot.startFrame}
+              onBatchComplete={(results) => {
+                console.log('Batch complete:', results);
+                setShowBatchGenerator(false);
+              }}
+              onImageGenerated={(result) => {
+                console.log('Image generated:', result);
+              }}
+              generateAngleImage={async (angle: BatchAngle, sourceImage: string) => {
+                // This should call your image generation API with the angle
+                const prompt = buildQwenPromptContinuous(angle.azimuth, angle.elevation, angle.distance);
+                console.log('Generating image with angle:', angle, 'prompt:', prompt);
+                // TODO: Implement actual API call
+                // For now return a placeholder
+                throw new Error('Batch generation API not implemented yet. Use the 3D Camera Control to set individual angles.');
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Emotions Panel */}
       {showEmotions && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowEmotions(false)}>
@@ -2572,7 +2668,7 @@ export default function CinemaStudio() {
 
               {/* Sequence Planner Button */}
               <button
-                onClick={() => { setShowSequencePlanner(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); setShowCharacterDNA(false); }}
+                onClick={() => { setShowSequencePlanner(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); setShowCharacterDNA(false); setShow3DCamera(false); setShowBatchGenerator(false); }}
                 className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
                   sequencePlan.length > 0
                     ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white'
@@ -2587,6 +2683,44 @@ export default function CinemaStudio() {
                   <rect x="14" y="14" width="7" height="7" rx="1" />
                 </svg>
                 <span>{sequencePlan.length > 0 ? `${sequencePlan.length} Shots` : 'Sequence'}</span>
+              </button>
+
+              {/* 3D Camera Control Button */}
+              <button
+                onClick={() => { setShow3DCamera(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); setShowCharacterDNA(false); setShowSequencePlanner(false); setShowBatchGenerator(false); }}
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                  show3DCamera
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
+                    : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
+                }`}
+                title="3D Camera Control - set angle with visual 3D preview"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+                <span>3D Angle</span>
+              </button>
+
+              {/* Batch Generator Button */}
+              <button
+                onClick={() => { setShowBatchGenerator(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); setShowCharacterDNA(false); setShowSequencePlanner(false); setShow3DCamera(false); }}
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                  showBatchGenerator
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                    : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
+                }`}
+                title="Batch Generator - generate multiple angles at once"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+                  <polyline points="7.5 4.21 12 6.81 16.5 4.21" />
+                  <polyline points="7.5 19.79 7.5 14.6 3 12" />
+                  <polyline points="21 12 16.5 14.6 16.5 19.79" />
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                  <line x1="12" y1="22.08" x2="12" y2="12" />
+                </svg>
+                <span>Batch</span>
               </button>
 
               <button
