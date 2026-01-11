@@ -4970,17 +4970,20 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
             </label>
 
             {/* Reference Image - for face/character consistency */}
-            <label className="cursor-pointer group">
-              <div className={`w-16 h-16 rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${
-                referenceImage
-                  ? 'border-purple-500 border-solid'
-                  : 'border-gray-600 hover:border-purple-400 group-hover:bg-purple-900/10'
-              }`}>
+            <div className="cursor-pointer group">
+              <div
+                onClick={() => !referenceImage && refInputRef.current?.click()}
+                className={`w-16 h-16 rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${
+                  referenceImage
+                    ? 'border-purple-500 border-solid'
+                    : 'border-gray-600 hover:border-purple-400 group-hover:bg-purple-900/10'
+                }`}
+              >
                 {referenceImage ? (
                   <div className="relative w-full h-full">
                     <img src={referenceImage} className="w-full h-full object-cover rounded-lg" />
                     <button
-                      onClick={(e) => { e.preventDefault(); setReferenceImage(null); }}
+                      onClick={(e) => { e.stopPropagation(); setReferenceImage(null); }}
                       className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px]"
                     >
                       x
@@ -4997,6 +5000,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
               <input type="file" accept="image/*" className="hidden" ref={refInputRef} onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
+                console.log('REF CHAR upload started:', file.name);
                 // Upload via server proxy to avoid CORS
                 setStatusMessage('Uploading reference...');
                 const formData = new FormData();
@@ -5004,6 +5008,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                 try {
                   const res = await fetch('/api/cinema/upload', { method: 'POST', body: formData });
                   const data = await res.json();
+                  console.log('Upload response:', data);
                   if (data.url) {
                     setReferenceImage(data.url);
                     setStatusMessage('Reference uploaded!');
@@ -5017,7 +5022,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                 setTimeout(() => setStatusMessage(null), 2000);
                 e.target.value = '';
               }} />
-            </label>
+            </div>
 
             {/* Additional Reference Images */}
             {aiRefImages.length > 0 && (
@@ -5042,34 +5047,43 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
             )}
 
             {/* Add More Refs Button */}
-            <label className="cursor-pointer">
-              <div className="w-10 h-16 rounded-lg border border-dashed border-yellow-500/30 hover:border-yellow-500/60 flex flex-col items-center justify-center text-yellow-400/60 hover:text-yellow-400 transition-all">
+            <div className="cursor-pointer">
+              <div
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = async (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (!file || aiRefImages.length >= 7) return;
+                    console.log('Additional ref upload started:', file.name);
+                    setStatusMessage('Uploading ref image...');
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    try {
+                      const res = await fetch('/api/cinema/upload', { method: 'POST', body: formData });
+                      const data = await res.json();
+                      console.log('Upload response:', data);
+                      if (data.url) {
+                        setAiRefImages(prev => [...prev, { url: data.url, description: null }]);
+                        setStatusMessage('Reference added!');
+                      } else {
+                        setStatusMessage('Upload failed: ' + (data.error || 'Unknown'));
+                      }
+                    } catch (err) {
+                      console.error('Upload error:', err);
+                      setStatusMessage('Upload failed');
+                    }
+                    setTimeout(() => setStatusMessage(null), 2000);
+                  };
+                  input.click();
+                }}
+                className="w-10 h-16 rounded-lg border border-dashed border-yellow-500/30 hover:border-yellow-500/60 flex flex-col items-center justify-center text-yellow-400/60 hover:text-yellow-400 transition-all"
+              >
                 <span className="text-lg">+</span>
                 <span className="text-[8px]">REF</span>
               </div>
-              <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file || aiRefImages.length >= 7) return;
-                setStatusMessage('Uploading ref image...');
-                const formData = new FormData();
-                formData.append('file', file);
-                try {
-                  const res = await fetch('/api/cinema/upload', { method: 'POST', body: formData });
-                  const data = await res.json();
-                  if (data.url) {
-                    setAiRefImages(prev => [...prev, { url: data.url, description: null }]);
-                    setStatusMessage('Reference added!');
-                  } else {
-                    setStatusMessage('Upload failed: ' + (data.error || 'Unknown'));
-                  }
-                } catch (err) {
-                  console.error('Upload error:', err);
-                  setStatusMessage('Upload failed');
-                }
-                setTimeout(() => setStatusMessage(null), 2000);
-                e.target.value = '';
-              }} />
-            </label>
+            </div>
           </div>
 
           {/* Camera Settings Button - Click to open panel, has ON/OFF toggle */}
