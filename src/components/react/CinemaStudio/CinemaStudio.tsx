@@ -44,6 +44,7 @@ import {
 // Multi-Angle Studio Components
 import Camera3DControl from './Camera3DControl';
 import BatchGenerator from './BatchGenerator';
+import MovieShotsBrowser from './MovieShotsBrowser';
 import { buildQwenPromptContinuous, type BatchAngle } from './promptVocabulary';
 
 // AI Prompt Assistant
@@ -328,6 +329,7 @@ export default function CinemaStudio() {
   // Multi-Angle Studio State
   const [show3DCamera, setShow3DCamera] = useState(false); // 3D Camera Control panel
   const [showBatchGenerator, setShowBatchGenerator] = useState(false); // Batch angle generator
+  const [showMovieShots, setShowMovieShots] = useState(false); // Movie Shots browser
   const [cameraAzimuth, setCameraAzimuth] = useState(0); // 3D camera azimuth (0-360)
   const [cameraElevation, setCameraElevation] = useState(0); // 3D camera elevation (-30 to 60)
   const [cameraDistance, setCameraDistance] = useState(1.0); // 3D camera distance (0.6-1.8)
@@ -826,6 +828,52 @@ export default function CinemaStudio() {
   // Remove reference image
   const removeAiRefImage = (index: number) => {
     setAiRefImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle selecting a movie shot as reference
+  const handleSelectMovieShot = (shot: any, imageUrl: string) => {
+    // Set as reference image
+    setReferenceImage(imageUrl);
+    setStartFrame(imageUrl);
+
+    // Apply shot metadata to prompt
+    if (shot.prompt) {
+      setPromptText(shot.prompt);
+    }
+
+    // Apply 3D camera if available
+    if (shot.camera3d) {
+      setCameraAzimuth(shot.camera3d.azimuth || 0);
+      setCameraElevation(shot.camera3d.elevation || 0);
+      setCameraDistance(shot.camera3d.distance || 1.0);
+    }
+
+    // Apply director style if matches our presets
+    const directorMap: Record<string, number> = {
+      'stanley-kubrick': 0,
+      'steven-spielberg': 1,
+      'quentin-tarantino': 2,
+      'david-fincher': 3,
+      'christopher-nolan': 4,
+      'denis-villeneuve': 5,
+      'wes-anderson': 6,
+      'terrence-malick': 10,
+    };
+    if (shot.director && directorMap[shot.director] !== undefined) {
+      setDirectorIndex(directorMap[shot.director]);
+    }
+
+    // Apply emotion if available
+    const emotionMap: Record<string, number> = {
+      'awe': 0, 'melancholy': 1, 'tense': 2, 'love': 3, 'fear': 4, 'loneliness': 5,
+      'mysterious': 6, 'hope': 7, 'sadness': 8, 'contemplative': 9, 'peaceful': 10,
+    };
+    if (shot.emotion && emotionMap[shot.emotion] !== undefined) {
+      setEmotionIndex(emotionMap[shot.emotion]);
+    }
+
+    // Close the panel
+    setShowMovieShots(false);
   };
 
   // ============================================
@@ -2514,6 +2562,18 @@ export default function CinemaStudio() {
         </div>
       )}
 
+      {/* Movie Shots Browser Panel */}
+      {showMovieShots && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowMovieShots(false)}>
+          <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800/50 p-6 shadow-2xl max-w-6xl w-full mx-4 h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <MovieShotsBrowser
+              onSelectShot={handleSelectMovieShot}
+              onClose={() => setShowMovieShots(false)}
+            />
+          </div>
+        </div>
+      )}
+
       {/* AI Prompt Assistant Panel */}
       {showAIPrompt && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowAIPrompt(false)}>
@@ -3730,6 +3790,29 @@ export default function CinemaStudio() {
                   <line x1="12" y1="22.08" x2="12" y2="12" />
                 </svg>
                 <span>Batch</span>
+              </button>
+
+              {/* Movie Shots Browser Button */}
+              <button
+                onClick={() => { setShowMovieShots(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); setShowCharacterDNA(false); setShowSequencePlanner(false); setShow3DCamera(false); setShowBatchGenerator(false); }}
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                  showMovieShots
+                    ? 'bg-gradient-to-r from-amber-500 to-red-500 text-white'
+                    : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
+                }`}
+                title="Movie Shots Library - 2100+ professional film shots"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
+                  <line x1="7" y1="2" x2="7" y2="22" />
+                  <line x1="17" y1="2" x2="17" y2="22" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <line x1="2" y1="7" x2="7" y2="7" />
+                  <line x1="2" y1="17" x2="7" y2="17" />
+                  <line x1="17" y1="17" x2="22" y2="17" />
+                  <line x1="17" y1="7" x2="22" y2="7" />
+                </svg>
+                <span>Shots</span>
               </button>
 
               {/* AI Prompt Assistant Button */}
