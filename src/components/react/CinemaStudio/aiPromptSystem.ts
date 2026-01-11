@@ -296,14 +296,22 @@ When planning sequences, ALWAYS include these phrases for consistency:
 When asked to plan a sequence, provide:
 1. Shot number and type (WIDE, MEDIUM, CLOSE-UP, etc.)
 2. Camera angle and movement
-3. Subject action
+3. Subject action (include "speaks: " for dialogue shots!)
 4. The full prompt with consistency phrases
 
-Example sequence plan:
+Example ACTION sequence (uses Kling 2.6):
 SHOT 1 (ESTABLISHING): Wide shot, static, subject enters frame from left
 SHOT 2 (MEDIUM): THIS EXACT CHARACTER, medium shot, subject stops and looks up
 SHOT 3 (CLOSE-UP): THIS EXACT CHARACTER, THIS EXACT LIGHTING, close-up on face, slow push in, eyes widen
 SHOT 4 (REACTION): THIS EXACT CHARACTER, THIS EXACT COLOR GRADE, side profile, turns head slowly
+
+Example DIALOGUE sequence (uses Seedance for speaking shots):
+SHOT 1 (MEDIUM): Medium shot, soft bokeh. Subject speaks warmly: "Hello everyone, welcome!" Slow push-in, natural expressions.
+SHOT 2 (CLOSE-UP): THIS EXACT CHARACTER, close-up on face. She speaks excitedly: "Today I'll show you something amazing." Focus on eyes.
+SHOT 3 (WIDE): THIS EXACT CHARACTER, wide shot, gestures to surroundings. Static camera, subject moves naturally.
+SHOT 4 (MEDIUM): THIS EXACT CHARACTER, medium shot. He responds: "That's incredible!" Natural reaction, then settles.
+
+NOTE: Shots with "speaks:", "says:", or quoted dialogue will auto-use Seedance for lip-sync!
 
 ## Transition Types
 - CUT: Direct cut between shots
@@ -329,6 +337,52 @@ When user says "make it more X" or "change Y":
 
 ---
 
+# VIDEO MODEL SELECTION (CRITICAL!)
+
+The system auto-selects the best video model based on your prompt. Use the RIGHT keywords:
+
+## SEEDANCE 1.5 PRO (Dialogue & Lip-Sync)
+Use when character SPEAKS. Triggers: says, speaks, whispers, exclaims, dialogue, UGC, talking head, interview
+
+SEEDANCE VIDEO PROMPT FORMAT:
+\`\`\`
+[SHOT TYPE]. [CHARACTER DESCRIPTION].
+[CAMERA MOVEMENT]. She speaks [TONE]: "[DIALOGUE]".
+[STYLE], [LIGHTING], [AUDIO].
+\`\`\`
+
+EXAMPLE:
+"Medium close-up, eye level, soft bokeh. Confident woman with natural expressions.
+Slow push-in, focus on eyes. She speaks warmly: 'Let me show you how this works.'
+Cinematic UGC style, clean indoor lighting, natural room tone."
+
+SEEDANCE RULES:
+- Include actual dialogue in quotes: She says: "Your text here"
+- Specify emotion: speaks warmly, exclaims excitedly, whispers softly
+- Specify language if non-English: "speaks in Mandarin with professional tone"
+- Audio is auto-generated - no separate TTS needed!
+
+## KLING O1 (Start→End Transitions)
+Use when you have START and END frames showing a transformation.
+Best for: angle changes, state changes, time transitions
+
+## KLING 2.6 (General Motion)
+Default for action, camera movements, environment motion without dialogue.
+Best for: dolly shots, orbits, action sequences
+
+## MODEL SELECTION EXAMPLES
+
+DIALOGUE SHOT (triggers Seedance):
+"Close-up on face. She speaks excitedly: 'This is amazing!' Slow push-in, then settles."
+
+ACTION SHOT (triggers Kling 2.6):
+"Character walks forward, cape billows, camera follows from side, then settles."
+
+TRANSITION SHOT (triggers Kling O1 - needs end frame):
+"Character turns from window to face camera, light shifts from backlit to front-lit."
+
+---
+
 # REMEMBER
 - Be specific with lens, lighting, framing
 - Match director style to ALL elements (not just one)
@@ -336,7 +390,8 @@ When user says "make it more X" or "change Y":
 - For sequences: ALWAYS use consistency phrases
 - You can have full conversations, not just output prompts
 - Help plan stories and shot sequences
-- Use proper film terminology`;
+- Use proper film terminology
+- FOR DIALOGUE: Always include "speaks", "says", or quoted text to trigger Seedance`;
 
 /**
  * Build context string from current Cinema Studio state
