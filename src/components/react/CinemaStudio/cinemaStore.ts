@@ -4,6 +4,17 @@ import type { CameraPreset, LensPreset, CameraBodyPreset, FocusPreset } from './
 
 export type VideoModel = 'kling-o1' | 'kling-2.6' | 'seedance-1.5';
 
+// Planned shot for sequence planner (simplified)
+export interface PlannedShot {
+  id: string;
+  angle: string;        // e.g., "Medium shot", "Closeup", "Side profile"
+  action: string;       // e.g., "sits in cockpit", "expression shifts"
+  cameraMove: string;   // e.g., "static", "dolly in", "orbit left"
+  status: 'planned' | 'generating' | 'complete' | 'error';
+  imageUrl?: string;    // Generated image URL
+  videoUrl?: string;    // Generated video URL
+}
+
 export interface Shot {
   id: string;
   startFrame: string | null;
@@ -29,6 +40,11 @@ interface CinemaState {
   // Character DNA - consistent character description across all shots
   // This ensures the same character details are used in every prompt
   characterDNA: string | null;
+
+  // Sequence Planner - plan multiple shots before generating
+  sequencePlan: PlannedShot[];
+  isAutoChaining: boolean;  // Auto-generate next shot when current completes
+  currentSequenceIndex: number;  // Which shot in sequence we're on
 
   // UI state
   selectedPresets: CameraPreset[];
@@ -66,6 +82,16 @@ interface CinemaState {
 
   // Reset
   resetCurrent: () => void;
+
+  // Sequence Planner Actions
+  addPlannedShot: (shot: Omit<PlannedShot, 'id' | 'status'>) => void;
+  updatePlannedShot: (id: string, updates: Partial<PlannedShot>) => void;
+  removePlannedShot: (id: string) => void;
+  reorderPlannedShots: (fromIndex: number, toIndex: number) => void;
+  clearSequencePlan: () => void;
+  setAutoChaining: (enabled: boolean) => void;
+  setCurrentSequenceIndex: (index: number) => void;
+  markPlannedShotComplete: (id: string, imageUrl?: string, videoUrl?: string) => void;
 }
 
 const createEmptyShot = (): Shot => ({
@@ -87,6 +113,9 @@ export const useCinemaStore = create<CinemaState>((set, get) => ({
   currentShot: createEmptyShot(),
   shots: [],
   characterDNA: null,
+  sequencePlan: [],
+  isAutoChaining: false,
+  currentSequenceIndex: 0,
   selectedPresets: [],
   selectedLens: null,
   selectedCamera: null,
@@ -224,7 +253,49 @@ export const useCinemaStore = create<CinemaState>((set, get) => ({
     isGenerating: false,
     generationProgress: 0,
     error: null
-  })
+  }),
+
+  // Sequence Planner Actions
+  addPlannedShot: (shot) => set((state) => ({
+    sequencePlan: [...state.sequencePlan, {
+      ...shot,
+      id: `planned-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      status: 'planned'
+    }]
+  })),
+
+  updatePlannedShot: (id, updates) => set((state) => ({
+    sequencePlan: state.sequencePlan.map(shot =>
+      shot.id === id ? { ...shot, ...updates } : shot
+    )
+  })),
+
+  removePlannedShot: (id) => set((state) => ({
+    sequencePlan: state.sequencePlan.filter(shot => shot.id !== id)
+  })),
+
+  reorderPlannedShots: (fromIndex, toIndex) => set((state) => {
+    const newPlan = [...state.sequencePlan];
+    const [removed] = newPlan.splice(fromIndex, 1);
+    newPlan.splice(toIndex, 0, removed);
+    return { sequencePlan: newPlan };
+  }),
+
+  clearSequencePlan: () => set({
+    sequencePlan: [],
+    currentSequenceIndex: 0,
+    isAutoChaining: false
+  }),
+
+  setAutoChaining: (enabled) => set({ isAutoChaining: enabled }),
+
+  setCurrentSequenceIndex: (index) => set({ currentSequenceIndex: index }),
+
+  markPlannedShotComplete: (id, imageUrl, videoUrl) => set((state) => ({
+    sequencePlan: state.sequencePlan.map(shot =>
+      shot.id === id ? { ...shot, status: 'complete' as const, imageUrl, videoUrl } : shot
+    )
+  }))
 }));
 
 // Auto-detect best model based on current state

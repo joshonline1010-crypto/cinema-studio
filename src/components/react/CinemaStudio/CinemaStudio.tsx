@@ -272,6 +272,16 @@ export default function CinemaStudio() {
     resetCurrent,
     characterDNA,
     setCharacterDNA,
+    sequencePlan,
+    isAutoChaining,
+    currentSequenceIndex,
+    addPlannedShot,
+    updatePlannedShot,
+    removePlannedShot,
+    clearSequencePlan,
+    setAutoChaining,
+    setCurrentSequenceIndex,
+    markPlannedShotComplete,
   } = useCinemaStore();
 
   const [promptText, setPromptText] = useState('');
@@ -289,6 +299,7 @@ export default function CinemaStudio() {
   const [showColorPalette, setShowColorPalette] = useState(false);
   const [showCharacterStyle, setShowCharacterStyle] = useState(false);
   const [showCharacterDNA, setShowCharacterDNA] = useState(false); // Character DNA panel for shot chaining
+  const [showSequencePlanner, setShowSequencePlanner] = useState(false); // Sequence Planner panel
   const [showVideoMotion, setShowVideoMotion] = useState(false); // Video prompt builder panel
   const [cameraPanelTab, setCameraPanelTab] = useState<'all' | 'recommended'>('all');
 
@@ -1672,6 +1683,195 @@ export default function CinemaStudio() {
         </div>
       )}
 
+      {/* Sequence Planner Panel */}
+      {showSequencePlanner && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowSequencePlanner(false)}>
+          <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800/50 p-6 shadow-2xl max-w-4xl w-full mx-4 max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <span className="px-4 py-1.5 bg-gradient-to-r from-orange-500/20 to-amber-500/20 border border-orange-500/30 rounded-lg text-xs font-medium text-orange-300">Sequence Planner</span>
+                <span className="text-xs text-gray-500">Plan multiple shots before generating</span>
+              </div>
+              <button onClick={() => setShowSequencePlanner(false)} className="w-9 h-9 rounded-lg bg-[#2a2a2a] hover:bg-gray-700 flex items-center justify-center text-gray-400 transition-colors">
+                {Icons.close}
+              </button>
+            </div>
+
+            {/* Character DNA Reference */}
+            {characterDNA && (
+              <div className="bg-teal-950/30 border border-teal-700/50 rounded-xl p-3 mb-4">
+                <div className="text-[9px] text-teal-400 uppercase mb-1 font-medium">Character DNA (applied to all shots)</div>
+                <div className="text-xs text-teal-200">{characterDNA}</div>
+              </div>
+            )}
+
+            {/* Shot List */}
+            <div className="space-y-3 mb-5 max-h-[40vh] overflow-y-auto">
+              {sequencePlan.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-12 h-12 mx-auto mb-3 opacity-50">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <path d="M14 17.5h7M17.5 14v7" />
+                  </svg>
+                  <div className="text-sm">No shots planned yet</div>
+                  <div className="text-xs mt-1">Add shots below to build your sequence</div>
+                </div>
+              ) : (
+                sequencePlan.map((shot, idx) => (
+                  <div
+                    key={shot.id}
+                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                      shot.status === 'complete' ? 'bg-green-950/30 border-green-700/50' :
+                      shot.status === 'generating' ? 'bg-orange-950/30 border-orange-700/50' :
+                      'bg-[#2a2a2a] border-gray-700/50'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      shot.status === 'complete' ? 'bg-green-500/20 text-green-400' :
+                      shot.status === 'generating' ? 'bg-orange-500/20 text-orange-400' :
+                      'bg-gray-700 text-gray-400'
+                    }`}>
+                      {shot.status === 'complete' ? (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4">
+                          <path d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : shot.status === 'generating' ? (
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <span className="text-sm font-bold">{idx + 1}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-white">{shot.angle}</span>
+                        <span className="text-[10px] text-gray-500">•</span>
+                        <span className="text-xs text-gray-400">{shot.cameraMove}</span>
+                      </div>
+                      <div className="text-[11px] text-gray-500 truncate">{shot.action}</div>
+                    </div>
+                    {shot.status === 'planned' && (
+                      <button
+                        onClick={() => removePlannedShot(shot.id)}
+                        className="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-400 transition-colors"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Add Shot Form */}
+            <div className="bg-[#252525] rounded-xl p-4 border border-gray-700/50">
+              <div className="text-xs text-gray-400 mb-3">Add New Shot</div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">Shot Type</label>
+                  <select
+                    id="seq-angle"
+                    className="w-full h-9 bg-[#1a1a1a] rounded-lg border border-gray-700 text-xs text-white px-2"
+                    defaultValue=""
+                  >
+                    <option value="">Select...</option>
+                    <option value="Wide shot">Wide shot</option>
+                    <option value="Medium shot">Medium shot</option>
+                    <option value="Closeup">Closeup</option>
+                    <option value="Extreme closeup">Extreme closeup</option>
+                    <option value="Over shoulder">Over shoulder</option>
+                    <option value="Side profile">Side profile</option>
+                    <option value="Low angle">Low angle</option>
+                    <option value="High angle">High angle</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">Camera Move</label>
+                  <select
+                    id="seq-camera"
+                    className="w-full h-9 bg-[#1a1a1a] rounded-lg border border-gray-700 text-xs text-white px-2"
+                    defaultValue=""
+                  >
+                    <option value="">Select...</option>
+                    <option value="static">Static</option>
+                    <option value="dolly in">Dolly in</option>
+                    <option value="dolly out">Dolly out</option>
+                    <option value="orbit left">Orbit left</option>
+                    <option value="orbit right">Orbit right</option>
+                    <option value="pan left">Pan left</option>
+                    <option value="pan right">Pan right</option>
+                    <option value="push in">Push in</option>
+                    <option value="steadicam follow">Steadicam follow</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">Action/Description</label>
+                  <input
+                    id="seq-action"
+                    type="text"
+                    placeholder="e.g., character turns head"
+                    className="w-full h-9 bg-[#1a1a1a] rounded-lg border border-gray-700 text-xs text-white px-3"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  const angleEl = document.getElementById('seq-angle') as HTMLSelectElement;
+                  const cameraEl = document.getElementById('seq-camera') as HTMLSelectElement;
+                  const actionEl = document.getElementById('seq-action') as HTMLInputElement;
+                  if (angleEl.value && cameraEl.value && actionEl.value) {
+                    addPlannedShot({
+                      angle: angleEl.value,
+                      cameraMove: cameraEl.value,
+                      action: actionEl.value
+                    });
+                    angleEl.value = '';
+                    cameraEl.value = '';
+                    actionEl.value = '';
+                  }
+                }}
+                className="mt-3 w-full h-9 bg-orange-500 hover:bg-orange-600 text-black rounded-lg text-xs font-semibold transition-colors"
+              >
+                + Add Shot to Sequence
+              </button>
+            </div>
+
+            {/* Auto-Chain Toggle */}
+            <div className="flex items-center justify-between mt-5 pt-5 border-t border-gray-700">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setAutoChaining(!isAutoChaining)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${isAutoChaining ? 'bg-orange-500' : 'bg-gray-700'}`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${isAutoChaining ? 'left-6' : 'left-0.5'}`} />
+                </button>
+                <div>
+                  <div className="text-xs text-white font-medium">Auto-Chain Mode</div>
+                  <div className="text-[10px] text-gray-500">Automatically generate next shot when current completes</div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={clearSequencePlan}
+                  className="px-4 py-2 bg-[#2a2a2a] hover:bg-gray-700 rounded-lg text-xs text-gray-400 transition-colors"
+                >
+                  Clear All
+                </button>
+                <button
+                  onClick={() => setShowSequencePlanner(false)}
+                  className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-black rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Start Sequence ({sequencePlan.length} shots)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Emotions Panel */}
       {showEmotions && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowEmotions(false)}>
@@ -2363,6 +2563,25 @@ export default function CinemaStudio() {
                   <circle cx="12" cy="12" r="3" />
                 </svg>
                 <span>{characterDNA ? 'DNA Set' : 'Character'}</span>
+              </button>
+
+              {/* Sequence Planner Button */}
+              <button
+                onClick={() => { setShowSequencePlanner(true); setShowMovements(false); setShowCameraPanel(false); setShowStyles(false); setShowLighting(false); setShowAtmosphere(false); setShowDirectors(false); setShowEmotions(false); setShowShotSetups(false); setShowCharacterDNA(false); }}
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                  sequencePlan.length > 0
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white'
+                    : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
+                }`}
+                title="Sequence Planner - plan multiple shots before generating"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+                <span>{sequencePlan.length > 0 ? `${sequencePlan.length} Shots` : 'Sequence'}</span>
               </button>
 
               <button
