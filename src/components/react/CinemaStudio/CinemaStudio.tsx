@@ -318,12 +318,16 @@ export default function CinemaStudio() {
   const [cameraElevation, setCameraElevation] = useState(0); // 3D camera elevation (-30 to 60)
   const [cameraDistance, setCameraDistance] = useState(1.0); // 3D camera distance (0.6-1.8)
 
-  // AI Prompt Assistant State
-  const [showAIPrompt, setShowAIPrompt] = useState(false); // AI Prompt panel
-  const [aiInput, setAiInput] = useState(''); // User's simple description
+  // AI Chat Assistant State
+  const [showAIPrompt, setShowAIPrompt] = useState(false); // AI Chat panel
+  const [aiInput, setAiInput] = useState(''); // User's message
   const [aiGenerating, setAiGenerating] = useState(false); // Loading state
   const [aiError, setAiError] = useState<string | null>(null); // Error message
   const [ollamaStatus, setOllamaStatus] = useState<'unknown' | 'ok' | 'error'>('unknown');
+  const [aiChatHistory, setAiChatHistory] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
+  const [aiSessionId] = useState(() => `cinema-${Date.now()}`); // Unique session ID
+  const aiChatRef = useRef<HTMLDivElement>(null); // For auto-scroll
+  const [aiMode, setAiMode] = useState<'quick' | 'chat'>('quick'); // Toggle between quick prompt and chat mode
 
   // Video Prompt Builder State
   const [videoCameraMovement, setVideoCameraMovement] = useState<string | null>(null);
@@ -634,6 +638,87 @@ export default function CinemaStudio() {
       setOllamaStatus(data.status === 'ok' ? 'ok' : 'error');
     } catch {
       setOllamaStatus('error');
+    }
+  };
+
+  // ============================================
+  // AI CHAT FUNCTION (with memory - uses Qwen3)
+  // ============================================
+  const handleAIChat = async () => {
+    if (!aiInput.trim()) {
+      setAiError('Please enter a message');
+      return;
+    }
+
+    const userMessage = aiInput.trim();
+    setAiInput('');
+    setAiGenerating(true);
+    setAiError(null);
+
+    // Add user message to history immediately
+    setAiChatHistory(prev => [...prev, { role: 'user', content: userMessage }]);
+
+    // Auto-scroll
+    setTimeout(() => {
+      if (aiChatRef.current) {
+        aiChatRef.current.scrollTop = aiChatRef.current.scrollHeight;
+      }
+    }, 100);
+
+    try {
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          sessionId: aiSessionId,
+          model: 'qwen3:8b'
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.details || 'Chat failed');
+      }
+
+      // Add assistant response to history
+      setAiChatHistory(prev => [...prev, { role: 'assistant', content: data.response }]);
+
+      // Auto-scroll
+      setTimeout(() => {
+        if (aiChatRef.current) {
+          aiChatRef.current.scrollTop = aiChatRef.current.scrollHeight;
+        }
+      }, 100);
+
+    } catch (err) {
+      console.error('AI chat error:', err);
+      setAiError(err instanceof Error ? err.message : 'Chat failed');
+      // Remove the user message if there was an error
+      setAiChatHistory(prev => prev.slice(0, -1));
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  // Use prompt from chat (copy to prompt field)
+  const usePromptFromChat = (content: string) => {
+    if (mode === 'image') {
+      setPromptText(content);
+    } else {
+      setMotionPrompt(content);
+    }
+    setShowAIPrompt(false);
+  };
+
+  // Clear chat history
+  const clearAIChatHistory = async () => {
+    setAiChatHistory([]);
+    try {
+      await fetch(`/api/ai/chat?sessionId=${aiSessionId}`, { method: 'DELETE' });
+    } catch (err) {
+      console.error('Failed to clear chat history:', err);
     }
   };
 
@@ -2055,32 +2140,51 @@ export default function CinemaStudio() {
       {/* AI Prompt Assistant Panel */}
       {showAIPrompt && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowAIPrompt(false)}>
-          <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800/50 p-6 shadow-2xl max-w-xl w-full mx-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
+          <div className={`bg-[#1a1a1a] rounded-2xl border border-gray-800/50 p-6 shadow-2xl w-full mx-4 ${aiMode === 'chat' ? 'max-w-2xl h-[80vh] flex flex-col' : 'max-w-xl'}`} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <span className="px-4 py-1.5 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-lg text-xs font-medium text-yellow-300 flex items-center gap-1.5">
                   {Icons.sparkle}
-                  AI Prompt Assistant
+                  AI Assistant
                 </span>
-                <span className="text-xs text-gray-500">Describe in simple terms</span>
+                {/* Mode Toggle */}
+                <div className="flex bg-[#2a2a2a] rounded-lg p-0.5">
+                  <button
+                    onClick={() => setAiMode('quick')}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                      aiMode === 'quick'
+                        ? 'bg-yellow-500 text-black'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Quick (Mistral)
+                  </button>
+                  <button
+                    onClick={() => setAiMode('chat')}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                      aiMode === 'chat'
+                        ? 'bg-purple-500 text-white'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Chat (Qwen3)
+                  </button>
+                </div>
               </div>
-              <button onClick={() => setShowAIPrompt(false)} className="w-9 h-9 rounded-lg bg-[#2a2a2a] hover:bg-gray-700 flex items-center justify-center text-gray-400 transition-colors">
-                {Icons.close}
-              </button>
-            </div>
-
-            {/* Mode indicator */}
-            <div className="flex items-center gap-2 mb-4">
-              <span className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                mode === 'image'
-                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                  : 'bg-green-500/20 text-green-300 border border-green-500/30'
-              }`}>
-                {mode === 'image' ? 'Image Mode' : 'Video Mode'}
-              </span>
-              <span className="text-xs text-gray-500">
-                {mode === 'image' ? 'Will generate an image prompt' : 'Will generate a motion/video prompt'}
-              </span>
+              <div className="flex items-center gap-2">
+                {aiMode === 'chat' && aiChatHistory.length > 0 && (
+                  <button
+                    onClick={clearAIChatHistory}
+                    className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
+                <button onClick={() => setShowAIPrompt(false)} className="w-9 h-9 rounded-lg bg-[#2a2a2a] hover:bg-gray-700 flex items-center justify-center text-gray-400 transition-colors">
+                  {Icons.close}
+                </button>
+              </div>
             </div>
 
             {/* Ollama Status */}
@@ -2090,84 +2194,195 @@ export default function CinemaStudio() {
                 ollamaStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
               }`} />
               <span className="text-xs text-gray-400">
-                {ollamaStatus === 'ok' ? 'Ollama connected (Mistral)' :
+                {ollamaStatus === 'ok' ? `Ollama connected (${aiMode === 'chat' ? 'Qwen3' : 'Mistral'})` :
                  ollamaStatus === 'error' ? 'Ollama not running - start with: ollama serve' :
                  'Checking Ollama...'}
               </span>
+              <span className={`ml-auto px-2 py-0.5 rounded text-xs font-medium ${
+                mode === 'image'
+                  ? 'bg-blue-500/20 text-blue-300'
+                  : 'bg-green-500/20 text-green-300'
+              }`}>
+                {mode === 'image' ? 'Image' : 'Video'}
+              </span>
             </div>
 
-            {/* Input */}
-            <div className="mb-4">
-              <textarea
-                value={aiInput}
-                onChange={(e) => setAiInput(e.target.value)}
-                placeholder={mode === 'image'
-                  ? "e.g., \"woman in cafe, lonely, Fincher style\" or \"epic battle, Nolan, IMAX\""
-                  : "e.g., \"slow push in, eyes widen\" or \"orbit around, hair blows in wind\""
-                }
-                className="w-full h-24 bg-[#2a2a2a] border border-gray-700 rounded-xl p-4 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
-                disabled={aiGenerating}
-              />
-            </div>
+            {/* QUICK MODE */}
+            {aiMode === 'quick' && (
+              <>
+                {/* Input */}
+                <div className="mb-4">
+                  <textarea
+                    value={aiInput}
+                    onChange={(e) => setAiInput(e.target.value)}
+                    placeholder={mode === 'image'
+                      ? "e.g., \"woman in cafe, lonely, Fincher style\" or \"epic battle, Nolan, IMAX\""
+                      : "e.g., \"slow push in, eyes widen\" or \"orbit around, hair blows in wind\""
+                    }
+                    className="w-full h-24 bg-[#2a2a2a] border border-gray-700 rounded-xl p-4 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
+                    disabled={aiGenerating}
+                  />
+                </div>
 
-            {/* Error */}
-            {aiError && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">
-                {aiError}
-              </div>
+                {/* Error */}
+                {aiError && (
+                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">
+                    {aiError}
+                  </div>
+                )}
+
+                {/* Examples */}
+                <div className="mb-4">
+                  <div className="text-xs text-gray-500 mb-2">Examples (click to try):</div>
+                  <div className="flex flex-wrap gap-2">
+                    {mode === 'image' ? (
+                      <>
+                        <button onClick={() => setAiInput('woman in cafe, lonely, Fincher style')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">lonely cafe, Fincher</button>
+                        <button onClick={() => setAiInput('epic battle scene, Nolan, IMAX')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">epic battle, Nolan</button>
+                        <button onClick={() => setAiInput('romantic scene, Wong Kar-wai, neon rain')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">romantic, Wong Kar-wai</button>
+                        <button onClick={() => setAiInput('symmetrical hotel, Kubrick stare')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">hotel, Kubrick</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => setAiInput('slow push in, subject turns head')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">push in + head turn</button>
+                        <button onClick={() => setAiInput('orbit around, hair blows in wind')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">orbit + wind</button>
+                        <button onClick={() => setAiInput('static shot, rain falls, eyes blink')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">static + rain</button>
+                        <button onClick={() => setAiInput('dolly out reveal, smoke rises')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">dolly out reveal</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Generate Button */}
+                <button
+                  onClick={handleAIGenerate}
+                  disabled={aiGenerating || !aiInput.trim() || ollamaStatus === 'error'}
+                  className={`w-full py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all ${
+                    aiGenerating || !aiInput.trim() || ollamaStatus === 'error'
+                      ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-yellow-500 to-orange-500 text-black hover:from-yellow-400 hover:to-orange-400'
+                  }`}
+                >
+                  {aiGenerating ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                      </svg>
+                      Generating with Mistral...
+                    </>
+                  ) : (
+                    <>
+                      {Icons.sparkle}
+                      Generate {mode === 'image' ? 'Image' : 'Motion'} Prompt
+                    </>
+                  )}
+                </button>
+
+                {/* Info */}
+                <div className="mt-4 text-[10px] text-gray-500 text-center">
+                  Quick mode: One-shot prompt generation with Mistral
+                </div>
+              </>
             )}
 
-            {/* Examples */}
-            <div className="mb-4">
-              <div className="text-xs text-gray-500 mb-2">Examples (click to try):</div>
-              <div className="flex flex-wrap gap-2">
-                {mode === 'image' ? (
-                  <>
-                    <button onClick={() => setAiInput('woman in cafe, lonely, Fincher style')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">lonely cafe, Fincher</button>
-                    <button onClick={() => setAiInput('epic battle scene, Nolan, IMAX')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">epic battle, Nolan</button>
-                    <button onClick={() => setAiInput('romantic scene, Wong Kar-wai, neon rain')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">romantic, Wong Kar-wai</button>
-                    <button onClick={() => setAiInput('symmetrical hotel, Kubrick stare')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">hotel, Kubrick</button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => setAiInput('slow push in, subject turns head')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">push in + head turn</button>
-                    <button onClick={() => setAiInput('orbit around, hair blows in wind')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">orbit + wind</button>
-                    <button onClick={() => setAiInput('static shot, rain falls, eyes blink')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">static + rain</button>
-                    <button onClick={() => setAiInput('dolly out reveal, smoke rises')} className="px-2 py-1 bg-[#2a2a2a] hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">dolly out reveal</button>
-                  </>
+            {/* CHAT MODE */}
+            {aiMode === 'chat' && (
+              <>
+                {/* Chat History */}
+                <div ref={aiChatRef} className="flex-1 overflow-y-auto mb-4 space-y-3 min-h-0">
+                  {aiChatHistory.length === 0 ? (
+                    <div className="text-center text-gray-500 py-8">
+                      <div className="text-lg mb-2">Chat with Qwen3</div>
+                      <div className="text-xs">Ask about cinematography, get prompts, refine ideas...</div>
+                      <div className="text-xs mt-1 text-purple-400">Memory is saved to disk!</div>
+                    </div>
+                  ) : (
+                    aiChatHistory.map((msg, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[85%] rounded-xl p-3 ${
+                            msg.role === 'user'
+                              ? 'bg-purple-500/20 border border-purple-500/30 text-purple-100'
+                              : 'bg-[#2a2a2a] border border-gray-700 text-gray-200'
+                          }`}
+                        >
+                          <div className="text-xs opacity-50 mb-1">
+                            {msg.role === 'user' ? 'You' : 'Qwen3'}
+                          </div>
+                          <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
+                          {msg.role === 'assistant' && (
+                            <button
+                              onClick={() => usePromptFromChat(msg.content)}
+                              className="mt-2 px-2 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded text-xs transition-colors"
+                            >
+                              Use as Prompt
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  {aiGenerating && (
+                    <div className="flex justify-start">
+                      <div className="bg-[#2a2a2a] border border-gray-700 rounded-xl p-3">
+                        <div className="flex items-center gap-2 text-gray-400">
+                          <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                          </svg>
+                          <span className="text-xs">Qwen3 thinking...</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Error */}
+                {aiError && (
+                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">
+                    {aiError}
+                  </div>
                 )}
-              </div>
-            </div>
 
-            {/* Generate Button */}
-            <button
-              onClick={handleAIGenerate}
-              disabled={aiGenerating || !aiInput.trim() || ollamaStatus === 'error'}
-              className={`w-full py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all ${
-                aiGenerating || !aiInput.trim() || ollamaStatus === 'error'
-                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-yellow-500 to-orange-500 text-black hover:from-yellow-400 hover:to-orange-400'
-              }`}
-            >
-              {aiGenerating ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-                  </svg>
-                  Generating with Mistral...
-                </>
-              ) : (
-                <>
-                  {Icons.sparkle}
-                  Generate {mode === 'image' ? 'Image' : 'Motion'} Prompt
-                </>
-              )}
-            </button>
+                {/* Chat Input */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={aiInput}
+                    onChange={(e) => setAiInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAIChat();
+                      }
+                    }}
+                    placeholder="Ask about cinematography, get prompts, refine ideas..."
+                    className="flex-1 bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
+                    disabled={aiGenerating}
+                  />
+                  <button
+                    onClick={handleAIChat}
+                    disabled={aiGenerating || !aiInput.trim() || ollamaStatus === 'error'}
+                    className={`px-4 py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all ${
+                      aiGenerating || !aiInput.trim() || ollamaStatus === 'error'
+                        ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-400 hover:to-pink-400'
+                    }`}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                      <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                    </svg>
+                  </button>
+                </div>
 
-            {/* Info */}
-            <div className="mt-4 text-[10px] text-gray-500 text-center">
-              AI knows: 12 directors (Kubrick, Spielberg, Fincher, Nolan, etc.), lenses, camera movements, lighting, and more
-            </div>
+                {/* Info */}
+                <div className="mt-3 text-[10px] text-gray-500 text-center">
+                  Chat mode: Qwen3 with memory saved to <code className="text-purple-400">ai-memory/</code> folder
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
