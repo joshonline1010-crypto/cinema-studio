@@ -1,7 +1,7 @@
-/* empty css                                     */
-import { e as createComponent, f as createAstro, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_CozMHr2T.mjs';
+/* empty css                                  */
+import { e as createComponent, f as createAstro, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_BJ9NHA2f.mjs';
 import 'piccolore';
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_B7uO4DCz.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_MPUrlo_H.mjs';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -9,6 +9,7 @@ import { create } from 'zustand';
 export { renderers } from '../renderers.mjs';
 
 const AVAILABLE_AGENTS = [
+  { id: "visual-story-v2", name: "Visual Story v2 (Main)", endpoint: "/webhook/visual-story-agent/chat" },
   { id: "movieagent-standalone", name: "MovieAgent (Story to Shots)", endpoint: "/webhook/movieagent-standalone/chat" },
   { id: "visual-intake", name: "Story Intake (New!)", endpoint: "/webhook/visual-story-intake/chat" },
   { id: "visual-story", name: "Visual Story Agent", endpoint: "/webhook/visual-story-agent/chat" },

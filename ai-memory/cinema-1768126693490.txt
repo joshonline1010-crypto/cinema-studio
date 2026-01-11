@@ -1,0 +1,23 @@
+# AI Chat Memory - Session: cinema-1768126693490
+# Created: 2026-01-11T10:28:23.786Z
+
+[USER]: IN THE STORY THINK WHAT NEXT SHOT WOULD BE ANGLE
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+IMAGE PROMPT: "Kubrick stare, head tilted down, eyes looking up at camera, intense menacing gaze, direct eye contact, close-up, cold lighting, centered framing, psychological intensity, character breaking sanity, unsettling, Kubrick style"
+MOTION PROMPT: "dolly in, <sks> back view eye-level shot wide shot"
+MODEL: kling-2.6
+MODE: Video
+ASPECT: 16:9 | RES: 4K
+
+=== REFERENCE IMAGES ===
+[Ref 1]: Reference image 1
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: low-angle wide shot, subject centered in one-point perspective corridor, cold practical lighting from ceiling, slow dolly back to reveal sterile white walls and distant flickering fluorescent lights, then settles
+---

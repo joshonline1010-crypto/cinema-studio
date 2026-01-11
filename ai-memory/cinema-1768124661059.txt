@@ -1,0 +1,11 @@
+# AI Chat Memory - Session: cinema-1768124661059
+# Created: 2026-01-11T09:44:45.071Z
+
+[USER]: Can you see my current photo and prombt I MADE
+---
+[ASSISTANT]: I cannot view external images or prompts. Please provide your description and I'll craft a cinematic prompt for you. For video prompts, describe the motion and end with "then settles". For images, describe the scene with specific cinematographic details.
+---
+[USER]: MAKE ROMANCTIC VIDEO PROMBT ZOOM IN OR SOMETHING
+---
+[ASSISTANT]: Subject's eyes slowly lock onto each other across the table, fingertips brush against wine glass rim, slow dolly in on shared close-up, breaths sync with heartbeat, candle flickers casting warm glow on trembling hands, then settles
+---

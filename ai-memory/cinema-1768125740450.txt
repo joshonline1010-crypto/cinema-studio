@@ -1,0 +1,43 @@
+# AI Chat Memory - Session: cinema-1768125740450
+# Created: 2026-01-11T10:05:41.367Z
+
+[USER]: MAKE ME A VIDEO PROMBT FOR THIS SHOT
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+MOTION PROMPT: "dolly in"
+MODEL: kling-2.6
+MODE: Video
+ASPECT: 16:9 | RES: 2K
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: slow dolly forward, camera pushes in, then settles
+---
+[USER]: PLAN OUT WHAT THE NEXT SHOT WOULD BE IN THIS STORY FOR THIS PENGION SAD in a lab plan out next 4 shots FROM HERE
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+MODEL: kling-2.6
+MODE: Image
+ASPECT: 16:9 | RES: 2K
+
+=== SHOT HISTORY (for sequence planning) ===
+Shot 1: slow dolly forward, camera pushes in, then settles
+Total shots: 1
+
+You can plan the NEXT shot in the sequence. Use consistency phrases!
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: SHOT 2 (REACTION): THIS EXACT CHARACTER, THIS EXACT LIGHTING, medium close-up, penguin's face reflected in cold lab glass, slow zoom out revealing drooping wings, then settles  
+SHOT 3 (ENVIRONMENT): THIS EXACT CHARACTER, THIS EXACT COLOR GRADE, wide shot, penguin isolated in sterile white tank, slow dolly around tank rim, then settles  
+SHOT 4 (DYNAMIC): THIS EXACT CHARACTER, THIS EXACT LIGHTING, low-angle crane up, penguin's shadow stretching across concrete floor, slow push-in to eye level, then settles  
+SHOT 5 (CLIMAX): THIS EXACT CHARACTER, THIS EXACT COLOR GRADE, extreme close-up, penguin's single tear reflecting fluorescent light, static shot with slight focus shift, then settles
+---

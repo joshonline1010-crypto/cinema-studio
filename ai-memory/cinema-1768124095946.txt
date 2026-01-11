@@ -1,0 +1,7 @@
+# AI Chat Memory - Session: cinema-1768124095946
+# Created: 2026-01-11T09:35:55.811Z
+
+[USER]: make me imax shot of cute woman like megan fox looking into green lambo truck hood WITH MICHEL BAY LIKE SHOT
+---
+[ASSISTANT]: IMAX wide shot of a youthful, Megan Fox-like woman in a neon-lit urban alley, mid-slow-motion interaction with a sleek green Lamborghini's hood, sparks flying from engine vents, dramatic backlit neon reflections on wet pavement, 2.39:1 anamorphic lens flares, low-angle crane rise to emphasize her heroic stance, high-key lighting with teal-green color grading, dynamic slow-motion camera movement tracking her gaze, then settles
+---

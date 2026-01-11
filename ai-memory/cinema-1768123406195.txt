@@ -1,0 +1,15 @@
+# AI Chat Memory - Session: cinema-1768123406195
+# Created: 2026-01-11T09:23:45.442Z
+
+[USER]: HI
+---
+[ASSISTANT]: Hello! How can I assist you today? Please provide a description, and I'll generate a detailed cinematic prompt for you.
+---
+[USER]: mAKE ME SOMETHING EPIC BANK ROBERY in style of wes anderson
+---
+[ASSISTANT]: A symmetrical bank heist in pastel hues, wide-angle establishing shot of a grand, geometric vault with mirrored walls, robbers in coordinated outfits arranged in a precise line, tracking shot on rails following their synchronized movements, flat even lighting bathes the scene in soft pinks and yellows, top-down insert shots reveal meticulous set design, whip pans transition between chaos and order, then settles
+---
+[USER]: MAKE BIG EPIC IMAX SHOT
+---
+[ASSISTANT]: A vast, symmetrical cityscape at dawn, IMAX wide shot capturing a colossal, geometric skyscraper complex with mirrored facades reflecting the golden hour sky, crowds of synchronized figures moving in precise patterns across the streets, slow dolly back to reveal the scale of the architecture, 2.39:1 anamorphic lens flares, flat even lighting bathes the scene in warm amber tones, precise framing emphasizes the grandeur of the structure, then settles
+---

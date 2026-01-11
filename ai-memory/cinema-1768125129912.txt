@@ -1,0 +1,20 @@
+# AI Chat Memory - Session: cinema-1768125129912
+# Created: 2026-01-11T09:55:13.119Z
+
+[USER]: what video prombt for this img
+
+
+=== CURRENT SESSION INFO ===
+CURRENT IMAGE: Yes, user has generated an image
+IMAGE PROMPT USED: "THIS EXACT CHARACTER, in spaceship interior at indeterminate, neutral mood (subtle), front view, eye level, medium shot, rule of thirds composition, medium shot deep focus, screen light and ambient lighting, cool blue tones"
+VIDEO/MOTION PROMPT: "THIS EXACT CHARACTER, in spaceship interior at indeterminate, neutral mood (subtle), front view, eye level, medium shot, rule of thirds composition, medium shot deep focus, screen light and ambient lighting, cool blue tones"
+MODEL: kling-2.6
+MODE: Video Generation
+ASPECT RATIO: 16:9
+RESOLUTION: 2K
+
+You can modify, enhance, or create variations of the current prompt. The user may ask you to change specific elements.
+
+---
+[ASSISTANT]: Camera slowly dollies forward, focusing on character's face, eyes tracking a faint light source, ambient blue glow intensifies, then settles
+---

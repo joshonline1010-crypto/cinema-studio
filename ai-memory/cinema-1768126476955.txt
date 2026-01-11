@@ -1,0 +1,22 @@
+# AI Chat Memory - Session: cinema-1768126476955
+# Created: 2026-01-11T10:15:25.388Z
+
+[USER]: MAKE me start and end img prombt IMAX of HIGH SPEED CHASE
+---
+[ASSISTANT]: IMAX wide shot of a high-speed car chase on a rain-slicked highway at night, 24mm wide-angle lens capturing the vast asphalt expanse, neon signs reflecting in puddles, camera slowly dollies forward through a foggy atmosphere, then settles on a dramatic close-up of the driver's face, eyes wide with determination, 50mm lens with shallow depth of field, split lighting casting sharp shadows, high-contrast neon color grade, Nolan-style practical effects and IMAX scale, 2.39:1 aspect ratio, cinematic tension.
+---
+[USER]: i need start prombt and end prombt photo
+
+
+=== CURRENT SHOT ===
+IMAGE PROMPT: "IMAX wide shot of a high-speed car chase on a rain-slicked highway at night, 24mm wide-angle lens capturing the vast asphalt expanse, neon signs reflecting in puddles, camera slowly dollies forward through a foggy atmosphere, then settles on a dramatic close-up of the driver's face, eyes wide with determination, 50mm lens with shallow depth of field, split lighting casting sharp shadows, high-contrast neon color grade, Nolan-style practical effects and IMAX scale, 2.39:1 aspect ratio, cinematic tension."
+MODEL: kling-2.6
+MODE: Image
+ASPECT: 16:9 | RES: 4K
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: IMAX wide shot of a rain-slicked highway at night, 24mm wide-angle lens capturing the vast asphalt expanse, neon signs reflecting in puddles, camera slowly dollies forward through a dense fog, then settles on a dramatic low-angle close-up of the driver's face, eyes wide with determination, 50mm lens with shallow depth of field, split lighting casting sharp shadows, high-contrast neon color grade, Nolan-style practical effects and IMAX scale, 2.39:1 aspect ratio, cinematic tension.
+---

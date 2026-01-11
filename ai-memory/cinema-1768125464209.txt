@@ -1,0 +1,45 @@
+# AI Chat Memory - Session: cinema-1768125464209
+# Created: 2026-01-11T10:04:43.858Z
+
+[USER]: make EPIC SHOT WITH THIS CHARCTER IN MAD MAX LIKE ROAD RAGE RAYTRACING
+
+=== REFERENCE IMAGES ===
+[Ref 1]: Reference image 1
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: A high-octane road rage confrontation in a post-apocalyptic wasteland, raytraced with hyper-realistic reflections and textures. Two modified muscle cars collide in a dust-choked desert, their chrome and rusted metal glinting under a harsh midday sun. The camera dollys forward through a cloud of debris, tracking the lead vehicle's rear wheels as it screeches toward the camera, tires smoking, exhaust plumes trailing. Neon signs flicker in the distance, casting jagged light across the cracked asphalt. The subject, a lone driver in a tactical jacket, leans out of the window, eyes locked on the oncoming vehicle, hands gripping the wheel with white-knuckled intensity. Raytraced headlights blaze through the dust, creating a strobing effect, while the environment's textures—dried mud, peeling paint, and shattered glass—pop with photorealistic detail. The shot ends with a slow push-in to the driver's face, sweat beading on their brow, then settles.
+---
+[USER]: MAKE SURE YOU PROMBT REF CHARCTER ill send as ref
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+IMAGE PROMPT: "A high-octane road rage confrontation in a post-apocalyptic wasteland, raytraced with hyper-realistic reflections and textures. Two modified muscle cars collide in a dust-choked desert, their chrome and rusted metal glinting under a harsh midday sun. The camera dollys forward through a cloud of debris, tracking the lead vehicle's rear wheels as it screeches toward the camera, tires smoking, exhaust plumes trailing. Neon signs flicker in the distance, casting jagged light across the cracked asphalt. The subject, a lone driver in a tactical jacket, leans out of the window, eyes locked on the oncoming vehicle, hands gripping the wheel with white-knuckled intensity. Raytraced headlights blaze through the dust, creating a strobing effect, while the environment's textures—dried mud, peeling paint, and shattered glass—pop with photorealistic detail. The shot ends with a slow push-in to the driver's face, sweat beading on their brow, then settles."
+MOTION PROMPT: "A high-octane road rage confrontation in a post-apocalyptic wasteland, raytraced with hyper-realistic reflections and textures. Two modified muscle cars collide in a dust-choked desert, their chrome and rusted metal glinting under a harsh midday sun. The camera dollys forward through a cloud of debris, tracking the lead vehicle's rear wheels as it screeches toward the camera, tires smoking, exhaust plumes trailing. Neon signs flicker in the distance, casting jagged light across the cracked asphalt. The subject, a lone driver in a tactical jacket, leans out of the window, eyes locked on the oncoming vehicle, hands gripping the wheel with white-knuckled intensity. Raytraced headlights blaze through the dust, creating a strobing effect, while the environment's textures—dried mud, peeling paint, and shattered glass—pop with photorealistic detail. The shot ends with a slow push-in to the driver's face, sweat beading on their brow, then settles."
+MODEL: kling-2.6
+MODE: Image
+ASPECT: 16:9 | RES: 2K
+
+=== REFERENCE IMAGES ===
+[Ref 1]: Reference image 1
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: **IMAGE PROMPT (WITH REFERENCE CHARACTER):**  
+"THIS EXACT CHARACTER, a lone driver in a tactical jacket, leans out of a modified muscle car window during a high-octane road rage confrontation in a post-apocalyptic wasteland. Raytraced with hyper-realistic reflections and textures, the scene features two chrome-and-rusted vehicles colliding in a dust-choked desert under a harsh midday sun. The camera dollys forward through a cloud of debris, tracking the lead vehicle's rear wheels as it screeches toward the camera, tires smoking, exhaust plumes trailing. Neon signs flicker in the distance, casting jagged light across cracked asphalt. Raytraced headlights blaze through the dust, creating a strobing effect, while the environment’s textures—dried mud, peeling paint, and shattered glass—pop with photorealistic detail. THIS EXACT CHARACTER’s face is framed by sweat-dampened hair, eyes locked on the oncoming vehicle, hands gripping the wheel with white-knuckled intensity. 16:9 aspect ratio, 2K resolution, Kling-2.6 model, Mad Max aesthetic, photorealistic raytracing, extreme desaturation with neon accents, dynamic motion blur in debris cloud."  
+
+**MOTION PROMPT (WITH REFERENCE CHARACTER):**  
+"THIS EXACT CHARACTER, the lone driver in a tactical jacket, leans out of the car window during a high-octane road rage confrontation. The camera dollys forward through a cloud of debris, tracking the lead vehicle’s rear wheels as it screeches toward the camera, tires smoking, exhaust plumes trailing. Raytraced headlights blaze through the dust, creating a strobing effect. THIS EXACT CHARACTER’s hands grip the wheel with white-knuckled intensity, eyes locked on the oncoming vehicle. The environment’s textures—dried mud, peeling paint, shattered glass—pop with photorealistic detail. The shot ends with a slow push-in to THIS EXACT CHARACTER’s face, sweat beading on their brow, then settles. 16:9 aspect ratio, 2K resolution, Kling-2.6 model, dynamic motion blur, hyper-realistic raytraced lighting, Mad Max road rage intensity."  
+
+---  
+**Notes:**  
+- Replaced generic descriptions with "THIS EXACT CHARACTER" to ensure alignment with your reference image.  
+- Retained all original cinematic elements (raytracing, Mad Max aesthetic, 16:9/2K) while prioritizing character fidelity.  
+- Adjusted phrasing to emphasize motion and texture for photorealistic rendering.  
+Let me know if you’d like to refine the character’s pose, lighting, or environment further!
+---

@@ -1,7 +1,7 @@
-/* empty css                                     */
-import { e as createComponent, k as renderComponent, l as renderScript, r as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_CozMHr2T.mjs';
+/* empty css                                  */
+import { e as createComponent, k as renderComponent, l as renderScript, r as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_BJ9NHA2f.mjs';
 import 'piccolore';
-import { $ as $$BaseLayout } from '../chunks/BaseLayout_DksSdzDt.mjs';
+import { $ as $$BaseLayout } from '../chunks/BaseLayout_DznVaL5_.mjs';
 export { renderers } from '../renderers.mjs';
 
 const $$Register = createComponent(async ($$result, $$props, $$slots) => {

@@ -537,6 +537,14 @@ export default function CinemaStudio() {
     }
   }, [mode, videoCameraMovement, videoSubjectMotion, videoBackgroundMotion, videoObjectMotion, promptText]);
 
+  // Auto-update motion prompt when 3D camera moves (only when 3D panel is open)
+  useEffect(() => {
+    if (show3DCamera && mode === 'video') {
+      const qwenPrompt = buildQwenPromptContinuous(cameraAzimuth, cameraElevation, cameraDistance);
+      setMotionPrompt(qwenPrompt);
+    }
+  }, [cameraAzimuth, cameraElevation, cameraDistance, show3DCamera]);
+
   // Auto-detect best model based on current settings
   const autoSelectModel = (): VideoModel => {
     // Has end frame? -> Kling O1 for transitions

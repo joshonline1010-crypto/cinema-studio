@@ -1,0 +1,15 @@
+# AI Chat Memory - Session: cinema-1768124168937
+# Created: 2026-01-11T09:36:16.292Z
+
+[USER]: hi
+---
+[ASSISTANT]: Hi! I'm here to help you craft **perfect, detailed cinematography prompts** for AI image/video generation. Whether you need a **David Fincher-esque cold close-up**, a **Christopher Nolan epic wide shot**, or a **Wong Kar-wai neon-lit slow motion**, I’ll tailor every detail: lenses, lighting, framing, and motion. Just describe your vision, and I’ll turn it into a director’s dream. What do you need?
+---
+[USER]: MAKE ME A IMAX SHOT OF CUTE WOMAN LOOKING INTO HOOD OF GREEN LAMBO TRUCK MICHEL BAY TYPE SHOT MAKE GIRL LOOK LIKE MEGAN FOX AND WEARING HOT OUTFIT
+---
+[ASSISTANT]: IMAX wide shot, 24mm lens, 2.39:1 aspect ratio, vibrant neon-lit urban backdrop, green Lambo truck parked with hood open, woman in tight red crop top and black leather pants, hair flowing in slow motion, camera dolly in on her confident stance, eyes locked on car's engine, neon reflections on her outfit, dynamic slow-motion movement as she leans forward, then settles
+---
+[USER]: now video prombt bigger then life zoom into cute face
+---
+[ASSISTANT]: Camera slowly zooms in on her face, eyes widen, lips part slightly, slow-motion movement, shallow depth of field, dynamic slow-motion zoom, then settles
+---

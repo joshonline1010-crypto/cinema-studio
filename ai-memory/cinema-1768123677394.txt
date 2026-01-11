@@ -1,0 +1,11 @@
+# AI Chat Memory - Session: cinema-1768123677394
+# Created: 2026-01-11T09:28:20.607Z
+
+[USER]: MAKE ME IMAX SHOT ON MONKEY
+---
+[ASSISTANT]: IMAX wide shot of a lone monkey perched on a moss-covered tree branch in a dense, misty jungle, golden hour light filtering through emerald canopy, shallow depth of field with background blurred, 2.39:1 aspect ratio, 18mm anamorphic lens, slow dolly forward to emphasize scale, then settles
+---
+[USER]: NOW MAKE VIDEO PROMBT FOR IT
+---
+[ASSISTANT]: Slow dolly forward with 18mm anamorphic lens, camera pushes in through dense mist, leaves sway gently in golden hour breeze, monkey's head slowly turns toward camera, then settles
+---

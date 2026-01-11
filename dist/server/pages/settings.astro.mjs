@@ -1,7 +1,7 @@
-/* empty css                                     */
-import { e as createComponent, f as createAstro, k as renderComponent, r as renderTemplate, m as maybeRenderHead, h as addAttribute } from '../chunks/astro/server_CozMHr2T.mjs';
+/* empty css                                  */
+import { e as createComponent, f as createAstro, k as renderComponent, r as renderTemplate, m as maybeRenderHead, h as addAttribute } from '../chunks/astro/server_BJ9NHA2f.mjs';
 import 'piccolore';
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_B7uO4DCz.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_MPUrlo_H.mjs';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { useState, useRef, useEffect } from 'react';
 export { renderers } from '../renderers.mjs';
@@ -21,7 +21,7 @@ function PreferencesPanel({ userId }) {
   }, []);
   const fetchPreferences = async () => {
     try {
-      const res = await fetch("/api/preferences");
+      const res = await fetch("/api/preferences", { credentials: "include" });
       const data = await res.json();
       setPreferences(data.preferences || {});
     } catch (e) {
@@ -32,7 +32,7 @@ function PreferencesPanel({ userId }) {
   };
   const fetchStyles = async () => {
     try {
-      const res = await fetch("/api/styles");
+      const res = await fetch("/api/styles", { credentials: "include" });
       const data = await res.json();
       setStyleCategories(data.categories || []);
     } catch (e) {
@@ -46,7 +46,8 @@ function PreferencesPanel({ userId }) {
       const res = await fetch("/api/preferences", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(preferences)
+        body: JSON.stringify(preferences),
+        credentials: "include"
       });
       if (res.ok) {
         setMessage({ type: "success", text: "Preferences saved!" });
@@ -69,7 +70,8 @@ function PreferencesPanel({ userId }) {
       formData.append("name", file.name.replace(/\.[^/.]+$/, ""));
       const res = await fetch("/api/preferences/upload", {
         method: "POST",
-        body: formData
+        body: formData,
+        credentials: "include"
       });
       if (res.ok) {
         const data = await res.json();
