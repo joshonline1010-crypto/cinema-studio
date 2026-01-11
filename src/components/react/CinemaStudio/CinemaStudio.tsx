@@ -251,6 +251,20 @@ function ScrollColumn({
   );
 }
 
+// Sequence Planning Types (local, for AI-generated sequences)
+interface AIPlannedShot {
+  shotNumber: number;
+  shotType: string;
+  cameraMovement: string;
+  subjectAction: string;
+  prompt: string;
+  motionPrompt?: string;
+  status: 'pending' | 'generating-image' | 'generating-video' | 'completed' | 'needs-ref' | 'error';
+  imageUrl?: string;
+  videoUrl?: string;
+  error?: string;
+}
+
 export default function CinemaStudio() {
   const {
     currentShot,
@@ -332,6 +346,12 @@ export default function CinemaStudio() {
   const [aiRefImages, setAiRefImages] = useState<Array<{ url: string; description: string | null }>>([]);  // Up to 7 ref images
   const [aiRefLoading, setAiRefLoading] = useState<number | null>(null); // Which image is being analyzed
   const aiRefInputRef = useRef<HTMLInputElement>(null);
+
+  // Sequence Planning & Auto-Execute State (characterDNA comes from store)
+  const [plannedSequence, setPlannedSequence] = useState<AIPlannedShot[]>([]);
+  const [sequenceExecuting, setSequenceExecuting] = useState(false);
+  const [sequenceProgress, setSequenceProgress] = useState(0); // Which shot is being processed
+  const [sequenceNeedsRef, setSequenceNeedsRef] = useState(false); // Pause if ref needed
 
   // Video Prompt Builder State
   const [videoCameraMovement, setVideoCameraMovement] = useState<string | null>(null);
@@ -800,6 +820,211 @@ export default function CinemaStudio() {
     setAiRefImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  // ============================================
+  // SHOT PLAN PARSING & AUTO-EXECUTE
+  // ============================================
+
+  // Detect if a message contains a shot sequence plan
+  const detectShotPlan = (content: string): boolean => {
+    // Look for patterns like "SHOT 1:", "Shot 1 (WIDE):", "1. ESTABLISHING:", etc.
+    const patterns = [
+      /SHOT\s*\d+\s*[:\(]/i,
+      /Shot\s*\d+\s*[:\(]/i,
+      /^\d+\.\s*(WIDE|MEDIUM|CLOSE|ESTABLISHING|ECU|POV)/im,
+      /\(ESTABLISHING\)|\(WIDE\)|\(MEDIUM\)|\(CLOSE-UP\)|\(ECU\)/i
+    ];
+    return patterns.some(p => p.test(content));
+  };
+
+  // Parse Qwen's shot plan into structured data
+  const parseShotPlan = (content: string): AIPlannedShot[] => {
+    const shots: AIPlannedShot[] = [];
+
+    // Split by shot markers
+    const shotBlocks = content.split(/(?=SHOT\s*\d+|Shot\s*\d+|^\d+\.\s*\()/im).filter(Boolean);
+
+    for (const block of shotBlocks) {
+      // Extract shot number
+      const numMatch = block.match(/(?:SHOT|Shot)\s*(\d+)|^(\d+)\./i);
+      if (!numMatch) continue;
+      const shotNumber = parseInt(numMatch[1] || numMatch[2]);
+
+      // Extract shot type (WIDE, MEDIUM, CLOSE-UP, etc.)
+      const typeMatch = block.match(/\((ESTABLISHING|WIDE|MEDIUM|CLOSE-UP|CLOSE|ECU|POV|FULL|MASTER)\)/i);
+      const shotType = typeMatch ? typeMatch[1].toUpperCase() : 'MEDIUM';
+
+      // Extract camera movement
+      const camMatch = block.match(/(?:camera|movement|motion)[:\s]+([^,\n]+)/i);
+      const cameraMovement = camMatch ? camMatch[1].trim() : 'static';
+
+      // Extract subject action
+      const actionMatch = block.match(/(?:subject|action|actor)[:\s]+([^,\n]+)/i);
+      const subjectAction = actionMatch ? actionMatch[1].trim() : '';
+
+      // The full prompt is everything after the shot header, cleaned up
+      let prompt = block
+        .replace(/^(?:SHOT|Shot)\s*\d+\s*[:\(]?[^:]*[:\)]?\s*/i, '')
+        .replace(/^\d+\.\s*\([^)]*\)\s*/i, '')
+        .trim();
+
+      // Extract motion prompt if present
+      const motionMatch = prompt.match(/(?:VIDEO|MOTION)[:\s]+([^\n]+)/i);
+      const motionPrompt = motionMatch ? motionMatch[1].trim() : undefined;
+
+      // Clean the image prompt (remove video/motion line)
+      if (motionMatch) {
+        prompt = prompt.replace(/(?:VIDEO|MOTION)[:\s]+[^\n]+/i, '').trim();
+      }
+
+      shots.push({
+        shotNumber,
+        shotType,
+        cameraMovement,
+        subjectAction,
+        prompt,
+        motionPrompt,
+        status: 'pending'
+      });
+    }
+
+    return shots;
+  };
+
+  // Load a shot plan from chat into the sequence planner
+  const loadShotPlan = (content: string) => {
+    const parsed = parseShotPlan(content);
+    if (parsed.length > 0) {
+      setPlannedSequence(parsed);
+      setSequenceProgress(0);
+      setSequenceExecuting(false);
+      setSequenceNeedsRef(false);
+    }
+  };
+
+  // Execute the entire shot sequence automatically
+  const executeSequence = async () => {
+    if (plannedSequence.length === 0) return;
+
+    setSequenceExecuting(true);
+    setSequenceNeedsRef(false);
+
+    // Check if we need a reference image for the first shot
+    if (!currentShot.startFrame && !referenceImage) {
+      setSequenceNeedsRef(true);
+      setSequenceExecuting(false);
+      return;
+    }
+
+    let lastFrame = currentShot.startFrame || referenceImage || '';
+    const COLOR_LOCK = 'THIS EXACT CHARACTER, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE.';
+
+    for (let i = 0; i < plannedSequence.length; i++) {
+      setSequenceProgress(i);
+      const shot = plannedSequence[i];
+
+      try {
+        // Update shot status
+        setPlannedSequence(prev => prev.map((s, idx) =>
+          idx === i ? { ...s, status: 'generating-image' } : s
+        ));
+
+        // Build image prompt with color lock and character DNA
+        let imagePrompt = shot.prompt;
+        const dna = characterDNA || '';
+        if (i > 0) {
+          // Add color lock phrases for consistency after first shot
+          imagePrompt = `${COLOR_LOCK} ${shot.shotType} shot. ${dna ? dna + '. ' : ''}${shot.prompt}`;
+        } else if (dna) {
+          imagePrompt = `${dna}. ${shot.prompt}`;
+        }
+
+        // Generate image
+        const imageResponse = await fetch('/api/cinema/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'image',
+            prompt: imagePrompt,
+            aspect_ratio: aspectRatio,
+            resolution: resolution,
+            reference_image: lastFrame
+          })
+        });
+
+        const imageData = await imageResponse.json();
+        if (!imageData.image_url) throw new Error('Image generation failed');
+
+        // Update shot with image
+        setPlannedSequence(prev => prev.map((s, idx) =>
+          idx === i ? { ...s, imageUrl: imageData.image_url, status: 'generating-video' } : s
+        ));
+
+        // Compress for video
+        const compressed = await compressForKling(imageData.image_url);
+
+        // Generate video
+        const videoPrompt = shot.motionPrompt || `${shot.cameraMovement}, ${shot.subjectAction}, then settles`;
+        const selectedModel = autoSelectModel();
+
+        const videoResponse = await fetch('/api/cinema/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: selectedModel === 'kling-o1' ? 'video-kling-o1' :
+                  selectedModel === 'seedance-1.5' ? 'video-seedance' : 'video-kling',
+            prompt: videoPrompt,
+            [selectedModel === 'kling-o1' ? 'start_image_url' : 'image_url']: compressed,
+            duration: String(currentShot.duration),
+            aspect_ratio: aspectRatio
+          })
+        });
+
+        const videoData = await videoResponse.json();
+        if (!videoData.video_url) throw new Error('Video generation failed');
+
+        // Update shot with video
+        setPlannedSequence(prev => prev.map((s, idx) =>
+          idx === i ? { ...s, videoUrl: videoData.video_url, status: 'completed' } : s
+        ));
+
+        // Extract last frame for next shot
+        const extractedFrame = await extractLastFrame(videoData.video_url);
+        if (extractedFrame) {
+          lastFrame = extractedFrame;
+        }
+
+        // Small delay between shots
+        await new Promise(r => setTimeout(r, 500));
+
+      } catch (err) {
+        console.error(`Shot ${i + 1} failed:`, err);
+        setPlannedSequence(prev => prev.map((s, idx) =>
+          idx === i ? { ...s, status: 'error', error: err instanceof Error ? err.message : 'Unknown error' } : s
+        ));
+        // Continue to next shot despite error
+      }
+    }
+
+    setSequenceExecuting(false);
+    setSequenceProgress(plannedSequence.length);
+  };
+
+  // Resume sequence after adding reference
+  const resumeSequenceWithRef = () => {
+    if (sequenceNeedsRef && currentShot.startFrame) {
+      setSequenceNeedsRef(false);
+      executeSequence();
+    }
+  };
+
+  // Clear the sequence
+  const clearSequence = () => {
+    setPlannedSequence([]);
+    setSequenceProgress(0);
+    setSequenceExecuting(false);
+    setSequenceNeedsRef(false);
+  };
+
   // Build context with current shot info, shot history, and reference images for chat
   const buildChatContext = (): string => {
     let context = '';
@@ -847,7 +1072,7 @@ export default function CinemaStudio() {
       context += '\n=== PLANNED SEQUENCE ===\n';
       sequencePlan.forEach((planned, i) => {
         const status = i < currentSequenceIndex ? 'DONE' : i === currentSequenceIndex ? 'CURRENT' : 'PENDING';
-        context += `[${status}] Shot ${i + 1}: ${planned.description || planned.angle}\n`;
+        context += `[${status}] Shot ${i + 1}: ${planned.angle} - ${planned.action}\n`;
       });
     }
 
@@ -2458,16 +2683,31 @@ export default function CinemaStudio() {
                           </div>
                           <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
                           {msg.role === 'assistant' && (
-                            <button
-                              onClick={() => usePromptFromChat(msg.content, idx)}
-                              className={`mt-2 px-2 py-1 rounded text-xs transition-colors ${
-                                aiCopiedIndex === idx
-                                  ? 'bg-green-500/30 text-green-400'
-                                  : 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400'
-                              }`}
-                            >
-                              {aiCopiedIndex === idx ? 'Copied to Prompt!' : 'Use as Prompt'}
-                            </button>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              <button
+                                onClick={() => usePromptFromChat(msg.content, idx)}
+                                className={`px-2 py-1 rounded text-xs transition-colors ${
+                                  aiCopiedIndex === idx
+                                    ? 'bg-green-500/30 text-green-400'
+                                    : 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400'
+                                }`}
+                              >
+                                {aiCopiedIndex === idx ? 'Copied to Prompt!' : 'Use as Prompt'}
+                              </button>
+                              {/* Execute Plan button - shows only when shot plan is detected */}
+                              {detectShotPlan(msg.content) && (
+                                <button
+                                  onClick={() => loadShotPlan(msg.content)}
+                                  className="px-2 py-1 rounded text-xs bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 transition-colors flex items-center gap-1"
+                                >
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3">
+                                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    <path d="M9 12l2 2 4-4" />
+                                  </svg>
+                                  Load Plan ({parseShotPlan(msg.content).length} shots)
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -2486,6 +2726,133 @@ export default function CinemaStudio() {
                     </div>
                   )}
                 </div>
+
+                {/* Sequence Planner Panel */}
+                {plannedSequence.length > 0 && (
+                  <div className="mb-3 p-3 bg-[#1f1f1f] rounded-xl border border-cyan-500/30">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-cyan-400 font-medium">
+                        Shot Sequence ({plannedSequence.filter(s => s.status === 'completed').length}/{plannedSequence.length} complete)
+                      </span>
+                      <div className="flex gap-2">
+                        {!sequenceExecuting && !sequenceNeedsRef && (
+                          <button
+                            onClick={executeSequence}
+                            className="px-2 py-1 rounded text-xs bg-green-500/20 hover:bg-green-500/30 text-green-400 transition-colors flex items-center gap-1"
+                          >
+                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                            Execute All
+                          </button>
+                        )}
+                        {sequenceExecuting && (
+                          <span className="px-2 py-1 rounded text-xs bg-yellow-500/20 text-yellow-400 flex items-center gap-1">
+                            <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                            </svg>
+                            Generating...
+                          </span>
+                        )}
+                        <button
+                          onClick={clearSequence}
+                          className="px-2 py-1 rounded text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Needs Reference Warning */}
+                    {sequenceNeedsRef && (
+                      <div className="mb-2 p-2 bg-orange-500/10 border border-orange-500/30 rounded-lg text-orange-400 text-xs">
+                        Add a reference image first! Upload a start frame or generate an image before executing.
+                        <button
+                          onClick={resumeSequenceWithRef}
+                          disabled={!currentShot.startFrame}
+                          className={`ml-2 px-2 py-0.5 rounded ${
+                            currentShot.startFrame
+                              ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                              : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                          }`}
+                        >
+                          Resume
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Character DNA Input */}
+                    <div className="mb-2">
+                      <input
+                        type="text"
+                        value={characterDNA || ''}
+                        onChange={(e) => setCharacterDNA(e.target.value)}
+                        placeholder="Character DNA (e.g., 'Asian man, 40s, tan flight suit')"
+                        className="w-full bg-[#2a2a2a] border border-gray-700 rounded px-2 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50"
+                      />
+                    </div>
+
+                    {/* Shot List */}
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {plannedSequence.map((shot, idx) => (
+                        <div
+                          key={idx}
+                          className={`flex items-center gap-2 p-1.5 rounded text-xs ${
+                            shot.status === 'completed' ? 'bg-green-500/10 border border-green-500/30' :
+                            shot.status === 'generating-image' || shot.status === 'generating-video' ? 'bg-yellow-500/10 border border-yellow-500/30' :
+                            shot.status === 'error' ? 'bg-red-500/10 border border-red-500/30' :
+                            'bg-[#2a2a2a] border border-gray-700'
+                          }`}
+                        >
+                          {/* Status Icon */}
+                          <div className="w-4 h-4 flex items-center justify-center">
+                            {shot.status === 'completed' ? (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 text-green-400">
+                                <path d="M20 6L9 17l-5-5" />
+                              </svg>
+                            ) : shot.status === 'generating-image' || shot.status === 'generating-video' ? (
+                              <svg className="w-3 h-3 text-yellow-400 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="32" />
+                              </svg>
+                            ) : shot.status === 'error' ? (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 text-red-400">
+                                <path d="M18 6L6 18M6 6l12 12" />
+                              </svg>
+                            ) : (
+                              <span className="text-gray-500">{shot.shotNumber}</span>
+                            )}
+                          </div>
+
+                          {/* Shot Info */}
+                          <div className="flex-1 truncate">
+                            <span className="text-cyan-300 font-medium">{shot.shotType}</span>
+                            <span className="text-gray-400 ml-1">- {shot.prompt.substring(0, 40)}...</span>
+                          </div>
+
+                          {/* Status Text */}
+                          <span className={`text-[10px] ${
+                            shot.status === 'generating-image' ? 'text-yellow-400' :
+                            shot.status === 'generating-video' ? 'text-blue-400' :
+                            shot.status === 'completed' ? 'text-green-400' :
+                            shot.status === 'error' ? 'text-red-400' :
+                            'text-gray-500'
+                          }`}>
+                            {shot.status === 'generating-image' ? 'Image...' :
+                             shot.status === 'generating-video' ? 'Video...' :
+                             shot.status === 'completed' ? 'Done' :
+                             shot.status === 'error' ? 'Failed' :
+                             'Pending'}
+                          </span>
+
+                          {/* Thumbnails */}
+                          {shot.imageUrl && (
+                            <img src={shot.imageUrl} alt="" className="w-6 h-6 rounded object-cover" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Reference Images */}
                 <div className="mb-3">
