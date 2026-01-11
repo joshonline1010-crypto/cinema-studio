@@ -928,13 +928,21 @@ export default function CinemaStudio() {
         }
       }
 
-      // Build prompt from primary shot, with asset swap if selected
+      // Build prompt from primary shot with character swap instructions
       let finalPrompt = primaryShot.shot.prompt || '';
+
+      // Priority: Asset > Character DNA > Reference Image
       if (selectedAssetForSwap && finalPrompt) {
-        // Replace subject description with user's asset description
-        // Insert asset description at the beginning and mark consistency
-        finalPrompt = `${selectedAssetForSwap.description}. ${finalPrompt}. THIS EXACT CHARACTER, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE.`;
+        // User has specific asset selected for swap
+        finalPrompt = `USE MY CHARACTER REFERENCE: ${selectedAssetForSwap.description}. Replace any person/character in this shot with my character from the reference image. ${finalPrompt}. THIS EXACT CHARACTER from reference, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE.`;
+      } else if (characterDNA && finalPrompt) {
+        // Character DNA defined - use it for swap
+        finalPrompt = `USE MY CHARACTER REFERENCE: ${characterDNA}. Replace any person/character in this shot with my character from the reference image. ${finalPrompt}. THIS EXACT CHARACTER from reference, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE.`;
+      } else if (referenceImage && finalPrompt) {
+        // Just a reference image without DNA - still instruct to use it
+        finalPrompt = `USE CHARACTER FROM REFERENCE IMAGE: Replace any person/character in this shot with the character shown in my reference image. Maintain exact appearance, clothing, features. ${finalPrompt}. THIS EXACT CHARACTER from reference, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE.`;
       }
+
       if (finalPrompt) {
         setPromptText(finalPrompt);
       }
@@ -4982,17 +4990,80 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                   <>
                     <span className="text-purple-400">{Icons.plus}</span>
                     <span className="text-[9px] text-purple-400 uppercase font-medium mt-1">REF</span>
-                    <span className="text-[9px] text-purple-400 uppercase font-medium">FACE</span>
+                    <span className="text-[9px] text-purple-400 uppercase font-medium">CHAR</span>
                   </>
                 )}
               </div>
-              <input type="file" accept="image/*" className="hidden" ref={refInputRef} onChange={(e) => {
+              <input type="file" accept="image/*" className="hidden" ref={refInputRef} onChange={async (e) => {
                 const file = e.target.files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onload = (ev) => setReferenceImage(ev.target?.result as string);
-                  reader.readAsDataURL(file);
+                if (!file) return;
+                // Upload to Catbox for public URL
+                setStatusMessage('Uploading reference...');
+                const formData = new FormData();
+                formData.append('reqtype', 'fileupload');
+                formData.append('fileToUpload', file);
+                try {
+                  const res = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: formData });
+                  const url = await res.text();
+                  if (url?.startsWith('https://')) {
+                    setReferenceImage(url.trim());
+                    setStatusMessage('Reference uploaded!');
+                  }
+                } catch (err) {
+                  setStatusMessage('Upload failed');
                 }
+                setTimeout(() => setStatusMessage(null), 1500);
+                e.target.value = '';
+              }} />
+            </label>
+
+            {/* Additional Reference Images */}
+            {aiRefImages.length > 0 && (
+              <div className="flex items-center gap-1">
+                {aiRefImages.slice(0, 3).map((ref, idx) => (
+                  <div key={idx} className="relative w-10 h-10 group">
+                    <img src={ref.url} className="w-full h-full object-cover rounded-lg border border-yellow-500/50" />
+                    <button
+                      onClick={() => removeAiRefImage(idx)}
+                      className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <span className="text-white text-[8px]">x</span>
+                    </button>
+                  </div>
+                ))}
+                {aiRefImages.length > 3 && (
+                  <div className="w-10 h-10 rounded-lg bg-yellow-500/20 border border-yellow-500/50 flex items-center justify-center text-yellow-400 text-[10px]">
+                    +{aiRefImages.length - 3}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Add More Refs Button */}
+            <label className="cursor-pointer">
+              <div className="w-10 h-16 rounded-lg border border-dashed border-yellow-500/30 hover:border-yellow-500/60 flex flex-col items-center justify-center text-yellow-400/60 hover:text-yellow-400 transition-all">
+                <span className="text-lg">+</span>
+                <span className="text-[8px]">REF</span>
+              </div>
+              <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file || aiRefImages.length >= 7) return;
+                setStatusMessage('Uploading ref image...');
+                const formData = new FormData();
+                formData.append('reqtype', 'fileupload');
+                formData.append('fileToUpload', file);
+                try {
+                  const res = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: formData });
+                  const url = await res.text();
+                  if (url?.startsWith('https://')) {
+                    setAiRefImages(prev => [...prev, { url: url.trim(), description: null }]);
+                    setStatusMessage('Reference added!');
+                  }
+                } catch (err) {
+                  setStatusMessage('Upload failed');
+                }
+                setTimeout(() => setStatusMessage(null), 1500);
+                e.target.value = '';
               }} />
             </label>
           </div>
