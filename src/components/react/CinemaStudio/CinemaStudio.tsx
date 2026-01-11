@@ -4917,14 +4917,49 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
 
           {/* Frame Upload Boxes */}
           <div className="flex items-center gap-3">
-            <label className="cursor-pointer group">
-              <div className={`w-16 h-16 rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${
-                currentShot.startFrame
-                  ? 'border-transparent'
-                  : 'border-gray-600 hover:border-gray-400 group-hover:bg-gray-800/30'
-              }`}>
+            {/* START Frame Upload */}
+            <div className="cursor-pointer group">
+              <div
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = async (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (!file) return;
+                    setStatusMessage('Uploading start frame...');
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    try {
+                      const res = await fetch('/api/cinema/upload', { method: 'POST', body: formData });
+                      const data = await res.json();
+                      if (data.url) {
+                        setStartFrame(data.url);
+                        setStatusMessage('Start frame uploaded!');
+                      } else {
+                        setStatusMessage('Upload failed');
+                      }
+                    } catch (err) {
+                      setStatusMessage('Upload failed');
+                    }
+                    setTimeout(() => setStatusMessage(null), 1500);
+                  };
+                  input.click();
+                }}
+                className={`w-16 h-16 rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${
+                  currentShot.startFrame
+                    ? 'border-transparent'
+                    : 'border-gray-600 hover:border-gray-400 group-hover:bg-gray-800/30'
+                }`}
+              >
                 {currentShot.startFrame ? (
-                  <img src={currentShot.startFrame} className="w-full h-full object-cover rounded-lg" />
+                  <div className="relative w-full h-full">
+                    <img src={currentShot.startFrame} className="w-full h-full object-cover rounded-lg" />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setStartFrame(''); }}
+                      className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px]"
+                    >x</button>
+                  </div>
                 ) : (
                   <>
                     <span className="text-gray-500">{Icons.plus}</span>
@@ -4933,24 +4968,51 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                   </>
                 )}
               </div>
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onload = (ev) => setStartFrame(ev.target?.result as string);
-                  reader.readAsDataURL(file);
-                }
-              }} />
-            </label>
+            </div>
 
-            <label className="cursor-pointer group">
-              <div className={`w-16 h-16 rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${
-                currentShot.endFrame
-                  ? 'border-transparent'
-                  : 'border-gray-600 hover:border-gray-400 group-hover:bg-gray-800/30'
-              }`}>
+            {/* END Frame Upload */}
+            <div className="cursor-pointer group">
+              <div
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = async (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (!file) return;
+                    setStatusMessage('Uploading end frame...');
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    try {
+                      const res = await fetch('/api/cinema/upload', { method: 'POST', body: formData });
+                      const data = await res.json();
+                      if (data.url) {
+                        setEndFrame(data.url);
+                        setStatusMessage('End frame uploaded!');
+                      } else {
+                        setStatusMessage('Upload failed');
+                      }
+                    } catch (err) {
+                      setStatusMessage('Upload failed');
+                    }
+                    setTimeout(() => setStatusMessage(null), 1500);
+                  };
+                  input.click();
+                }}
+                className={`w-16 h-16 rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${
+                  currentShot.endFrame
+                    ? 'border-transparent'
+                    : 'border-gray-600 hover:border-gray-400 group-hover:bg-gray-800/30'
+                }`}
+              >
                 {currentShot.endFrame ? (
-                  <img src={currentShot.endFrame} className="w-full h-full object-cover rounded-lg" />
+                  <div className="relative w-full h-full">
+                    <img src={currentShot.endFrame} className="w-full h-full object-cover rounded-lg" />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEndFrame(''); }}
+                      className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px]"
+                    >x</button>
+                  </div>
                 ) : (
                   <>
                     <span className="text-gray-500">{Icons.plus}</span>
@@ -4959,15 +5021,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                   </>
                 )}
               </div>
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onload = (ev) => setEndFrame(ev.target?.result as string);
-                  reader.readAsDataURL(file);
-                }
-              }} />
-            </label>
+            </div>
 
             {/* Reference Image - for face/character consistency */}
             <div className="cursor-pointer group">
