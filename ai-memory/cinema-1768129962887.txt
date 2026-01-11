@@ -1,0 +1,22 @@
+# AI Chat Memory - Session: cinema-1768129962887
+# Created: 2026-01-11T11:19:46.799Z
+
+[USER]: video prombt this start and end shot how does car just blowup?? AND FLIP
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+MODEL: kling-o1
+MODE: Video
+ASPECT: 16:9 | RES: 2K
+
+=== REFERENCE IMAGES ===
+[Ref 1]: Reference image 1
+[Ref 2]: Reference image 2
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: Subject's car explodes with a violent flash, camera crash zooms in from wide shot to close-up of flaming wreckage, car flips mid-air with rapid dolly backward, flames burst through shattered windshield, debris rains down, camera tilts up to show car flipping over, then settles
+---

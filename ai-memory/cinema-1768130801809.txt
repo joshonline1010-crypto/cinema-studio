@@ -1,0 +1,32 @@
+# AI Chat Memory - Session: cinema-1768130801809
+# Created: 2026-01-11T11:27:34.717Z
+
+[USER]: make shot ready for dialog based off ref photo
+
+
+=== CURRENT SHOT ===
+MOTION PROMPT: "dolly in"
+MODEL: kling-2.6
+MODE: Image
+ASPECT: 16:9 | RES: 2K
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: **Video Prompt (Seedance 1.5 Pro - Dialogue Mode)**  
+```
+[SHOT TYPE]: Medium close-up, eye level, soft bokeh.  
+[CHARACTER DESCRIPTION]: Confident woman with natural expressions, slightly tilted head, subtle eye contact.  
+[CAMERA MOVEMENT]: Slow push-in, focus on eyes. She speaks warmly: "Let me show you how this works."  
+[STYLE]: Cinematic UGC style, clean indoor lighting, natural room tone.  
+[ASPECT]: 16:9 | [RES]: 2K  
+```  
+
+**Next Steps for Dialogue Flow:**  
+1. **Shot 1 (Establishing):** Wide shot, static, subject in frame (same lighting/color grade).  
+2. **Shot 2 (Dialogue):** Use above prompt for seamless transition.  
+3. **Shot 3 (Reaction):** Close-up on face, same lighting, subject nods slowly, then settles.  
+
+Would you like to refine the dialogue tone (e.g., "whispers softly," "exclaims excitedly") or adjust the character’s posture/setting?
+---

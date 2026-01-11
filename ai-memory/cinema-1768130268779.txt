@@ -1,0 +1,83 @@
+# AI Chat Memory - Session: cinema-1768130268779
+# Created: 2026-01-11T11:18:56.082Z
+
+[USER]: plan out 5 shots of something made by stantly kubric horror shots THAT ALL MAKE SNESE
+---
+[ASSISTANT]: SHOT 1 (ESTABLISHING): Wide shot, static, symmetrical corridor with vanishing point centered, 18mm lens, cold practical light from ceiling, subject stands center frame, Kubrick stare (head down, eyes up at camera), desaturated color grade, deep blacks, sterile environment, 2.39:1 anamorphic aspect ratio  
+
+SHOT 2 (CHARACTER INTRO): THIS EXACT CHARACTER, low-angle Steadicam glide from floor level, subject seated at desk in dimly lit room, single practical lamp casting long shadows, slow orbit around subject, 50mm lens f/2.8, low-key lighting, geometric framing, cold blue tones  
+
+SHOT 3 (ACTION): THIS EXACT CHARACTER, THIS EXACT LIGHTING, extreme close-up on face, slow dolly in to face (18 inches from ground), eyes wide, breath visible in cold air, shallow depth of field, 85mm lens, green-tinted shadows, frozen expression of terror, then settles  
+
+SHOT 4 (DIALOGUE): THIS EXACT CHARACTER, THIS EXACT COLOR GRADE, tracking shot following subject down endless hallway, 24mm lens, practical flickering bulb, slow dolly around subject, 360 rotation revealing identical doors, symmetrical framing, cold sterile environment, then settles  
+
+SHOT 5 (CLIMAX): THIS EXACT CHARACTER, THIS EXACT LIGHTING, wide shot of subject in vast empty warehouse, 16mm film grain, overhead practical light casting harsh shadows, slow pull back revealing endless rows of identical boxes, Kubrick stare fixed on camera, desaturated color grade, then settles
+---
+[USER]: wait i added ref its a girl CHARCTER
+---
+[ASSISTANT]: **Revised Plan with Female Protagonist (Kubrick Horror Style):**  
+
+**SHOT 1 (ESTABLISHING):**  
+- **Type:** Wide shot, static, symmetrical corridor with vanishing point centered.  
+- **Lens:** 18mm anamorphic, shallow depth of field.  
+- **Lighting:** Single cold practical light from ceiling (flickering), casting long geometric shadows.  
+- **Subject:** Girl (mid-20s) standing center frame, back to camera, hands clasped tightly.  
+- **Details:** Floor tiles etched with faint, repeating symbols (Kubrick-esque obsession with patterns).  
+- **Color Grade:** Desaturated, deep blacks, green-tinted shadows.  
+- **Style:** Kubrick’s sterile, isolated aesthetic—emphasizing her vulnerability.  
+
+**SHOT 2 (CHARACTER INTRO):**  
+- **Type:** Low-angle Steadicam glide from floor level (18 inches above ground).  
+- **Lens:** 50mm f/2.8, precise focus on her face.  
+- **Lighting:** Single practical lamp casting long shadows, highlighting her trembling hands.  
+- **Subject:** Girl seated at a desk, scribbling in a notebook (subtle drawing of a faceless figure).  
+- **Details:** Desk covered in identical objects (clocks, mirrors, rulers)—symbolizing her trapped mind.  
+- **Color Grade:** Same desaturated tones, cold blue undertones.  
+- **Style:** Kubrick’s focus on psychological tension, her isolation amplified by the environment.  
+
+**SHOT 3 (ACTION):**  
+- **Type:** Extreme close-up on her face, slow dolly in (from floor level).  
+- **Lens:** 85mm f/2.8, shallow depth of field.  
+- **Lighting:** Flickering bulb casting harsh shadows across her face.  
+- **Subject:** Girl’s eyes wide, pupils dilated, breath visible in cold air.  
+- **Details:** Her lips slightly parted, as if screaming silently (Kubrick’s “frozen scream” motif).  
+- **Color Grade:** Green-tinted shadows, deep blacks, no warmth.  
+- **Style:** Kubrick’s clinical horror—her terror is both visceral and psychological.  
+
+**SHOT 4 (DIALOGUE):**  
+- **Type:** Tracking shot following her down an endless hallway (24mm lens distortion).  
+- **Lens:** 24mm f/2.8, wide-angle distortion emphasizing her isolation.  
+- **Lighting:** Flickering bulb casting jagged shadows, creating a sense of disorientation.  
+- **Subject:** Girl walking slowly, head down, hands gripping her sides.  
+- **Details:** Identical doors on either side (one slightly ajar, hinting at her past).  
+- **Color Grade:** Same desaturated palette, cold tones.  
+- **Style:** Kubrick’s use of space to evoke dread, her journey through a labyrinth of her own mind.  
+
+**SHOT 5 (CLIMAX):**  
+- **Type:** Wide shot of her in a vast, empty warehouse (16mm film grain).  
+- **Lens:** 16mm f/2.8, grainy texture emphasizing the cold, sterile environment.  
+- **Lighting:** Overhead practical light casting harsh shadows, highlighting her small frame.  
+- **Subject:** Girl standing center frame, Kubrick stare (head down, eyes up at camera).  
+- **Details:** Rows of identical boxes (each labeled with her name in a different language).  
+- **Color Grade:** Deep blacks, green-tinted shadows, no warmth.  
+- **Style:** Kubrick’s final shot—her defiance in the face of horror, a silent scream of survival.  
+
+**Consistency Phrases:**  
+- "THIS EXACT CHARACTER" (girl’s appearance, posture, and expressions).  
+- "THIS EXACT LIGHTING" (single practical sources, cold tones).  
+- "THIS EXACT COLOR GRADE" (desaturated, green-tinted shadows).  
+- "Same costume, same lighting direction" (no changes to her attire or light source).  
+
+**Narrative Flow:**  
+- **Establishing Shot:** Isolation in a sterile environment.  
+- **Character Intro:** Psychological tension through her actions and surroundings.  
+- **Action:** Visceral horror of her terror.  
+- **Dialogue:** Journey through a labyrinth of her own mind.  
+- **Climax:** Defiance in the face of horror, a silent scream of survival.  
+
+**Kubrick Style Elements:**  
+- Symmetrical framing, cold lighting, precise lenses (18mm, 24mm, 50mm, 85mm).  
+- Focus on psychological horror over gore.  
+- Use of patterns, repetition, and isolation to evoke dread.  
+- Clinical, unflinching gaze at the protagonist’s suffering.
+---

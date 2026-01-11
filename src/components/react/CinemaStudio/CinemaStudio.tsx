@@ -331,8 +331,19 @@ export default function CinemaStudio() {
   const [show3DCamera, setShow3DCamera] = useState(false); // 3D Camera Control panel
   const [showBatchGenerator, setShowBatchGenerator] = useState(false); // Batch angle generator
   const [showMovieShots, setShowMovieShots] = useState(false); // Movie Shots browser
+  const [showContinueFromVideo, setShowContinueFromVideo] = useState(false); // Continue from Video workflow
   const [userAssets, setUserAssets] = useState<UserAsset[]>([]); // User's custom character/item assets
   const [selectedAssetForSwap, setSelectedAssetForSwap] = useState<UserAsset | null>(null); // Asset to swap into prompts
+
+  // Continue from Video State
+  const [continueVideoUrl, setContinueVideoUrl] = useState(''); // Source video URL
+  const [continueExtractedFrame, setContinueExtractedFrame] = useState<string | null>(null); // Extracted last frame
+  const [continueCloseupUrl, setContinueCloseupUrl] = useState<string | null>(null); // Generated close-up
+  const [continueDialogue, setContinueDialogue] = useState(''); // Dialogue text for Seedance
+  const [continueDialogueVideoUrl, setContinueDialogueVideoUrl] = useState<string | null>(null); // Generated dialogue video
+  const [continueStep, setContinueStep] = useState<1 | 2 | 3 | 4>(1); // Current workflow step
+  const [continueLoading, setContinueLoading] = useState(false); // Loading state
+  const [continueError, setContinueError] = useState<string | null>(null); // Error message
   const [cameraAzimuth, setCameraAzimuth] = useState(0); // 3D camera azimuth (0-360)
   const [cameraElevation, setCameraElevation] = useState(0); // 3D camera elevation (-30 to 60)
   const [cameraDistance, setCameraDistance] = useState(1.0); // 3D camera distance (0.6-1.8)
@@ -1393,6 +1404,166 @@ export default function CinemaStudio() {
     } finally {
       setIsExtractingFrame(false);
     }
+  };
+
+  // ============================================
+  // CONTINUE FROM VIDEO WORKFLOW
+  // ============================================
+
+  // Step 1: Extract last frame from source video
+  const continueStep1ExtractFrame = async () => {
+    if (!continueVideoUrl) {
+      setContinueError('Please enter a video URL');
+      return;
+    }
+    setContinueLoading(true);
+    setContinueError(null);
+    try {
+      const frameUrl = await extractLastFrame(continueVideoUrl);
+      if (frameUrl) {
+        setContinueExtractedFrame(frameUrl);
+        setContinueStep(2);
+      } else {
+        setContinueError('Failed to extract frame from video');
+      }
+    } catch (err) {
+      setContinueError('Error extracting frame: ' + (err instanceof Error ? err.message : 'Unknown'));
+    } finally {
+      setContinueLoading(false);
+    }
+  };
+
+  // Step 2: Generate close-up for dialogue
+  const continueStep2GenerateCloseup = async () => {
+    if (!continueExtractedFrame) {
+      setContinueError('No frame extracted');
+      return;
+    }
+    setContinueLoading(true);
+    setContinueError(null);
+    try {
+      // Generate close-up using /edit endpoint
+      const editPrompt = `THIS EXACT CHARACTER, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE.
+Cinematic close-up shot, face fills frame, shallow depth of field,
+soft bokeh background, ready for dialogue, expressive eyes, natural skin texture.
+Same costume, same lighting direction.`;
+
+      const response = await fetch('/api/cinema/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'edit',
+          image_urls: [continueExtractedFrame],
+          prompt: editPrompt,
+          aspect_ratio: '16:9',
+          resolution: '2K'
+        })
+      });
+
+      const data = await response.json();
+      if (data.image_url) {
+        setContinueCloseupUrl(data.image_url);
+        setContinueStep(3);
+      } else {
+        setContinueError('Failed to generate close-up: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      setContinueError('Error generating close-up: ' + (err instanceof Error ? err.message : 'Unknown'));
+    } finally {
+      setContinueLoading(false);
+    }
+  };
+
+  // Step 3: Generate dialogue video with Seedance
+  const continueStep3GenerateDialogue = async () => {
+    if (!continueCloseupUrl || !continueDialogue.trim()) {
+      setContinueError('Please enter the dialogue text');
+      return;
+    }
+    setContinueLoading(true);
+    setContinueError(null);
+    try {
+      // Build Seedance dialogue prompt
+      const seedancePrompt = `Close-up on face, soft focus on eyes, natural expressions.
+Slow push-in, focus locked on eyes, minimal shake.
+Subject speaks warmly: "${continueDialogue}"
+Cinematic UGC style, clean audio, natural room tone, then settles.`;
+
+      const response = await fetch('/api/cinema/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'video-seedance',
+          image_url: continueCloseupUrl,
+          prompt: seedancePrompt,
+          duration: '5',
+          aspect_ratio: '16:9'
+        })
+      });
+
+      const data = await response.json();
+      if (data.video_url) {
+        setContinueDialogueVideoUrl(data.video_url);
+        setContinueStep(4);
+      } else {
+        setContinueError('Failed to generate dialogue video: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      setContinueError('Error generating dialogue: ' + (err instanceof Error ? err.message : 'Unknown'));
+    } finally {
+      setContinueLoading(false);
+    }
+  };
+
+  // Step 4: Stitch videos together
+  const continueStep4StitchVideos = async () => {
+    if (!continueVideoUrl || !continueDialogueVideoUrl) {
+      setContinueError('Missing videos to stitch');
+      return;
+    }
+    setContinueLoading(true);
+    setContinueError(null);
+    try {
+      const response = await fetch('/api/cinema/stitch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videos: [continueVideoUrl, continueDialogueVideoUrl]
+        })
+      });
+
+      const data = await response.json();
+      if (data.video_url) {
+        // Open result in new tab or add to shots
+        window.open(data.video_url, '_blank');
+        setShowContinueFromVideo(false);
+        // Reset state
+        setContinueVideoUrl('');
+        setContinueExtractedFrame(null);
+        setContinueCloseupUrl(null);
+        setContinueDialogue('');
+        setContinueDialogueVideoUrl(null);
+        setContinueStep(1);
+      } else {
+        setContinueError('Failed to stitch videos: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      setContinueError('Error stitching: ' + (err instanceof Error ? err.message : 'Unknown'));
+    } finally {
+      setContinueLoading(false);
+    }
+  };
+
+  // Reset continue workflow
+  const resetContinueWorkflow = () => {
+    setContinueVideoUrl('');
+    setContinueExtractedFrame(null);
+    setContinueCloseupUrl(null);
+    setContinueDialogue('');
+    setContinueDialogueVideoUrl(null);
+    setContinueStep(1);
+    setContinueError(null);
+    setContinueLoading(false);
   };
 
   // Call Vision Agent to generate smart edit prompt
@@ -2631,6 +2802,219 @@ export default function CinemaStudio() {
               selectedAsset={selectedAssetForSwap}
               onSelectAsset={setSelectedAssetForSwap}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Continue from Video Panel */}
+      {showContinueFromVideo && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowContinueFromVideo(false)}>
+          <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800/50 p-6 shadow-2xl max-w-2xl w-full mx-4" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <span className="px-4 py-1.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-lg text-xs font-medium text-purple-300">
+                  🎬 Continue from Video
+                </span>
+                <span className="text-[10px] text-gray-500">Video → Extract → Close-up → Dialogue → Stitch</span>
+              </div>
+              <button onClick={() => setShowContinueFromVideo(false)} className="w-9 h-9 rounded-lg bg-[#2a2a2a] hover:bg-gray-700 flex items-center justify-center text-gray-400 transition-colors">
+                {Icons.close}
+              </button>
+            </div>
+
+            {/* Progress Steps */}
+            <div className="flex items-center justify-between mb-6 px-4">
+              {[1, 2, 3, 4].map(step => (
+                <div key={step} className="flex items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                    continueStep >= step
+                      ? continueStep === step ? 'bg-purple-500 text-white' : 'bg-green-500 text-white'
+                      : 'bg-gray-700 text-gray-400'
+                  }`}>
+                    {continueStep > step ? '✓' : step}
+                  </div>
+                  {step < 4 && (
+                    <div className={`w-16 h-0.5 mx-1 ${continueStep > step ? 'bg-green-500' : 'bg-gray-700'}`} />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Error Display */}
+            {continueError && (
+              <div className="mb-4 px-4 py-3 bg-red-500/20 border border-red-500/50 rounded-lg text-sm text-red-300">
+                {continueError}
+              </div>
+            )}
+
+            {/* Step 1: Video URL Input */}
+            {continueStep === 1 && (
+              <div className="space-y-4">
+                <div className="text-sm text-gray-300 mb-2">Step 1: Paste your video URL</div>
+                <input
+                  type="text"
+                  value={continueVideoUrl}
+                  onChange={e => setContinueVideoUrl(e.target.value)}
+                  placeholder="https://example.com/video.mp4"
+                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                />
+                <button
+                  onClick={continueStep1ExtractFrame}
+                  disabled={continueLoading || !continueVideoUrl}
+                  className="w-full py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {continueLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Extracting last frame...
+                    </>
+                  ) : (
+                    <>📸 Extract Last Frame</>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Step 2: Generate Close-up */}
+            {continueStep === 2 && (
+              <div className="space-y-4">
+                <div className="text-sm text-gray-300 mb-2">Step 2: Generate dialogue-ready close-up</div>
+                {continueExtractedFrame && (
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <div className="text-[10px] text-gray-500 uppercase mb-1">Extracted Frame</div>
+                      <img src={continueExtractedFrame} alt="Extracted" className="w-full h-32 object-cover rounded-lg border border-gray-700" />
+                    </div>
+                    <div className="flex-1 flex items-center justify-center text-4xl">→</div>
+                    <div className="flex-1">
+                      <div className="text-[10px] text-gray-500 uppercase mb-1">Will Generate</div>
+                      <div className="w-full h-32 bg-[#2a2a2a] rounded-lg border border-gray-700 flex items-center justify-center text-gray-500">
+                        Close-up shot
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setContinueStep(1)}
+                    className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    onClick={continueStep2GenerateCloseup}
+                    disabled={continueLoading}
+                    className="flex-1 py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    {continueLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Generating close-up...
+                      </>
+                    ) : (
+                      <>🎯 Generate Close-up</>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Enter Dialogue */}
+            {continueStep === 3 && (
+              <div className="space-y-4">
+                <div className="text-sm text-gray-300 mb-2">Step 3: Enter dialogue for character to speak</div>
+                {continueCloseupUrl && (
+                  <div className="mb-4">
+                    <div className="text-[10px] text-gray-500 uppercase mb-1">Generated Close-up</div>
+                    <img src={continueCloseupUrl} alt="Close-up" className="w-48 h-28 object-cover rounded-lg border border-gray-700" />
+                  </div>
+                )}
+                <div>
+                  <div className="text-[10px] text-gray-500 uppercase mb-1">What should they say?</div>
+                  <textarea
+                    value={continueDialogue}
+                    onChange={e => setContinueDialogue(e.target.value)}
+                    placeholder="Hello everyone! Welcome to my video. Today I'm going to show you something amazing..."
+                    className="w-full px-4 py-3 bg-[#0a0a0a] border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 h-24 resize-none"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setContinueStep(2)}
+                    className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    onClick={continueStep3GenerateDialogue}
+                    disabled={continueLoading || !continueDialogue.trim()}
+                    className="flex-1 py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    {continueLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Generating with Seedance...
+                      </>
+                    ) : (
+                      <>🗣️ Generate Dialogue (Seedance)</>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Stitch Videos */}
+            {continueStep === 4 && (
+              <div className="space-y-4">
+                <div className="text-sm text-gray-300 mb-2">Step 4: Stitch videos together</div>
+                <div className="flex gap-4 items-center">
+                  {continueDialogueVideoUrl && (
+                    <>
+                      <div className="flex-1">
+                        <div className="text-[10px] text-gray-500 uppercase mb-1">Original Video</div>
+                        <video src={continueVideoUrl} className="w-full h-24 object-cover rounded-lg border border-gray-700" muted />
+                      </div>
+                      <div className="text-2xl">+</div>
+                      <div className="flex-1">
+                        <div className="text-[10px] text-gray-500 uppercase mb-1">Dialogue Video</div>
+                        <video src={continueDialogueVideoUrl} className="w-full h-24 object-cover rounded-lg border border-purple-500" muted controls />
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setContinueStep(3)}
+                    className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    onClick={continueStep4StitchVideos}
+                    disabled={continueLoading}
+                    className="flex-1 py-3 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    {continueLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Stitching videos...
+                      </>
+                    ) : (
+                      <>🎬 Stitch & Download</>
+                    )}
+                  </button>
+                </div>
+                <div className="text-center">
+                  <button
+                    onClick={resetContinueWorkflow}
+                    className="text-xs text-gray-500 hover:text-gray-300"
+                  >
+                    Start Over
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -4008,6 +4392,23 @@ export default function CinemaStudio() {
                   <line x1="17" y1="7" x2="22" y2="7" />
                 </svg>
                 <span>Shots</span>
+              </button>
+
+              {/* Continue from Video Button */}
+              <button
+                onClick={() => { setShowContinueFromVideo(true); resetContinueWorkflow(); }}
+                className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-all ${
+                  showContinueFromVideo
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                    : 'bg-[#2a2a2a] text-gray-400 hover:bg-gray-700'
+                }`}
+                title="Continue from Video - Extract frame → Close-up → Dialogue → Stitch"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                  <line x1="19" y1="5" x2="19" y2="19" />
+                </svg>
+                <span>Continue</span>
               </button>
 
               {/* AI Prompt Assistant Button */}
