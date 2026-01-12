@@ -786,125 +786,183 @@ export default function CinemaStudio() {
     }
   };
 
-  // Execute entire plan - generate all pending shots
+  // Execute entire plan - REFS FIRST, then PARALLEL images, then PARALLEL videos
   const executeEntirePlan = async () => {
     if (!currentScene || executingPlan) return;
 
+    setExecutingPlan(true);
+    setPlanProgress(0);
+
+    // STEP 1: Generate all refs FIRST (in parallel)
+    const charRefs = Object.values(currentScene.character_references || {}).filter(c => !c.ref_url && c.generate_prompt);
+    const sceneRefs = Object.values(currentScene.scene_references || {}).filter(r => !r.ref_url && r.generate_prompt);
+    const totalRefs = charRefs.length + sceneRefs.length;
+
+    if (totalRefs > 0) {
+      setStatusMessage(`Step 1: Generating ${totalRefs} reference sheets in parallel...`);
+
+      // Generate ALL refs in parallel
+      const refPromises = [
+        ...charRefs.map(async (char) => {
+          try {
+            const response = await fetch('/api/cinema/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'image',
+                prompt: char.generate_prompt,
+                aspect_ratio: '1:1',  // Square for ref sheets
+                resolution: '4K'
+              })
+            });
+            if (response.ok) {
+              const data = await response.json();
+              const url = data.image_url || data.images?.[0]?.url;
+              if (url) updateCharacter(char.id, { ref_url: url });
+            }
+          } catch (err) {
+            console.error(`Ref gen failed for ${char.name}:`, err);
+          }
+        }),
+        ...sceneRefs.map(async (ref) => {
+          try {
+            const response = await fetch('/api/cinema/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'image',
+                prompt: ref.generate_prompt,
+                aspect_ratio: '1:1',
+                resolution: '4K'
+              })
+            });
+            if (response.ok) {
+              const data = await response.json();
+              const url = data.image_url || data.images?.[0]?.url;
+              if (url) updateSceneRef(ref.id, { ref_url: url });
+            }
+          } catch (err) {
+            console.error(`Ref gen failed for ${ref.name}:`, err);
+          }
+        })
+      ];
+
+      await Promise.all(refPromises);
+      setStatusMessage(`Refs complete! Now generating images...`);
+    }
+
+    // STEP 2: Generate all images in PARALLEL batches
     const pendingShots = currentScene.shots.filter(s => s.status === 'pending');
     if (pendingShots.length === 0) {
+      setExecutingPlan(false);
       setStatusMessage('All shots already generated!');
       return;
     }
 
-    setExecutingPlan(true);
-    setPlanProgress(0);
-    setStatusMessage(`Starting plan execution: ${pendingShots.length} shots to generate...`);
+    const BATCH_SIZE = 4;  // Generate 4 images at a time
+    setStatusMessage(`Step 2: Generating ${pendingShots.length} images (${BATCH_SIZE} at a time)...`);
 
-    for (let i = 0; i < pendingShots.length; i++) {
-      const shot = pendingShots[i];
-      setPlanProgress(i + 1);
-      setStatusMessage(`Generating shot ${i + 1}/${pendingShots.length}: ${shot.shot_id}`);
+    // Mark all as generating
+    pendingShots.forEach(shot => markShotGenerating(shot.shot_id));
 
-      // Select and load the shot
-      selectSceneShot(shot.shot_id);
-      handleSceneShotSelect(shot);
-      markShotGenerating(shot.shot_id);
+    // Process images in parallel batches
+    for (let i = 0; i < pendingShots.length; i += BATCH_SIZE) {
+      const batch = pendingShots.slice(i, i + BATCH_SIZE);
+      setPlanProgress(i);
+      setStatusMessage(`Generating images ${i + 1}-${Math.min(i + BATCH_SIZE, pendingShots.length)} of ${pendingShots.length}...`);
 
-      // Generate the image using /api/cinema/generate
-      try {
-        const prompt = shot.photo_prompt || `${shot.subject}, ${shot.shot_type} shot, ${shot.location || ''}, cinematic, 8K`;
+      const imagePromises = batch.map(async (shot) => {
+        try {
+          const prompt = shot.photo_prompt || `${shot.subject}, ${shot.shot_type} shot, ${shot.location || ''}, cinematic, 8K`;
+          const refUrls = getRefUrlsForShot(shot);
 
-        // Get reference image from previous shot if chained
-        const prevShot = i > 0 ? pendingShots[i - 1] : null;
-        const chainedRef = prevShot?.image_url || currentShot.startFrame;
+          const response = await fetch('/api/cinema/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: refUrls.length > 0 ? 'edit' : 'image',
+              prompt: prompt,
+              aspect_ratio: currentScene.aspect_ratio || '16:9',
+              resolution: '4K',
+              image_urls: refUrls.length > 0 ? refUrls : undefined,
+            })
+          });
 
-        // Get all ref URLs for this shot (characters, locations, objects)
-        const refUrls = getRefUrlsForShot(shot);
-        if (chainedRef) {
-          refUrls.unshift(chainedRef);  // Add chained ref at front (highest priority)
+          if (response.ok) {
+            const data = await response.json();
+            const imageUrl = data.image_url || data.images?.[0]?.url;
+            if (imageUrl) {
+              markShotComplete(shot.shot_id, imageUrl);
+              return { shot_id: shot.shot_id, image_url: imageUrl, success: true };
+            }
+          }
+          return { shot_id: shot.shot_id, success: false };
+        } catch (err) {
+          console.error(`Image error for ${shot.shot_id}:`, err);
+          return { shot_id: shot.shot_id, success: false };
         }
+      });
 
-        const response = await fetch('/api/cinema/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: refUrls.length > 0 ? 'edit' : 'image',  // Use edit if we have references
-            prompt: prompt,
-            aspect_ratio: currentScene.aspect_ratio || '16:9',
-            resolution: '4K',
-            image_urls: refUrls.length > 0 ? refUrls : undefined,  // Use image_urls array for multiple refs
-          })
+      await Promise.all(imagePromises);
+    }
+
+    setStatusMessage(`All images done! Now generating videos in parallel...`);
+
+    // STEP 3: Generate all videos in PARALLEL batches
+    // Re-fetch shots to get updated image_urls
+    const shotsWithImages = currentScene.shots.filter(s => s.image_url && !s.video_url);
+
+    if (shotsWithImages.length > 0) {
+      setStatusMessage(`Step 3: Generating ${shotsWithImages.length} videos (${BATCH_SIZE} at a time)...`);
+
+      for (let i = 0; i < shotsWithImages.length; i += BATCH_SIZE) {
+        const batch = shotsWithImages.slice(i, i + BATCH_SIZE);
+        setPlanProgress(i);
+        setStatusMessage(`Generating videos ${i + 1}-${Math.min(i + BATCH_SIZE, shotsWithImages.length)} of ${shotsWithImages.length}...`);
+
+        const videoPromises = batch.map(async (shot) => {
+          try {
+            let videoType = 'video-kling';
+            if (shot.model === 'seedance-1.5') {
+              videoType = 'video-seedance';
+            } else if (shot.model === 'kling-o1' || shot.end_frame) {
+              videoType = 'video-kling-o1';
+            }
+
+            const videoResponse = await fetch('/api/cinema/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: videoType,
+                prompt: shot.motion_prompt || 'subtle motion, cinematic',
+                start_image_url: shot.image_url,
+                end_image_url: shot.end_frame || undefined,
+                duration: String(shot.duration || 5),
+              })
+            });
+
+            if (videoResponse.ok) {
+              const videoData = await videoResponse.json();
+              const videoUrl = videoData.video_url;
+              if (videoUrl) {
+                markShotComplete(shot.shot_id, shot.image_url!, videoUrl);
+                return { shot_id: shot.shot_id, success: true };
+              }
+            }
+            return { shot_id: shot.shot_id, success: false };
+          } catch (err) {
+            console.error(`Video error for ${shot.shot_id}:`, err);
+            return { shot_id: shot.shot_id, success: false };
+          }
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          const imageUrl = data.image_url || data.images?.[0]?.url;
-          if (imageUrl) {
-            // Update shot with image
-            markShotComplete(shot.shot_id, imageUrl);
-            setStartFrame(imageUrl);
-            setStatusMessage(`Image ${i + 1}/${pendingShots.length} done - generating video...`);
-
-            // Now generate video from the image
-            try {
-              let videoType = 'video-kling';
-              if (shot.model === 'seedance-1.5') {
-                videoType = 'video-seedance';
-              } else if (shot.model === 'kling-o1' || shot.end_frame) {
-                videoType = 'video-kling-o1';
-              }
-
-              const videoResponse = await fetch('/api/cinema/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  type: videoType,
-                  prompt: shot.motion_prompt || 'subtle motion, cinematic',
-                  start_image_url: imageUrl,
-                  end_image_url: shot.end_frame || undefined,
-                  duration: String(shot.duration || 5),
-                })
-              });
-
-              if (videoResponse.ok) {
-                const videoData = await videoResponse.json();
-                const videoUrl = videoData.video_url;
-                if (videoUrl) {
-                  markShotComplete(shot.shot_id, imageUrl, videoUrl);
-                  setStatusMessage(`Shot ${i + 1}/${pendingShots.length} complete (image + video)!`);
-                } else {
-                  console.log(`No video URL for ${shot.shot_id}, image saved`);
-                  setStatusMessage(`Shot ${i + 1} image done (video pending)`);
-                }
-              } else {
-                console.error(`Video failed for ${shot.shot_id}`);
-                setStatusMessage(`Shot ${i + 1} image done (video failed)`);
-              }
-            } catch (videoErr) {
-              console.error(`Video error for ${shot.shot_id}:`, videoErr);
-              setStatusMessage(`Shot ${i + 1} image done (video error)`);
-            }
-          } else {
-            console.error(`No image URL in response for ${shot.shot_id}:`, data);
-            setStatusMessage(`No image URL: ${shot.shot_id} - continuing...`);
-          }
-        } else {
-          const errorData = await response.json().catch(() => ({}));
-          console.error(`Failed to generate shot ${shot.shot_id}:`, errorData);
-          setStatusMessage(`Failed: ${shot.shot_id} - ${errorData.error || 'Unknown error'}`);
-        }
-      } catch (err) {
-        console.error(`Error generating shot ${shot.shot_id}:`, err);
-        setStatusMessage(`Error: ${shot.shot_id} - ${err instanceof Error ? err.message : 'Unknown'}`);
+        await Promise.all(videoPromises);
       }
-
-      // Small delay between shots
-      await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
     setExecutingPlan(false);
     setPlanProgress(0);
-    setStatusMessage(`Plan complete! ${pendingShots.length} shots with videos generated.`);
+    setStatusMessage(`Plan complete! ${pendingShots.length} shots generated.`);
   };
 
   // Stop plan execution
