@@ -7,7 +7,13 @@ import * as os from 'os';
 
 const execAsync = promisify(exec);
 
-// Upload to Catbox
+// Get Downloads folder path
+function getDownloadsFolder(): string {
+  const home = os.homedir();
+  return path.join(home, 'Downloads');
+}
+
+// Upload to Catbox (optional, for sharing)
 async function uploadToCatbox(filePath: string): Promise<string> {
   const formData = new FormData();
   formData.append('reqtype', 'fileupload');
@@ -32,7 +38,7 @@ async function uploadToCatbox(filePath: string): Promise<string> {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { videos } = body;
+    const { videos, uploadToCloud = true } = body;  // Option to skip cloud upload
 
     if (!videos || !Array.isArray(videos) || videos.length < 2) {
       return new Response(JSON.stringify({ error: 'At least 2 video URLs required' }), {
@@ -73,39 +79,66 @@ export const POST: APIRoute = async ({ request }) => {
     const concatContent = videoPaths.map(p => `file '${p.replace(/\\/g, '/')}'`).join('\n');
     fs.writeFileSync(concatFilePath, concatContent);
 
-    // Output path
-    const outputPath = path.join(tempDir, `stitched_${timestamp}.mp4`);
+    // Temp output path for concat
+    const concatOutputPath = path.join(tempDir, `concat_${timestamp}.mp4`);
 
-    // Run ffmpeg concat
-    // Using -safe 0 to allow absolute paths
-    const ffmpegCommand = `ffmpeg -f concat -safe 0 -i "${concatFilePath}" -c copy "${outputPath}" -y`;
-    console.log('Running ffmpeg:', ffmpegCommand);
+    // STEP 1: Concat all videos (fast, just copy streams)
+    const concatCommand = `ffmpeg -f concat -safe 0 -i "${concatFilePath}" -c copy "${concatOutputPath}" -y`;
+    console.log('Running ffmpeg concat:', concatCommand);
+    await execAsync(concatCommand);
 
-    await execAsync(ffmpegCommand);
-
-    if (!fs.existsSync(outputPath)) {
+    if (!fs.existsSync(concatOutputPath)) {
       throw new Error('FFmpeg concat failed');
     }
 
-    const outputSize = fs.statSync(outputPath).size;
-    console.log(`Stitched video size: ${(outputSize / 1024 / 1024).toFixed(2)} MB`);
+    // STEP 2: Re-encode to 1080p 60fps
+    // Save directly to Downloads folder
+    const downloadsFolder = getDownloadsFolder();
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const timeStr = new Date().toTimeString().slice(0, 8).replace(/:/g, '');
+    const finalFileName = `CinemaStudio_${dateStr}_${timeStr}.mp4`;
+    const finalOutputPath = path.join(downloadsFolder, finalFileName);
 
-    // Upload to Catbox
-    console.log('Uploading stitched video...');
-    const uploadUrl = await uploadToCatbox(outputPath);
-    console.log('Uploaded:', uploadUrl);
+    // Re-encode: 1080p, 60fps, high quality H.264
+    const encodeCommand = `ffmpeg -i "${concatOutputPath}" -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" -r 60 -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k "${finalOutputPath}" -y`;
+    console.log('Running ffmpeg encode (1080p 60fps):', encodeCommand);
+    await execAsync(encodeCommand);
 
-    // Cleanup
+    if (!fs.existsSync(finalOutputPath)) {
+      throw new Error('FFmpeg encode failed');
+    }
+
+    const outputSize = fs.statSync(finalOutputPath).size;
+    console.log(`Final video: ${finalOutputPath}`);
+    console.log(`Size: ${(outputSize / 1024 / 1024).toFixed(2)} MB`);
+
+    // Upload to Catbox (optional)
+    let uploadUrl: string | null = null;
+    if (uploadToCloud) {
+      console.log('Uploading to Catbox...');
+      try {
+        uploadUrl = await uploadToCatbox(finalOutputPath);
+        console.log('Uploaded:', uploadUrl);
+      } catch (err) {
+        console.error('Catbox upload failed (video saved locally):', err);
+      }
+    }
+
+    // Cleanup temp files (keep the final output in Downloads!)
     for (const videoPath of videoPaths) {
       if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
     }
     if (fs.existsSync(concatFilePath)) fs.unlinkSync(concatFilePath);
-    if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    if (fs.existsSync(concatOutputPath)) fs.unlinkSync(concatOutputPath);
 
     return new Response(JSON.stringify({
       success: true,
       video_url: uploadUrl,
-      video_count: videos.length
+      local_path: finalOutputPath,
+      file_name: finalFileName,
+      video_count: videos.length,
+      resolution: '1920x1080',
+      fps: 60
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

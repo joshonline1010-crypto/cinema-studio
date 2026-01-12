@@ -4681,14 +4681,16 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
 
                                     const data = await response.json();
 
-                                    if (response.ok && data.video_url) {
-                                      setStatusMessage(`✅ RENDER COMPLETE!`);
-                                      // Show video in UI
-                                      setStartFrame(data.video_url);
-                                      setMode('video');
-                                      // Also open in new tab
-                                      window.open(data.video_url, '_blank');
-                                      alert(`🎬 Final video ready!\n\n${data.video_url}\n\nOpened in new tab!`);
+                                    if (response.ok && (data.video_url || data.local_path)) {
+                                      setStatusMessage(`✅ RENDER COMPLETE! 1080p 60fps - Saved to Downloads`);
+                                      // Show video in UI (prefer cloud URL for preview)
+                                      if (data.video_url) {
+                                        setStartFrame(data.video_url);
+                                        setMode('video');
+                                        window.open(data.video_url, '_blank');
+                                      }
+                                      // Show success message with local path
+                                      alert(`🎬 Final video ready!\n\n📁 LOCAL: ${data.local_path}\n\n🌐 CLOUD: ${data.video_url || 'Not uploaded'}\n\n✅ 1080p 60fps\n\nSaved to your Downloads folder!`);
                                     } else {
                                       setStatusMessage(`❌ Render failed: ${data.error || 'Unknown error'}`);
                                       alert(`Render failed: ${data.error || data.details || 'Unknown error'}`);
