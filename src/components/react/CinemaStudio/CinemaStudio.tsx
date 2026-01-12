@@ -1229,6 +1229,41 @@ export default function CinemaStudio() {
     setSequenceNeedsRef(false);
   };
 
+  // Start manual sequence from Sequence Planner (convert store's sequencePlan to AIPlannedShot format)
+  const startManualSequence = () => {
+    if (sequencePlan.length === 0) return;
+
+    // Check for reference image
+    if (!currentShot.startFrame && !referenceImage) {
+      setStatusMessage('Add a START FRAME or REF image first');
+      setTimeout(() => setStatusMessage(null), 2000);
+      return;
+    }
+
+    // Convert PlannedShot from store to AIPlannedShot format
+    const converted: AIPlannedShot[] = sequencePlan.map((shot, idx) => ({
+      shotNumber: idx + 1,
+      shotType: shot.angle,
+      cameraMovement: shot.cameraMove,
+      subjectAction: shot.action,
+      prompt: `${shot.angle}. ${characterDNA ? characterDNA + '. ' : ''}${shot.action}`,
+      motionPrompt: `${shot.cameraMove}, ${shot.action}, then settles`,
+      status: 'pending' as const
+    }));
+
+    setPlannedSequence(converted);
+    setShowSequencePlanner(false);
+    clearSequencePlan(); // Clear store's plan after converting
+
+    setStatusMessage(`Starting sequence: ${converted.length} shots`);
+    setTimeout(() => setStatusMessage(null), 2000);
+
+    // Small delay then execute
+    setTimeout(() => {
+      executeSequence();
+    }, 100);
+  };
+
   // Build context with current shot info, shot history, and reference images for chat
   const buildChatContext = (): string => {
     let context = '';
@@ -1531,11 +1566,40 @@ export default function CinemaStudio() {
     setContinueLoading(true);
     setContinueError(null);
     try {
-      // Generate close-up using /edit endpoint
-      const editPrompt = `THIS EXACT CHARACTER, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE.
-Cinematic close-up shot, face fills frame, shallow depth of field,
-soft bokeh background, ready for dialogue, expressive eyes, natural skin texture.
-Same costume, same lighting direction.`;
+      // Try Vision Agent first for smart close-up prompt
+      let editPrompt = '';
+
+      try {
+        const visionResponse = await fetch('/api/cinema/vision', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image_url: continueExtractedFrame,
+            task: 'closeup',
+            character_dna: characterDNA || undefined
+          })
+        });
+
+        if (visionResponse.ok) {
+          const visionData = await visionResponse.json();
+          if (visionData.success && visionData.closeup_prompt) {
+            editPrompt = visionData.closeup_prompt;
+            console.log('Vision Agent close-up prompt:', editPrompt);
+          }
+        }
+      } catch (visionErr) {
+        console.warn('Vision Agent not available, using fallback prompt');
+      }
+
+      // Fallback to improved static prompt
+      if (!editPrompt) {
+        const dnaPrefix = characterDNA ? `${characterDNA}. ` : '';
+        editPrompt = `${dnaPrefix}THIS EXACT CHARACTER, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE.
+Cinematic close-up shot, face fills 70% of frame, shallow depth of field f/1.4,
+soft bokeh background, prepared for dialogue scene, expressive eyes with catchlight,
+natural skin texture, subtle rim light. Same costume, same lighting direction.
+8K detail, photorealistic, cinematic color grading.`;
+      }
 
       const response = await fetch('/api/cinema/generate', {
         method: 'POST',
@@ -2911,10 +2975,14 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                   Clear All
                 </button>
                 <button
-                  onClick={() => setShowSequencePlanner(false)}
-                  className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-black rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity"
+                  onClick={startManualSequence}
+                  disabled={sequencePlan.length === 0 || (!currentShot.startFrame && !referenceImage)}
+                  className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-black rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={(!currentShot.startFrame && !referenceImage) ? 'Add a START FRAME or REF image first' : ''}
                 >
-                  Start Sequence ({sequencePlan.length} shots)
+                  {sequencePlan.length === 0 ? 'Add shots first' :
+                   (!currentShot.startFrame && !referenceImage) ? 'Need ref image' :
+                   `Generate ${sequencePlan.length} shots`}
                 </button>
               </div>
             </div>
