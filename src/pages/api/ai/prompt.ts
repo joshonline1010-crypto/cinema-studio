@@ -1,5 +1,9 @@
 import type { APIRoute } from 'astro';
 import { AI_SYSTEM_PROMPT, buildContextString, type AIPromptContext } from '../../../components/react/CinemaStudio/aiPromptSystem';
+import { config } from 'dotenv';
+
+// Load .env file explicitly
+config();
 
 // API Configuration - Use environment variable or fallback
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';

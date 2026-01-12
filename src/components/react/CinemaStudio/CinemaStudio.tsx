@@ -795,68 +795,24 @@ export default function CinemaStudio() {
     setExecutingPlan(true);
     setPlanProgress(0);
 
-    // STEP 1: Generate all refs FIRST (in parallel)
-    // Helper: Build proper 3x3 character sheet prompt using unified template system
-    // ALWAYS uses template system with description field - more reliable than AI generate_prompt
+    // STEP 1: Generate all refs FIRST (in parallel) - SINGLE CINEMATIC SHOTS (not grids!)
     const buildCharacterSheetPrompt = (char: CharacterRef): string => {
-      // Build description from character fields - AI just needs to fill these in correctly
       const desc = `${char.description || char.name}${char.costume ? `, wearing ${char.costume}` : ''}`;
-
-      if (!desc || desc.length < 10) {
-        console.warn(`Character ${char.name} has empty/short description! Using name as fallback.`);
-      }
-
-      const generated = generateAssetPrompt({
-        assetType: 'character',
-        description: desc,
-        gridSize: '3x3',
-        characterVariant: 'base'
-      });
-      console.log(`Built character prompt for ${char.name}:`, generated.prompt.substring(0, 200) + '...');
-      return generated.prompt;
+      // Single cinematic portrait - not a grid!
+      return `Cinematic character portrait, ${desc}. Medium close-up, dramatic lighting from side, shallow depth of field, film grain, 85mm lens, professional photography, neutral expression looking at camera, studio quality, 8K, photorealistic`;
     };
 
-    // Helper: Build proper 3x3 location/object sheet prompt using unified template system
-    // ALWAYS uses template system with description field - more reliable than AI generate_prompt
     const buildSceneRefSheetPrompt = (ref: SceneRef): string => {
       const desc = ref.description || ref.name;
 
-      if (!desc || desc.length < 10) {
-        console.warn(`Scene ref ${ref.name} (${ref.type}) has empty/short description! Using name as fallback.`);
-      }
-
       if (ref.type === 'location') {
-        // Use background template for general locations/environments
-        const generated = generateAssetPrompt({
-          assetType: 'background',
-          description: desc,
-          gridSize: '3x3',
-          locationType: 'INT-EXT',
-          timeOfDay: 'day',
-          mood: 'cinematic',
-          backgroundVariant: 'base'
-        });
-        console.log(`Built location prompt for ${ref.name}:`, generated.prompt.substring(0, 200) + '...');
-        return generated.prompt;
+        return `Cinematic establishing shot, ${desc}. Wide angle, golden hour lighting, atmospheric depth, film grain, professional cinematography, no people, empty scene ready for action, 8K, photorealistic`;
+      } else if (ref.type === 'vehicle') {
+        return `Cinematic vehicle beauty shot, ${desc}. Three-quarter front angle, dramatic lighting, reflections on paint, shallow depth of field, automotive photography, professional studio quality, 8K, photorealistic`;
+      } else if (ref.type === 'building') {
+        return `Cinematic architectural shot, ${desc}. Wide establishing angle, dramatic sky, golden hour lighting, professional real estate photography, no people, 8K, photorealistic`;
       } else {
-        // Use prop template for objects, vehicles, buildings, props
-        let propCategory: PropCategory;
-        if (ref.type === 'vehicle') {
-          propCategory = 'vehicle';
-        } else if (ref.type === 'building') {
-          propCategory = 'building';
-        } else {
-          propCategory = 'simple';
-        }
-        const generated = generateAssetPrompt({
-          assetType: 'prop',
-          description: desc,
-          gridSize: '3x3',
-          propCategory,
-          propVariant: 'base'
-        });
-        console.log(`Built ${ref.type} prompt for ${ref.name}:`, generated.prompt.substring(0, 200) + '...');
-        return generated.prompt;
+        return `Cinematic product shot, ${desc}. Studio lighting, dramatic shadows, shallow depth of field, professional product photography, hero angle, 8K, photorealistic`;
       }
     };
 
@@ -865,7 +821,7 @@ export default function CinemaStudio() {
     const totalRefs = charRefs.length + sceneRefs.length;
 
     if (totalRefs > 0) {
-      setStatusMessage(`Step 1: Generating ${totalRefs} reference sheets (3x3 grids) in parallel...`);
+      setStatusMessage(`Step 1: Generating ${totalRefs} reference shots in parallel...`);
 
       // Generate ALL refs in parallel
       const refPromises = [
