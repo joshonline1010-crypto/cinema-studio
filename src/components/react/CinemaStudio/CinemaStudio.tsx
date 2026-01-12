@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useCinemaStore, detectBestModel, explainModelSelection, type VideoModel } from './cinemaStore';
 import { useSceneStore, type SceneShot, type CharacterRef } from './sceneStore';
 import { SceneSidebar } from './SceneSidebar';
-import { ShotGrid } from './ShotGrid';
+import { PlanningGrid } from './PlanningGrid';
 import {
   CAMERA_PRESETS,
   LENS_PRESETS,
@@ -2076,15 +2076,15 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
           {showSceneSidebar ? '◀' : '▶'}
         </button>
 
-        {/* Shot Grid Toggle Button */}
+        {/* Planning Grid Toggle Button */}
         {currentScene && (
           <button
             onClick={() => setShowShotGrid(!showShotGrid)}
-            className="absolute top-4 z-50 px-3 h-8 bg-[#4f46e5] border border-[#6366f1] rounded-lg flex items-center justify-center text-white text-xs font-medium hover:bg-[#5b52f0] transition-all"
+            className="absolute top-4 z-50 px-3 h-8 bg-[#e8ff00] border border-[#d4eb00] rounded-lg flex items-center justify-center text-black text-xs font-semibold hover:bg-[#f0ff4d] transition-all"
             style={{ left: showSceneSidebar ? '340px' : '60px' }}
-            title="Toggle Shot Grid View"
+            title="Toggle Planning Grid View"
           >
-            🎬 {showShotGrid ? 'Hide Grid' : 'Shot Grid'}
+            📋 {showShotGrid ? 'Hide Plan' : 'View Full Plan'}
           </button>
         )}
 
@@ -5401,12 +5401,12 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
       </div>
       </div>
 
-      {/* Shot Grid Overlay */}
+      {/* Planning Grid Overlay */}
       {showShotGrid && currentScene && (
-        <div className="absolute inset-0 z-40 bg-[#0d0d0d]/95 flex">
+        <div className="absolute inset-0 z-40 flex">
           {/* Keep sidebar visible */}
-          {showSceneSidebar && <div style={{ width: '280px', flexShrink: 0 }} />}
-          <ShotGrid
+          {showSceneSidebar && <div style={{ width: '320px', flexShrink: 0 }} />}
+          <PlanningGrid
             onShotSelect={handleSceneShotSelect}
             onGenerateShot={handleGenerateSceneShot}
           />
