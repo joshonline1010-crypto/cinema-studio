@@ -1228,45 +1228,29 @@ export default function CinemaStudio() {
 
     let completed = 0;
 
-    // Helper: Build character prompt from description
+    // Helper: Build SINGLE SHOT character prompt (not grid!)
     const buildCharPrompt = (char: CharacterRef): string => {
       const desc = `${char.description || char.name}${char.costume ? `, wearing ${char.costume}` : ''}`;
-      const generated = generateAssetPrompt({
-        assetType: 'character',
-        description: desc,
-        gridSize: '3x3',
-        characterVariant: 'base'
-      });
-      return generated.prompt;
+      // Cinematic character portrait - single hero shot
+      return `Cinematic character portrait, ${desc}. Medium close-up, dramatic lighting from side, shallow depth of field, film grain, 85mm lens, professional photography, neutral expression looking at camera, studio quality, 8K, photorealistic`;
     };
 
-    // Helper: Build scene ref prompt from description
+    // Helper: Build SINGLE SHOT scene ref prompt (not grid!)
     const buildRefPrompt = (ref: SceneRef): string => {
       const desc = ref.description || ref.name;
+
       if (ref.type === 'location') {
-        const generated = generateAssetPrompt({
-          assetType: 'background',
-          description: desc,
-          gridSize: '3x3',
-          locationType: 'INT-EXT',
-          timeOfDay: 'day',
-          mood: 'cinematic',
-          backgroundVariant: 'base'
-        });
-        return generated.prompt;
+        // Cinematic establishing shot of location
+        return `Cinematic establishing shot, ${desc}. Wide angle, golden hour lighting, atmospheric depth, film grain, professional cinematography, no people, empty scene ready for action, 8K, photorealistic`;
+      } else if (ref.type === 'vehicle') {
+        // Hero vehicle shot - beauty angle
+        return `Cinematic vehicle beauty shot, ${desc}. Three-quarter front angle, dramatic lighting, reflections on paint, shallow depth of field, automotive photography, professional studio quality, 8K, photorealistic`;
+      } else if (ref.type === 'building') {
+        // Architectural establishing shot
+        return `Cinematic architectural shot, ${desc}. Wide establishing angle, dramatic sky, golden hour lighting, professional real estate photography, no people, 8K, photorealistic`;
       } else {
-        let propCategory: PropCategory;
-        if (ref.type === 'vehicle') propCategory = 'vehicle';
-        else if (ref.type === 'building') propCategory = 'building';
-        else propCategory = 'simple';
-        const generated = generateAssetPrompt({
-          assetType: 'prop',
-          description: desc,
-          gridSize: '3x3',
-          propCategory,
-          propVariant: 'base'
-        });
-        return generated.prompt;
+        // Product/prop hero shot
+        return `Cinematic product shot, ${desc}. Studio lighting, dramatic shadows, shallow depth of field, professional product photography, hero angle, 8K, photorealistic`;
       }
     };
 
@@ -1522,9 +1506,8 @@ OUTPUT THIS EXACT FORMAT (wrapped in \`\`\`json code block):
     "char_id": {
       "id": "char_id",
       "name": "Name",
-      "description": "Physical description",
-      "costume": "What they wear",
-      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+      "description": "FULL physical description - age, hair color/style, eye color, skin tone, body type, distinguishing features",
+      "costume": "FULL outfit - colors, materials, accessories, shoes"
     }
   },
   "scene_references": {
@@ -1532,8 +1515,7 @@ OUTPUT THIS EXACT FORMAT (wrapped in \`\`\`json code block):
       "id": "location_id",
       "name": "Location",
       "type": "location",
-      "description": "What it looks like",
-      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+      "description": "FULL description - terrain, vegetation, architecture, atmosphere, lighting mood, weather"
     }
   },
   "shots": [

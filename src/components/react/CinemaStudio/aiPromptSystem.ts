@@ -847,10 +847,14 @@ MUST CREATE:
     "lamborghini_urus": { type: "vehicle", ... }  ← REQUIRED! Don't miss this!
   }
 
-## CRITICAL: WRITE DETAILED DESCRIPTIONS - The system builds prompts automatically!
+## CRITICAL: WRITE DETAILED DESCRIPTIONS - Single cinematic shots!
 
 You do NOT need to write generate_prompt - just fill in the "description" field with FULL DETAILS!
-The system automatically converts your description into the correct 3x3 grid prompt format.
+The system automatically creates a SINGLE CINEMATIC SHOT (not a grid!) from your description:
+- Characters → Cinematic portrait, medium close-up, dramatic lighting
+- Locations → Wide establishing shot, golden hour, atmospheric
+- Vehicles → Beauty shot, three-quarter angle, automotive photography
+- Objects → Product hero shot, studio lighting
 
 WRONG - Empty or placeholder descriptions:
   "description": ""
