@@ -81,6 +81,8 @@ const POST = async ({ request }) => {
       start_image_url,
       end_image_url,
       reference_image,
+      image_urls,
+      // Array of reference images (takes priority over single reference_image)
       duration = "5",
       aspect_ratio = "16:9",
       resolution = "2K"
@@ -118,15 +120,22 @@ const POST = async ({ request }) => {
         break;
       }
       case "image":
-      case "image-video": {
+      case "image-video":
+      case "edit": {
         const imageBody = {
           prompt,
           aspect_ratio,
           resolution: "4K"
         };
-        if (reference_image) {
-          imageBody.image_urls = [reference_image];
-          console.log("Using EDIT endpoint with reference:", reference_image);
+        const allRefs = [];
+        if (image_urls && Array.isArray(image_urls) && image_urls.length > 0) {
+          allRefs.push(...image_urls);
+        } else if (reference_image) {
+          allRefs.push(reference_image);
+        }
+        if (allRefs.length > 0) {
+          imageBody.image_urls = allRefs;
+          console.log("Using EDIT endpoint with", allRefs.length, "reference(s):", allRefs.map((u) => u.substring(0, 50) + "..."));
           result = await callFal(FAL_ENDPOINTS["image-edit"], imageBody);
         } else {
           console.log("Using TEXT-TO-IMAGE endpoint (no reference)");

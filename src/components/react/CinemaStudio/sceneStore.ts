@@ -255,7 +255,13 @@ export const useSceneStore = create<SceneState>()(
         return scene;
       },
 
-      clearScene: () => set({ currentScene: null, selectedShotId: null }),
+      clearScene: () => {
+        // Also clear from localStorage directly
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('cinema-scene-storage');
+        }
+        return set({ currentScene: null, selectedShotId: null });
+      },
 
       // Shot management
       addShot: (shotData) => set((state) => {

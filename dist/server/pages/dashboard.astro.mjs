@@ -1,7 +1,7 @@
 /* empty css                                  */
-import { e as createComponent, f as createAstro, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_BJ9NHA2f.mjs';
+import { e as createComponent, f as createAstro, p as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_D9cEOE7x.mjs';
 import 'piccolore';
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_MPUrlo_H.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_DmOU0m9k.mjs';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';

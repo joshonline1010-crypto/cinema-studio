@@ -1,9 +1,9 @@
-import { d as defineMiddleware, s as sequence } from './chunks/index_BOTSgDqy.mjs';
+import { d as defineMiddleware, s as sequence } from './chunks/index_DVnEmTQN.mjs';
 import { g as getSessionCookie, f as findSessionById, a as findUserById } from './chunks/db_CvyCu46H.mjs';
 import 'es-module-lexer';
-import './chunks/astro-designed-error-pages_8Hqqvh-Z.mjs';
+import './chunks/astro-designed-error-pages_DwYuWI9g.mjs';
 import 'piccolore';
-import './chunks/astro/server_BJ9NHA2f.mjs';
+import './chunks/astro/server_D9cEOE7x.mjs';
 import 'clsx';
 
 const PROTECTED_ROUTES = ["/dashboard", "/settings", "/projects"];

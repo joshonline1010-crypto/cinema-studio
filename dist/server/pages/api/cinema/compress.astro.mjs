@@ -6,21 +6,72 @@ import * as os from 'os';
 export { renderers } from '../../../renderers.mjs';
 
 const execAsync = promisify(exec);
-async function uploadToCatbox(filePath) {
+async function uploadToCatbox(filePath, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const formData = new FormData();
+      formData.append("reqtype", "fileupload");
+      const fileBuffer = fs.readFileSync(filePath);
+      const blob = new Blob([fileBuffer], { type: "image/jpeg" });
+      formData.append("fileToUpload", blob, path.basename(filePath));
+      const response = await fetch("https://catbox.moe/user/api.php", {
+        method: "POST",
+        body: formData
+      });
+      const url = await response.text();
+      if (url && url.startsWith("https://")) {
+        return url.trim();
+      }
+      console.log(`Catbox attempt ${attempt} response:`, url);
+      if (attempt < retries) {
+        console.log(`Retrying catbox upload... (${attempt}/${retries})`);
+        await new Promise((r) => setTimeout(r, 1e3 * attempt));
+      }
+    } catch (err) {
+      console.error(`Catbox attempt ${attempt} error:`, err);
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 1e3 * attempt));
+      }
+    }
+  }
+  throw new Error("Catbox upload failed after " + retries + " attempts");
+}
+async function uploadToLitterbox(filePath) {
   const formData = new FormData();
   formData.append("reqtype", "fileupload");
+  formData.append("time", "1h");
   const fileBuffer = fs.readFileSync(filePath);
   const blob = new Blob([fileBuffer], { type: "image/jpeg" });
   formData.append("fileToUpload", blob, path.basename(filePath));
-  const response = await fetch("https://catbox.moe/user/api.php", {
+  const response = await fetch("https://litterbox.catbox.moe/resources/internals/api.php", {
     method: "POST",
     body: formData
   });
   const url = await response.text();
-  if (!url.startsWith("https://")) {
-    throw new Error("Catbox upload failed: " + url);
+  console.log("Litterbox response:", url);
+  if (!url || !url.startsWith("https://")) {
+    throw new Error("Litterbox upload failed: " + url);
   }
-  return url;
+  return url.trim();
+}
+async function uploadCompressedImage(filePath) {
+  try {
+    console.log("Trying Litterbox upload...");
+    const url = await uploadToLitterbox(filePath);
+    console.log("Litterbox upload success:", url);
+    return url;
+  } catch (err) {
+    console.log("Litterbox failed, trying Catbox:", err);
+  }
+  try {
+    console.log("Trying Catbox upload...");
+    const url = await uploadToCatbox(filePath, 2);
+    console.log("Catbox upload success:", url);
+    return url;
+  } catch (err) {
+    console.log("Catbox also failed:", err);
+    throw new Error("All upload methods failed");
+  }
 }
 const POST = async ({ request }) => {
   try {
@@ -55,12 +106,12 @@ const POST = async ({ request }) => {
       if (fs.existsSync(expectedOutput)) {
         const outputSize2 = fs.statSync(expectedOutput).size;
         console.log(`Output size: ${(outputSize2 / 1024).toFixed(0)} KB`);
-        const catboxUrl2 = await uploadToCatbox(expectedOutput);
+        const uploadUrl = await uploadCompressedImage(expectedOutput);
         fs.unlinkSync(inputPath);
         fs.unlinkSync(expectedOutput);
         return new Response(JSON.stringify({
           success: true,
-          image_url: catboxUrl2,
+          image_url: uploadUrl,
           original_size: inputSize,
           compressed_size: outputSize2
         }), {
@@ -81,7 +132,7 @@ const POST = async ({ request }) => {
     if (outputSize > 10 * 1024 * 1024) {
       await execAsync(`"${magickPath}" "${inputPath}" -resize "3840x2160>" -quality 70 "${outputPath}"`);
     }
-    const catboxUrl = await uploadToCatbox(outputPath);
+    const catboxUrl = await uploadCompressedImage(outputPath);
     fs.unlinkSync(inputPath);
     fs.unlinkSync(outputPath);
     return new Response(JSON.stringify({
