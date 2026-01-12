@@ -3,8 +3,24 @@
  * Browse 2100+ professional film shots with filtering
  * Multi-select up to 7 as references
  * Asset swap: replace subjects with your own character/item
+ *
+ * Asset Generation uses unified 3x3 grid system for:
+ * - Characters (expressions/poses)
+ * - Backgrounds (angles/shots)
+ * - Props (angles/states by category)
  */
 import { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  type AssetType,
+  type PropCategory,
+  type CharacterVariant,
+  type BackgroundVariant,
+  type PropVariant,
+  generateAssetPrompt,
+  buildApiRequest,
+  PROP_CATEGORY_NAMES,
+  PROP_VARIATIONS
+} from './assetPromptTemplates';
 
 export interface MovieShot {
   id: string;
@@ -53,9 +69,12 @@ interface MovieShotsIndex {
 export interface UserAsset {
   id: string;
   name: string;
-  type: 'character' | 'item' | 'vehicle' | 'creature';
+  type: AssetType; // character | background | prop
+  propCategory?: PropCategory; // For prop type assets
   imageUrl: string;
   description: string; // Detailed description for prompt injection
+  gridSize?: '3x3' | '5x5'; // Grid type used for generation
+  totalCells?: number; // Number of cells in grid
 }
 
 interface MovieShotsBrowserProps {
@@ -122,7 +141,7 @@ export default function MovieShotsBrowser({
   // Asset upload
   const [showAssetUpload, setShowAssetUpload] = useState(false);
   const [newAssetName, setNewAssetName] = useState('');
-  const [newAssetType, setNewAssetType] = useState<'character' | 'item' | 'vehicle' | 'creature'>('character');
+  const [newAssetType, setNewAssetType] = useState<AssetType>('character');
   const [newAssetDescription, setNewAssetDescription] = useState('');
   const [newAssetImage, setNewAssetImage] = useState<string | null>(null);
   const assetInputRef = useRef<HTMLInputElement>(null);
@@ -133,6 +152,15 @@ export default function MovieShotsBrowser({
   const [assetGenerating, setAssetGenerating] = useState(false);
   const [assetGenError, setAssetGenError] = useState<string | null>(null);
   const refImageInputRef = useRef<HTMLInputElement>(null);
+
+  // Asset generation options (for 3x3 grid templates)
+  const [propCategory, setPropCategory] = useState<PropCategory>('simple');
+  const [locationType, setLocationType] = useState<'INT' | 'EXT' | 'INT-EXT'>('INT-EXT');
+  const [timeOfDay, setTimeOfDay] = useState('day');
+  const [mood, setMood] = useState('neutral');
+  const [characterVariant, setCharacterVariant] = useState<CharacterVariant>('base');
+  const [backgroundVariant, setBackgroundVariant] = useState<BackgroundVariant>('base');
+  const [propVariant, setPropVariant] = useState<PropVariant>('base');
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'shots' | 'assets'>('shots');
@@ -256,7 +284,7 @@ export default function MovieShotsBrowser({
     setAssetRefImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Generate asset with AI
+  // Generate asset with AI using 3x3 grid templates
   const generateAsset = async () => {
     if (!newAssetDescription || !onAddAsset) return;
 
@@ -264,26 +292,31 @@ export default function MovieShotsBrowser({
     setAssetGenError(null);
 
     try {
-      // Build prompt based on asset type
-      const typePrompts: Record<string, string> = {
-        character: 'Character portrait, centered composition, full detail, clean background.',
-        item: 'Product shot, centered, clean white background, studio lighting.',
-        vehicle: 'Vehicle showcase, 3/4 angle, clean studio environment.',
-        creature: 'Fantasy creature portrait, detailed, clean background, concept art style.'
-      };
+      // Build prompt using unified 3x3 grid template system
+      const generatedPrompt = generateAssetPrompt({
+        assetType: newAssetType,
+        description: newAssetDescription,
+        gridSize: '3x3',
+        // Character options
+        characterVariant: newAssetType === 'character' ? characterVariant : undefined,
+        // Background options
+        locationType: newAssetType === 'background' ? locationType : undefined,
+        timeOfDay: newAssetType === 'background' ? timeOfDay : undefined,
+        mood: newAssetType === 'background' ? mood : undefined,
+        backgroundVariant: newAssetType === 'background' ? backgroundVariant : undefined,
+        // Prop options
+        propCategory: newAssetType === 'prop' ? propCategory : undefined,
+        propVariant: newAssetType === 'prop' ? propVariant : undefined
+      });
 
-      const fullPrompt = `${newAssetDescription}. ${typePrompts[newAssetType]} High quality, 4K, detailed.`;
+      // Build API request (handles refs automatically)
+      const requestBody = buildApiRequest(
+        generatedPrompt,
+        assetRefImages.length > 0 ? assetRefImages : undefined
+      );
 
-      // Call generate API with optional refs
-      const requestBody: any = {
-        type: assetRefImages.length > 0 ? 'edit' : 'image',
-        prompt: fullPrompt,
-        aspect_ratio: '1:1'
-      };
-
-      if (assetRefImages.length > 0) {
-        requestBody.image_urls = assetRefImages;
-      }
+      console.log('Asset generation prompt:', generatedPrompt.prompt);
+      console.log('API request:', requestBody);
 
       const response = await fetch('/api/cinema/generate', {
         method: 'POST',
@@ -294,13 +327,16 @@ export default function MovieShotsBrowser({
       const data = await response.json();
 
       if (data.image_url) {
-        // Auto-add to assets
+        // Auto-add to assets with grid metadata
         const asset: UserAsset = {
           id: `asset-${Date.now()}`,
           name: newAssetName || `Generated ${newAssetType}`,
           type: newAssetType,
+          propCategory: newAssetType === 'prop' ? propCategory : undefined,
           imageUrl: data.image_url,
-          description: newAssetDescription
+          description: newAssetDescription,
+          gridSize: generatedPrompt.gridSize,
+          totalCells: generatedPrompt.totalCells
         };
         onAddAsset(asset);
 
@@ -325,6 +361,15 @@ export default function MovieShotsBrowser({
     setAssetMode('upload');
     setAssetGenError(null);
     setShowAssetUpload(false);
+    // Reset template options
+    setNewAssetType('character');
+    setPropCategory('simple');
+    setLocationType('INT-EXT');
+    setTimeOfDay('day');
+    setMood('neutral');
+    setCharacterVariant('base');
+    setBackgroundVariant('base');
+    setPropVariant('base');
   };
 
   // Save new asset
@@ -713,25 +758,153 @@ export default function MovieShotsBrowser({
                   className="w-full bg-[#2a2a2a] border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 mb-2"
                 />
 
-                {/* Type */}
-                <select
-                  value={newAssetType}
-                  onChange={(e) => setNewAssetType(e.target.value as any)}
-                  className="w-full bg-[#2a2a2a] border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500/50 mb-2"
-                >
-                  <option value="character">Character</option>
-                  <option value="item">Item / Object</option>
-                  <option value="vehicle">Vehicle</option>
-                  <option value="creature">Creature</option>
-                </select>
+                {/* Asset Type (3x3 Grid System) */}
+                <div className="mb-2">
+                  <div className="text-[10px] text-gray-500 uppercase mb-1">Asset Type (3x3 Grid)</div>
+                  <div className="flex gap-1">
+                    {(['character', 'background', 'prop'] as AssetType[]).map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setNewAssetType(type)}
+                        className={`flex-1 py-1.5 rounded text-xs font-medium transition-all ${
+                          newAssetType === type
+                            ? type === 'character' ? 'bg-blue-500 text-white'
+                              : type === 'background' ? 'bg-green-500 text-white'
+                              : 'bg-orange-500 text-white'
+                            : 'bg-[#333] text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Prop Category (only when prop selected) */}
+                {newAssetType === 'prop' && (
+                  <div className="mb-2">
+                    <div className="text-[10px] text-gray-500 uppercase mb-1">Prop Category</div>
+                    <select
+                      value={propCategory}
+                      onChange={(e) => setPropCategory(e.target.value as PropCategory)}
+                      className="w-full bg-[#2a2a2a] border border-gray-700 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500/50"
+                    >
+                      {(Object.entries(PROP_CATEGORY_NAMES) as [PropCategory, string][]).map(([key, name]) => (
+                        <option key={key} value={key}>{name}</option>
+                      ))}
+                    </select>
+                    <div className="mt-1 text-[9px] text-gray-500">
+                      Grid: {PROP_VARIATIONS[propCategory].slice(0, 3).join(', ')}...
+                    </div>
+                  </div>
+                )}
+
+                {/* Background Options (only when background selected) */}
+                {newAssetType === 'background' && (
+                  <div className="mb-2 grid grid-cols-3 gap-2">
+                    <div>
+                      <div className="text-[10px] text-gray-500 uppercase mb-1">Location</div>
+                      <select
+                        value={locationType}
+                        onChange={(e) => setLocationType(e.target.value as 'INT' | 'EXT' | 'INT-EXT')}
+                        className="w-full bg-[#2a2a2a] border border-gray-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-green-500/50"
+                      >
+                        <option value="INT">Interior</option>
+                        <option value="EXT">Exterior</option>
+                        <option value="INT-EXT">Both</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-gray-500 uppercase mb-1">Time</div>
+                      <select
+                        value={timeOfDay}
+                        onChange={(e) => setTimeOfDay(e.target.value)}
+                        className="w-full bg-[#2a2a2a] border border-gray-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-green-500/50"
+                      >
+                        <option value="day">Day</option>
+                        <option value="night">Night</option>
+                        <option value="dawn">Dawn</option>
+                        <option value="dusk">Dusk</option>
+                        <option value="golden hour">Golden Hour</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-gray-500 uppercase mb-1">Mood</div>
+                      <select
+                        value={mood}
+                        onChange={(e) => setMood(e.target.value)}
+                        className="w-full bg-[#2a2a2a] border border-gray-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-green-500/50"
+                      >
+                        <option value="neutral">Neutral</option>
+                        <option value="tense">Tense</option>
+                        <option value="peaceful">Peaceful</option>
+                        <option value="mysterious">Mysterious</option>
+                        <option value="dramatic">Dramatic</option>
+                        <option value="romantic">Romantic</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Variant Options */}
+                {assetMode === 'generate' && (
+                  <div className="mb-2">
+                    <div className="text-[10px] text-gray-500 uppercase mb-1">Variant</div>
+                    <select
+                      value={
+                        newAssetType === 'character' ? characterVariant :
+                        newAssetType === 'background' ? backgroundVariant :
+                        propVariant
+                      }
+                      onChange={(e) => {
+                        if (newAssetType === 'character') setCharacterVariant(e.target.value as CharacterVariant);
+                        else if (newAssetType === 'background') setBackgroundVariant(e.target.value as BackgroundVariant);
+                        else setPropVariant(e.target.value as PropVariant);
+                      }}
+                      className="w-full bg-[#2a2a2a] border border-gray-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-purple-500/50"
+                    >
+                      {newAssetType === 'character' && (
+                        <>
+                          <option value="base">Base (9 expressions)</option>
+                          <option value="damage">Battle Damage</option>
+                          <option value="emotion_extreme">Extreme Emotions</option>
+                        </>
+                      )}
+                      {newAssetType === 'background' && (
+                        <>
+                          <option value="base">Base (9 angles)</option>
+                          <option value="destroyed">Destroyed</option>
+                          <option value="on_fire">On Fire</option>
+                          <option value="flooded">Flooded</option>
+                          <option value="night">Night Version</option>
+                        </>
+                      )}
+                      {newAssetType === 'prop' && (
+                        <>
+                          <option value="base">Base (9 views)</option>
+                          <option value="damaged">Damaged</option>
+                          <option value="glowing">Glowing/Magic</option>
+                          <option value="wet">Wet</option>
+                          <option value="dusty">Dusty/Aged</option>
+                          <option value="golden">Golden/Gilded</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                )}
 
                 {/* Description */}
                 <textarea
                   value={newAssetDescription}
                   onChange={(e) => setNewAssetDescription(e.target.value)}
-                  placeholder={assetMode === 'generate'
-                    ? "Describe what to generate (e.g., 'Fluffy yellow chipmunk with green headphones, red jacket, blue pants, cute cartoon style, 8K')"
-                    : "Detailed description for AI swapping (e.g., 'Fluffy yellow chipmunk with green headphones, red jacket, blue pants')"
+                  placeholder={
+                    assetMode === 'generate'
+                      ? newAssetType === 'character'
+                        ? "Describe character (e.g., 'Fluffy yellow chipmunk with green headphones, red jacket, blue pants, cute cartoon style')"
+                        : newAssetType === 'background'
+                        ? "Describe location (e.g., 'Haunted Victorian mansion, overgrown garden, fog, moonlight')"
+                        : "Describe prop (e.g., 'Ancient golden treasure chest with gems, ornate carvings')"
+                      : "Detailed description for AI swapping"
                   }
                   rows={3}
                   className="w-full bg-[#2a2a2a] border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 mb-3 resize-none"
@@ -763,10 +936,13 @@ export default function MovieShotsBrowser({
                     {assetGenerating ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Generating...
+                        Generating 3x3 Grid...
                       </>
                     ) : (
-                      <>✨ Generate & Add to Assets</>
+                      <>
+                        <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded">3x3</span>
+                        Generate {newAssetType.charAt(0).toUpperCase() + newAssetType.slice(1)} Grid
+                      </>
                     )}
                   </button>
                 )}
@@ -790,7 +966,15 @@ export default function MovieShotsBrowser({
                 >
                   <img src={asset.imageUrl} alt={asset.name} className="w-full h-20 object-contain bg-[#2a2a2a] rounded mb-2" />
                   <div className="text-sm text-white font-medium truncate">{asset.name}</div>
-                  <div className="text-[10px] text-gray-400 capitalize">{asset.type}</div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-gray-400 capitalize">{asset.type}</span>
+                    {asset.propCategory && (
+                      <span className="text-[9px] text-orange-400">({asset.propCategory})</span>
+                    )}
+                    {asset.gridSize && (
+                      <span className="text-[9px] bg-purple-500/30 text-purple-300 px-1 rounded">{asset.gridSize}</span>
+                    )}
+                  </div>
                   {isActive && (
                     <div className="absolute top-2 right-2 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                       <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" className="w-3 h-3">

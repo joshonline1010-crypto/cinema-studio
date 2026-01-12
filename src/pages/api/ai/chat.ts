@@ -3,8 +3,20 @@ import { AI_SYSTEM_PROMPT } from '../../../components/react/CinemaStudio/aiPromp
 import fs from 'fs';
 import path from 'path';
 
-// Ollama chat endpoint (supports message history)
+// API Configuration - Use environment variable or fallback
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const OLLAMA_CHAT_URL = 'http://localhost:11434/api/chat';
+
+// Model options
+type ModelOption = 'claude-sonnet' | 'claude-opus' | 'qwen' | 'mistral';
+
+const MODEL_MAP: Record<ModelOption, { provider: 'anthropic' | 'ollama'; model: string }> = {
+  'claude-sonnet': { provider: 'anthropic', model: 'claude-sonnet-4-20250514' },
+  'claude-opus': { provider: 'anthropic', model: 'claude-opus-4-5-20251101' },
+  'qwen': { provider: 'ollama', model: 'qwen3:8b' },
+  'mistral': { provider: 'ollama', model: 'mistral' }
+};
 
 // Memory storage directory
 const MEMORY_DIR = path.join(process.cwd(), 'ai-memory');
@@ -76,22 +88,6 @@ function loadChatHistory(sessionId: string): Array<{ role: string; content: stri
   }
 }
 
-// Save chat history to file
-function saveChatHistory(sessionId: string, messages: Array<{ role: string; content: string }>) {
-  ensureMemoryDir();
-  const filePath = getChatFilePath(sessionId);
-
-  let content = `# AI Chat Memory - Session: ${sessionId}\n`;
-  content += `# Created: ${new Date().toISOString()}\n\n`;
-
-  for (const msg of messages) {
-    const roleLabel = msg.role === 'user' ? '[USER]' : '[ASSISTANT]';
-    content += `${roleLabel}: ${msg.content}\n---\n`;
-  }
-
-  fs.writeFileSync(filePath, content, 'utf-8');
-}
-
 // Append a single exchange to file (more efficient for ongoing chats)
 function appendToHistory(sessionId: string, userMessage: string, assistantMessage: string) {
   ensureMemoryDir();
@@ -109,19 +105,124 @@ function appendToHistory(sessionId: string, userMessage: string, assistantMessag
   fs.appendFileSync(filePath, content, 'utf-8');
 }
 
+// Call Claude API with extended thinking
+async function callClaude(
+  systemPrompt: string,
+  messages: Array<{ role: string; content: string }>,
+  model: string,
+  useExtendedThinking: boolean = true
+): Promise<string> {
+  // Convert messages to Claude format
+  const claudeMessages = messages.map(msg => ({
+    role: msg.role as 'user' | 'assistant',
+    content: msg.content
+  }));
+
+  const requestBody: any = {
+    model: model,
+    max_tokens: 16000,
+    system: systemPrompt,
+    messages: claudeMessages
+  };
+
+  // Add extended thinking for better reasoning (Sonnet/Opus support this)
+  if (useExtendedThinking) {
+    requestBody.thinking = {
+      type: 'enabled',
+      budget_tokens: 10000  // Allow up to 10k tokens for thinking
+    };
+  }
+
+  console.log(`[Claude API] Calling ${model} with extended_thinking=${useExtendedThinking}`);
+  console.log(`[Claude API] System prompt length: ${systemPrompt.length}, Messages: ${claudeMessages.length}`);
+
+  const response = await fetch(ANTHROPIC_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[Claude API] Error:', response.status, errorText);
+    throw new Error(`Claude API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+
+  // Extract response - handle both thinking and regular responses
+  let responseText = '';
+  let thinkingText = '';
+
+  if (data.content && Array.isArray(data.content)) {
+    for (const block of data.content) {
+      if (block.type === 'thinking') {
+        thinkingText = block.thinking;
+        console.log('[Claude API] Thinking:', thinkingText.substring(0, 200) + '...');
+      } else if (block.type === 'text') {
+        responseText = block.text;
+      }
+    }
+  }
+
+  console.log(`[Claude API] Response length: ${responseText.length}, Thinking length: ${thinkingText.length}`);
+
+  return responseText;
+}
+
+// Call Ollama API (fallback)
+async function callOllama(
+  systemPrompt: string,
+  messages: Array<{ role: string; content: string }>,
+  model: string
+): Promise<string> {
+  const ollamaMessages = [
+    { role: 'system', content: systemPrompt },
+    ...messages
+  ];
+
+  const response = await fetch(OLLAMA_CHAT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: model,
+      messages: ollamaMessages,
+      stream: false,
+      options: {
+        temperature: 0.7,
+        top_p: 0.9,
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Ollama error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.message?.content?.trim() || '';
+}
+
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
     const {
       message,
       sessionId = 'default',
-      model = 'qwen3:8b',
-      clearHistory = false
+      model = 'claude-opus',  // Default to Claude Opus 4.5 - BEST model!
+      clearHistory = false,
+      extendedThinking = true   // Enable by default
     } = body as {
       message: string;
       sessionId?: string;
       model?: string;
       clearHistory?: boolean;
+      extendedThinking?: boolean;
     };
 
     if (!message) {
@@ -142,66 +243,52 @@ export const POST: APIRoute = async ({ request }) => {
     // Load existing chat history
     const history = loadChatHistory(sessionId);
 
-    // Build messages array for Ollama
+    // Build messages array
     const messages = [
-      { role: 'system', content: AI_SYSTEM_PROMPT },
       ...history,
       { role: 'user', content: message }
     ];
 
-    console.log(`AI Chat [${sessionId}] (${history.length} previous messages):`, message.substring(0, 100));
+    console.log(`\n========================================`);
+    console.log(`AI Chat [${sessionId}] using model: ${model}`);
+    console.log(`History: ${history.length} messages, Extended thinking: ${extendedThinking}`);
+    console.log(`User message: ${message.substring(0, 150)}...`);
+    console.log(`========================================\n`);
 
-    // Call Ollama chat API
-    const ollamaResponse = await fetch(OLLAMA_CHAT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        stream: false,
-        options: {
-          temperature: 0.7,
-          top_p: 0.9,
-        }
-      })
-    });
+    let assistantMessage = '';
 
-    if (!ollamaResponse.ok) {
-      const errorText = await ollamaResponse.text();
-      console.error('Ollama chat error:', ollamaResponse.status, errorText);
+    // Determine provider and model
+    const modelConfig = MODEL_MAP[model as ModelOption] || MODEL_MAP['claude-sonnet'];
 
-      if (ollamaResponse.status === 0 || errorText.includes('ECONNREFUSED')) {
-        return new Response(JSON.stringify({
-          error: 'Ollama is not running. Start it with: ollama serve',
-          details: errorText
-        }), {
-          status: 503,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-
-      return new Response(JSON.stringify({
-        error: `Ollama error: ${ollamaResponse.status}`,
-        details: errorText
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    if (modelConfig.provider === 'anthropic') {
+      // Use Claude
+      assistantMessage = await callClaude(
+        AI_SYSTEM_PROMPT,
+        messages,
+        modelConfig.model,
+        extendedThinking
+      );
+    } else {
+      // Fallback to Ollama
+      assistantMessage = await callOllama(
+        AI_SYSTEM_PROMPT,
+        messages,
+        modelConfig.model
+      );
     }
-
-    const data = await ollamaResponse.json();
-    const assistantMessage = data.message?.content?.trim() || '';
 
     // Save to chat history
     appendToHistory(sessionId, message, assistantMessage);
 
-    console.log('AI Response:', assistantMessage.substring(0, 100) + '...');
+    console.log('\n[AI Response Preview]:', assistantMessage.substring(0, 200) + '...\n');
 
     return new Response(JSON.stringify({
       response: assistantMessage,
-      model: model,
+      model: modelConfig.model,
+      provider: modelConfig.provider,
       sessionId: sessionId,
-      historyLength: history.length + 1
+      historyLength: history.length + 1,
+      extendedThinking: extendedThinking
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -210,10 +297,25 @@ export const POST: APIRoute = async ({ request }) => {
   } catch (error) {
     console.error('AI Chat API error:', error);
 
-    if (error instanceof TypeError && error.message.includes('fetch')) {
+    // Check for specific errors
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    if (errorMessage.includes('Claude API error')) {
       return new Response(JSON.stringify({
-        error: 'Cannot connect to Ollama. Make sure Ollama is running.',
-        details: 'Run "ollama serve" in a terminal to start Ollama.'
+        error: 'Claude API error',
+        details: errorMessage,
+        suggestion: 'Check API key and credits at console.anthropic.com'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (errorMessage.includes('Ollama') || errorMessage.includes('ECONNREFUSED')) {
+      return new Response(JSON.stringify({
+        error: 'Ollama is not running',
+        details: 'Run "ollama serve" in a terminal to start Ollama.',
+        suggestion: 'Or switch to Claude model which uses API'
       }), {
         status: 503,
         headers: { 'Content-Type': 'application/json' }
@@ -222,7 +324,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     return new Response(JSON.stringify({
       error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: errorMessage
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -247,7 +349,8 @@ export const GET: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify({
       sessionId: sessionId,
       history: history,
-      sessions: sessions
+      sessions: sessions,
+      availableModels: Object.keys(MODEL_MAP)
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

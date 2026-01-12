@@ -1,1 +1,3 @@
 public/movie-shots/
+.env
+*.env

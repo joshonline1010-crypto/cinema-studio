@@ -51,6 +51,7 @@ import { buildQwenPromptContinuous, type BatchAngle } from './promptVocabulary';
 
 // AI Prompt Assistant
 import { extractScenePlan, type AIPromptContext } from './aiPromptSystem';
+import { generateAssetPrompt, type AssetType, type PropCategory } from './assetPromptTemplates';
 
 // Clean SVG Icons
 const Icons = {
@@ -795,26 +796,67 @@ export default function CinemaStudio() {
     setPlanProgress(0);
 
     // STEP 1: Generate all refs FIRST (in parallel)
-    // Helper: Build proper 3x3 character sheet prompt
+    // Helper: Build proper 3x3 character sheet prompt using unified template system
+    // ALWAYS uses template system with description field - more reliable than AI generate_prompt
     const buildCharacterSheetPrompt = (char: CharacterRef): string => {
-      if (char.generate_prompt && char.generate_prompt.includes('3x3')) {
-        return char.generate_prompt;  // AI provided good prompt
-      }
+      // Build description from character fields - AI just needs to fill these in correctly
       const desc = `${char.description || char.name}${char.costume ? `, wearing ${char.costume}` : ''}`;
-      return `Character reference sheet, 3x3 grid layout, ${desc}. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations showing happy and serious and surprised. Bottom row: full body standing pose, action pose, costume and prop details. White background, consistent soft studio lighting, character turnaround style, 4K high detail`;
+
+      if (!desc || desc.length < 10) {
+        console.warn(`Character ${char.name} has empty/short description! Using name as fallback.`);
+      }
+
+      const generated = generateAssetPrompt({
+        assetType: 'character',
+        description: desc,
+        gridSize: '3x3',
+        characterVariant: 'base'
+      });
+      console.log(`Built character prompt for ${char.name}:`, generated.prompt.substring(0, 200) + '...');
+      return generated.prompt;
     };
 
-    // Helper: Build proper 3x3 location/object sheet prompt
+    // Helper: Build proper 3x3 location/object sheet prompt using unified template system
+    // ALWAYS uses template system with description field - more reliable than AI generate_prompt
     const buildSceneRefSheetPrompt = (ref: SceneRef): string => {
-      if (ref.generate_prompt && ref.generate_prompt.includes('3x3')) {
-        return ref.generate_prompt;  // AI provided good prompt
-      }
       const desc = ref.description || ref.name;
+
+      if (!desc || desc.length < 10) {
+        console.warn(`Scene ref ${ref.name} (${ref.type}) has empty/short description! Using name as fallback.`);
+      }
+
       if (ref.type === 'location') {
-        return `Location reference sheet, 3x3 grid layout, ${desc}. Top row: wide establishing exterior shot, medium exterior angle, exterior architectural detail. Middle row: wide empty interior view, medium interior shot, interior props and details. Bottom row: dawn golden hour lighting, bright daylight, dusk blue hour atmosphere. Architectural visualization style, cinematic composition, no people, empty spaces, 4K`;
+        // Use background template for general locations/environments
+        const generated = generateAssetPrompt({
+          assetType: 'background',
+          description: desc,
+          gridSize: '3x3',
+          locationType: 'INT-EXT',
+          timeOfDay: 'day',
+          mood: 'cinematic',
+          backgroundVariant: 'base'
+        });
+        console.log(`Built location prompt for ${ref.name}:`, generated.prompt.substring(0, 200) + '...');
+        return generated.prompt;
       } else {
-        // object, vehicle, prop
-        return `Object reference sheet, 3x3 grid layout, ${desc}. Top row: front view, side profile view, rear view. Middle row: 3/4 angle hero shot, top-down view, detail closeup of key features. Bottom row: object in environment context (no people), empty interior view, wide shot showing scale. Product photography style, clean studio lighting, white background, no humans, 4K`;
+        // Use prop template for objects, vehicles, buildings, props
+        let propCategory: PropCategory;
+        if (ref.type === 'vehicle') {
+          propCategory = 'vehicle';
+        } else if (ref.type === 'building') {
+          propCategory = 'building';
+        } else {
+          propCategory = 'simple';
+        }
+        const generated = generateAssetPrompt({
+          assetType: 'prop',
+          description: desc,
+          gridSize: '3x3',
+          propCategory,
+          propVariant: 'base'
+        });
+        console.log(`Built ${ref.type} prompt for ${ref.name}:`, generated.prompt.substring(0, 200) + '...');
+        return generated.prompt;
       }
     };
 
@@ -837,7 +879,7 @@ export default function CinemaStudio() {
               body: JSON.stringify({
                 type: 'image',
                 prompt: prompt,
-                aspect_ratio: '1:1',  // Square for ref sheets
+                aspect_ratio: '16:9',
                 resolution: '4K'
               })
             });
@@ -860,7 +902,7 @@ export default function CinemaStudio() {
               body: JSON.stringify({
                 type: 'image',
                 prompt: prompt,
-                aspect_ratio: '1:1',
+                aspect_ratio: '16:9',
                 resolution: '4K'
               })
             });
@@ -879,7 +921,7 @@ export default function CinemaStudio() {
       setStatusMessage(`Refs complete! Now generating images...`);
     }
 
-    // STEP 2: Generate all images in PARALLEL batches
+    // STEP 2: Generate ALL images in PARALLEL (no batching!)
     const pendingShots = currentScene.shots.filter(s => s.status === 'pending');
     if (pendingShots.length === 0) {
       setExecutingPlan(false);
@@ -887,110 +929,106 @@ export default function CinemaStudio() {
       return;
     }
 
-    const BATCH_SIZE = 4;  // Generate 4 images at a time
-    setStatusMessage(`Step 2: Generating ${pendingShots.length} images (${BATCH_SIZE} at a time)...`);
+    setStatusMessage(`🚀 Step 2: Generating ALL ${pendingShots.length} images IN PARALLEL...`);
 
     // Mark all as generating
     pendingShots.forEach(shot => markShotGenerating(shot.shot_id));
+    let imagesCompleted = 0;
 
-    // Process images in parallel batches
-    for (let i = 0; i < pendingShots.length; i += BATCH_SIZE) {
-      const batch = pendingShots.slice(i, i + BATCH_SIZE);
-      setPlanProgress(i);
-      setStatusMessage(`Generating images ${i + 1}-${Math.min(i + BATCH_SIZE, pendingShots.length)} of ${pendingShots.length}...`);
+    // Generate ALL images at once!
+    const imagePromises = pendingShots.map(async (shot) => {
+      try {
+        const prompt = shot.photo_prompt || `${shot.subject}, ${shot.shot_type} shot, ${shot.location || ''}, cinematic, 8K`;
+        const refUrls = getRefUrlsForShot(shot);
+        console.log(`[executeFullPlan] PARALLEL: Sending image ${shot.shot_id}`);
 
-      const imagePromises = batch.map(async (shot) => {
+        const response = await fetch('/api/cinema/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: refUrls.length > 0 ? 'edit' : 'image',
+            prompt: prompt,
+            aspect_ratio: currentScene.aspect_ratio || '16:9',
+            resolution: '4K',
+            image_urls: refUrls.length > 0 ? refUrls : undefined,
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const imageUrl = data.image_url || data.images?.[0]?.url;
+          if (imageUrl) {
+            markShotComplete(shot.shot_id, imageUrl);
+            imagesCompleted++;
+            setStatusMessage(`✓ Images: ${imagesCompleted}/${pendingShots.length} done`);
+            return { shot_id: shot.shot_id, image_url: imageUrl, success: true };
+          }
+        }
+        return { shot_id: shot.shot_id, success: false };
+      } catch (err) {
+        console.error(`Image error for ${shot.shot_id}:`, err);
+        return { shot_id: shot.shot_id, success: false };
+      }
+    });
+
+    console.log(`[executeFullPlan] 🚀 Launching ALL ${imagePromises.length} images in PARALLEL!`);
+    await Promise.all(imagePromises);
+
+    setStatusMessage(`✅ All ${pendingShots.length} images done! Now videos...`);
+
+    // STEP 3: Generate ALL videos in PARALLEL (no batching!)
+    const shotsWithImages = currentScene.shots.filter(s => s.image_url && !s.video_url);
+
+    if (shotsWithImages.length > 0) {
+      setStatusMessage(`🚀 Step 3: Generating ALL ${shotsWithImages.length} videos IN PARALLEL...`);
+      let videosCompleted = 0;
+
+      const videoPromises = shotsWithImages.map(async (shot) => {
         try {
-          const prompt = shot.photo_prompt || `${shot.subject}, ${shot.shot_type} shot, ${shot.location || ''}, cinematic, 8K`;
-          const refUrls = getRefUrlsForShot(shot);
+          let videoType = 'video-kling';
+          if (shot.model === 'seedance-1.5') {
+            videoType = 'video-seedance';
+          } else if (shot.model === 'kling-o1' || shot.end_frame) {
+            videoType = 'video-kling-o1';
+          }
+          console.log(`[executeFullPlan] PARALLEL: Sending video ${shot.shot_id}`);
 
-          const response = await fetch('/api/cinema/generate', {
+          const videoResponse = await fetch('/api/cinema/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              type: refUrls.length > 0 ? 'edit' : 'image',
-              prompt: prompt,
-              aspect_ratio: currentScene.aspect_ratio || '16:9',
-              resolution: '4K',
-              image_urls: refUrls.length > 0 ? refUrls : undefined,
+              type: videoType,
+              prompt: shot.motion_prompt || 'subtle motion, cinematic',
+              start_image_url: shot.image_url,
+              end_image_url: shot.end_frame || undefined,
+              duration: String(shot.duration || 5),
             })
           });
 
-          if (response.ok) {
-            const data = await response.json();
-            const imageUrl = data.image_url || data.images?.[0]?.url;
-            if (imageUrl) {
-              markShotComplete(shot.shot_id, imageUrl);
-              return { shot_id: shot.shot_id, image_url: imageUrl, success: true };
+          if (videoResponse.ok) {
+            const videoData = await videoResponse.json();
+            const videoUrl = videoData.video_url;
+            if (videoUrl) {
+              markShotComplete(shot.shot_id, shot.image_url!, videoUrl);
+              videosCompleted++;
+              setStatusMessage(`✓ Videos: ${videosCompleted}/${shotsWithImages.length} done`);
+              return { shot_id: shot.shot_id, success: true };
             }
           }
           return { shot_id: shot.shot_id, success: false };
         } catch (err) {
-          console.error(`Image error for ${shot.shot_id}:`, err);
+          console.error(`Video error for ${shot.shot_id}:`, err);
           return { shot_id: shot.shot_id, success: false };
         }
       });
 
-      await Promise.all(imagePromises);
-    }
-
-    setStatusMessage(`All images done! Now generating videos in parallel...`);
-
-    // STEP 3: Generate all videos in PARALLEL batches
-    // Re-fetch shots to get updated image_urls
-    const shotsWithImages = currentScene.shots.filter(s => s.image_url && !s.video_url);
-
-    if (shotsWithImages.length > 0) {
-      setStatusMessage(`Step 3: Generating ${shotsWithImages.length} videos (${BATCH_SIZE} at a time)...`);
-
-      for (let i = 0; i < shotsWithImages.length; i += BATCH_SIZE) {
-        const batch = shotsWithImages.slice(i, i + BATCH_SIZE);
-        setPlanProgress(i);
-        setStatusMessage(`Generating videos ${i + 1}-${Math.min(i + BATCH_SIZE, shotsWithImages.length)} of ${shotsWithImages.length}...`);
-
-        const videoPromises = batch.map(async (shot) => {
-          try {
-            let videoType = 'video-kling';
-            if (shot.model === 'seedance-1.5') {
-              videoType = 'video-seedance';
-            } else if (shot.model === 'kling-o1' || shot.end_frame) {
-              videoType = 'video-kling-o1';
-            }
-
-            const videoResponse = await fetch('/api/cinema/generate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type: videoType,
-                prompt: shot.motion_prompt || 'subtle motion, cinematic',
-                start_image_url: shot.image_url,
-                end_image_url: shot.end_frame || undefined,
-                duration: String(shot.duration || 5),
-              })
-            });
-
-            if (videoResponse.ok) {
-              const videoData = await videoResponse.json();
-              const videoUrl = videoData.video_url;
-              if (videoUrl) {
-                markShotComplete(shot.shot_id, shot.image_url!, videoUrl);
-                return { shot_id: shot.shot_id, success: true };
-              }
-            }
-            return { shot_id: shot.shot_id, success: false };
-          } catch (err) {
-            console.error(`Video error for ${shot.shot_id}:`, err);
-            return { shot_id: shot.shot_id, success: false };
-          }
-        });
-
-        await Promise.all(videoPromises);
-      }
+      console.log(`[executeFullPlan] 🚀 Launching ALL ${videoPromises.length} videos in PARALLEL!`);
+      await Promise.all(videoPromises);
     }
 
     setExecutingPlan(false);
     setPlanProgress(0);
-    setStatusMessage(`Plan complete! ${pendingShots.length} shots generated.`);
+    setStatusMessage(`✅ Plan complete! ${pendingShots.length} shots generated in parallel!`);
   };
 
   // Stop plan execution
@@ -1067,13 +1105,13 @@ export default function CinemaStudio() {
     setStatusMessage(`All ${shotsNeedingVideo.length} videos generated!`);
   };
 
-  // Generate all reference images (characters + scene refs like locations/objects)
+  // Generate all reference images (characters + scene refs like locations/objects) - ALL IN PARALLEL!
   const generateAllRefs = async () => {
     if (!currentScene || executingPlan) return;
 
-    // Collect all refs that need generation
-    const charRefs = Object.values(currentScene.character_references || {}).filter(c => !c.ref_url && c.generate_prompt);
-    const sceneRefs = Object.values(currentScene.scene_references || {}).filter(r => !r.ref_url && r.generate_prompt);
+    // Collect all refs that need generation (uses description, not generate_prompt)
+    const charRefs = Object.values(currentScene.character_references || {}).filter(c => !c.ref_url && (c.description || c.name));
+    const sceneRefs = Object.values(currentScene.scene_references || {}).filter(r => !r.ref_url && (r.description || r.name));
     const totalRefs = charRefs.length + sceneRefs.length;
 
     if (totalRefs === 0) {
@@ -1083,79 +1121,132 @@ export default function CinemaStudio() {
 
     setExecutingPlan(true);
     setPlanProgress(0);
-    setStatusMessage(`Generating ${totalRefs} reference images...`);
+    setStatusMessage(`🚀 Generating ${totalRefs} refs IN PARALLEL...`);
 
     let completed = 0;
 
-    // Generate character refs (3x3 character sheets)
+    // Helper: Build character prompt from description
+    const buildCharPrompt = (char: CharacterRef): string => {
+      const desc = `${char.description || char.name}${char.costume ? `, wearing ${char.costume}` : ''}`;
+      const generated = generateAssetPrompt({
+        assetType: 'character',
+        description: desc,
+        gridSize: '3x3',
+        characterVariant: 'base'
+      });
+      return generated.prompt;
+    };
+
+    // Helper: Build scene ref prompt from description
+    const buildRefPrompt = (ref: SceneRef): string => {
+      const desc = ref.description || ref.name;
+      if (ref.type === 'location') {
+        const generated = generateAssetPrompt({
+          assetType: 'background',
+          description: desc,
+          gridSize: '3x3',
+          locationType: 'INT-EXT',
+          timeOfDay: 'day',
+          mood: 'cinematic',
+          backgroundVariant: 'base'
+        });
+        return generated.prompt;
+      } else {
+        let propCategory: PropCategory;
+        if (ref.type === 'vehicle') propCategory = 'vehicle';
+        else if (ref.type === 'building') propCategory = 'building';
+        else propCategory = 'simple';
+        const generated = generateAssetPrompt({
+          assetType: 'prop',
+          description: desc,
+          gridSize: '3x3',
+          propCategory,
+          propVariant: 'base'
+        });
+        return generated.prompt;
+      }
+    };
+
+    // Build ALL promises for parallel execution
+    const allPromises: Promise<void>[] = [];
+
+    // Character ref promises
     for (const char of charRefs) {
-      completed++;
-      setPlanProgress(completed);
-      setStatusMessage(`Ref ${completed}/${totalRefs}: ${char.name} (character sheet)`);
+      const promise = (async () => {
+        try {
+          const prompt = buildCharPrompt(char);
+          console.log(`[generateAllRefs] PARALLEL: Sending ${char.name} to FAL`);
 
-      try {
-        const response = await fetch('/api/cinema/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'image',
-            prompt: char.generate_prompt,
-            aspect_ratio: '1:1',  // Square for 3x3 grid sheets
-            resolution: '4K',
-          })
-        });
+          const response = await fetch('/api/cinema/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'image',
+              prompt: prompt,
+              aspect_ratio: '16:9',
+              resolution: '4K',
+            })
+          });
 
-        if (response.ok) {
-          const data = await response.json();
-          const imageUrl = data.image_url || data.images?.[0]?.url;
-          if (imageUrl) {
-            updateCharacter(char.id, { ref_url: imageUrl });
-            setStatusMessage(`✓ ${char.name} ref done`);
+          if (response.ok) {
+            const data = await response.json();
+            const imageUrl = data.image_url || data.images?.[0]?.url;
+            if (imageUrl) {
+              updateCharacter(char.id, { ref_url: imageUrl });
+              completed++;
+              setPlanProgress(completed);
+              setStatusMessage(`✓ ${completed}/${totalRefs} done - ${char.name}`);
+            }
           }
+        } catch (err) {
+          console.error(`Failed to generate ref for ${char.name}:`, err);
         }
-      } catch (err) {
-        console.error(`Failed to generate ref for ${char.name}:`, err);
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      })();
+      allPromises.push(promise);
     }
 
-    // Generate scene refs (location sheets, object sheets - all 3x3 grids)
+    // Scene ref promises
     for (const ref of sceneRefs) {
-      completed++;
-      setPlanProgress(completed);
-      setStatusMessage(`Ref ${completed}/${totalRefs}: ${ref.name} (${ref.type} sheet)`);
+      const promise = (async () => {
+        try {
+          const prompt = buildRefPrompt(ref);
+          console.log(`[generateAllRefs] PARALLEL: Sending ${ref.name} (${ref.type}) to FAL`);
 
-      try {
-        const response = await fetch('/api/cinema/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'image',
-            prompt: ref.generate_prompt,
-            aspect_ratio: '1:1',  // Square for all 3x3 grid sheets
-            resolution: '4K',
-          })
-        });
+          const response = await fetch('/api/cinema/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'image',
+              prompt: prompt,
+              aspect_ratio: '16:9',
+              resolution: '4K',
+            })
+          });
 
-        if (response.ok) {
-          const data = await response.json();
-          const imageUrl = data.image_url || data.images?.[0]?.url;
-          if (imageUrl) {
-            updateSceneRef(ref.id, { ref_url: imageUrl });
-            setStatusMessage(`✓ ${ref.name} ref done`);
+          if (response.ok) {
+            const data = await response.json();
+            const imageUrl = data.image_url || data.images?.[0]?.url;
+            if (imageUrl) {
+              updateSceneRef(ref.id, { ref_url: imageUrl });
+              completed++;
+              setPlanProgress(completed);
+              setStatusMessage(`✓ ${completed}/${totalRefs} done - ${ref.name}`);
+            }
           }
+        } catch (err) {
+          console.error(`Failed to generate ref for ${ref.name}:`, err);
         }
-      } catch (err) {
-        console.error(`Failed to generate ref for ${ref.name}:`, err);
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      })();
+      allPromises.push(promise);
     }
+
+    // Execute ALL in parallel!
+    console.log(`[generateAllRefs] 🚀 Launching ${allPromises.length} refs in PARALLEL!`);
+    await Promise.all(allPromises);
 
     setExecutingPlan(false);
     setPlanProgress(0);
-    setStatusMessage(`All ${totalRefs} reference images generated!`);
+    setStatusMessage(`✅ All ${totalRefs} refs generated in parallel!`);
   };
 
   // Get all ref URLs for shot generation (to maintain consistency)
@@ -1163,35 +1254,49 @@ export default function CinemaStudio() {
     if (!currentScene) return [];
 
     const refs: string[] = [];
+    const searchText = `${shot.subject || ''} ${shot.photo_prompt || ''} ${shot.location || ''}`.toLowerCase();
+
+    console.log(`[getRefUrlsForShot] Shot ${shot.shot_id}: searching in "${searchText.substring(0, 100)}..."`);
 
     // Add character refs if mentioned in subject/prompt
     Object.values(currentScene.character_references || {}).forEach(char => {
-      if (char.ref_url && (
-        shot.subject?.toLowerCase().includes(char.name.toLowerCase()) ||
-        shot.photo_prompt?.toLowerCase().includes(char.name.toLowerCase())
-      )) {
+      const nameMatch = searchText.includes(char.name.toLowerCase());
+      console.log(`  - Character "${char.name}": has_ref=${!!char.ref_url}, name_match=${nameMatch}`);
+      if (char.ref_url && nameMatch) {
         refs.push(char.ref_url);
+        console.log(`    ✓ ADDED character ref: ${char.ref_url.substring(0, 50)}...`);
       }
     });
 
-    // Add location refs if location matches
+    // Add location refs if location matches (fuzzy keyword matching)
     Object.values(currentScene.scene_references || {}).forEach(ref => {
-      if (ref.ref_url && ref.type === 'location' &&
-          shot.location?.toLowerCase().includes(ref.name.toLowerCase())) {
-        refs.push(ref.ref_url);
+      if (ref.type === 'location') {
+        // Split name into keywords (handles "Mountain Pass" vs "mountain_pass")
+        const nameWords = ref.name.toLowerCase().split(/[\s_-]+/).filter(w => w.length > 2);
+        const hasKeywordMatch = nameWords.some(word => searchText.includes(word));
+        console.log(`  - Location "${ref.name}": has_ref=${!!ref.ref_url}, keywords=[${nameWords.join(',')}], match=${hasKeywordMatch}`);
+        if (ref.ref_url && hasKeywordMatch) {
+          refs.push(ref.ref_url);
+          console.log(`    ✓ ADDED location ref: ${ref.ref_url.substring(0, 50)}...`);
+        }
       }
     });
 
-    // Add object refs if mentioned in prompt
+    // Add vehicle/object refs if mentioned in prompt (fuzzy match keywords from name)
     Object.values(currentScene.scene_references || {}).forEach(ref => {
-      if (ref.ref_url && ref.type !== 'location' && (
-        shot.subject?.toLowerCase().includes(ref.name.toLowerCase()) ||
-        shot.photo_prompt?.toLowerCase().includes(ref.name.toLowerCase())
-      )) {
-        refs.push(ref.ref_url);
+      if (ref.type !== 'location') {
+        // Split name into keywords and check if any match
+        const nameWords = ref.name.toLowerCase().split(/[\s_-]+/).filter(w => w.length > 2);
+        const hasKeywordMatch = nameWords.some(word => searchText.includes(word));
+        console.log(`  - ${ref.type} "${ref.name}": has_ref=${!!ref.ref_url}, keywords=[${nameWords.join(',')}], match=${hasKeywordMatch}`);
+        if (ref.ref_url && hasKeywordMatch) {
+          refs.push(ref.ref_url);
+          console.log(`    ✓ ADDED ${ref.type} ref: ${ref.ref_url.substring(0, 50)}...`);
+        }
       }
     });
 
+    console.log(`[getRefUrlsForShot] Shot ${shot.shot_id}: found ${refs.length} refs`);
     return refs;
   };
 
@@ -1231,7 +1336,7 @@ export default function CinemaStudio() {
         body: JSON.stringify({
           userInput: aiInput,
           context: context,
-          model: 'mistral'
+          model: 'claude-opus'  // Claude Opus 4.5 - BEST model!
         })
       });
 
@@ -1360,7 +1465,8 @@ USER REQUEST: ` : '';
         body: JSON.stringify({
           message: messageWithContext,
           sessionId: aiSessionId,
-          model: 'qwen3:8b'
+          model: 'claude-opus',      // Claude Opus 4.5 - BEST model with extended thinking!
+          extendedThinking: true       // Makes it THINK about what you need
         })
       });
 

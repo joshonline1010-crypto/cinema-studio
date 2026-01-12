@@ -1,13 +1,83 @@
 import type { APIRoute } from 'astro';
 import { AI_SYSTEM_PROMPT, buildContextString, type AIPromptContext } from '../../../components/react/CinemaStudio/aiPromptSystem';
 
-// Ollama local endpoint
+// API Configuration - Use environment variable or fallback
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const OLLAMA_URL = 'http://localhost:11434/api/generate';
+
+// Model options
+type ModelOption = 'claude-sonnet' | 'claude-opus' | 'mistral' | 'qwen';
+
+const MODEL_CONFIG: Record<ModelOption, { provider: 'anthropic' | 'ollama'; model: string }> = {
+  'claude-sonnet': { provider: 'anthropic', model: 'claude-sonnet-4-20250514' },
+  'claude-opus': { provider: 'anthropic', model: 'claude-opus-4-5-20251101' },
+  'mistral': { provider: 'ollama', model: 'mistral' },
+  'qwen': { provider: 'ollama', model: 'qwen3:8b' }
+};
+
+// Call Claude API
+async function callClaude(systemPrompt: string, userPrompt: string, model: string): Promise<string> {
+  console.log(`[Claude Prompt] Calling ${model}`);
+
+  const response = await fetch(ANTHROPIC_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: model,
+      max_tokens: 4000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }]
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[Claude Prompt] Error:', response.status, errorText);
+    throw new Error(`Claude API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const text = data.content?.[0]?.text || '';
+  console.log('[Claude Prompt] Response:', text.substring(0, 100) + '...');
+  return text;
+}
+
+// Call Ollama API (fallback)
+async function callOllama(systemPrompt: string, userPrompt: string, model: string): Promise<string> {
+  const response = await fetch(OLLAMA_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: model,
+      prompt: userPrompt,
+      system: systemPrompt,
+      stream: false,
+      options: { temperature: 0.7, top_p: 0.9 }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Ollama error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.response?.trim() || '';
+}
 
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { userInput, context, model = 'mistral' } = body as {
+    const {
+      userInput,
+      context,
+      model = 'claude-opus'  // Default to Claude Opus 4.5 - BEST model!
+    } = body as {
       userInput: string;
       context: AIPromptContext;
       model?: string;
@@ -29,56 +99,24 @@ USER REQUEST: ${userInput}
 
 Output ONLY the ${context?.mode || 'image'} prompt, nothing else:`;
 
-    console.log('AI Prompt Request:', { userInput, context, model });
+    console.log('AI Prompt Request:', { userInput, model, mode: context?.mode });
 
-    // Call Ollama
-    const ollamaResponse = await fetch(OLLAMA_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: model,
-        prompt: fullPrompt,
-        system: AI_SYSTEM_PROMPT,
-        stream: false,
-        options: {
-          temperature: 0.7,
-          top_p: 0.9,
-        }
-      })
-    });
+    // Determine provider
+    const config = MODEL_CONFIG[model as ModelOption] || MODEL_CONFIG['claude-sonnet'];
+    let generatedPrompt = '';
 
-    if (!ollamaResponse.ok) {
-      const errorText = await ollamaResponse.text();
-      console.error('Ollama error:', ollamaResponse.status, errorText);
-
-      // Check if Ollama is running
-      if (ollamaResponse.status === 0 || errorText.includes('ECONNREFUSED')) {
-        return new Response(JSON.stringify({
-          error: 'Ollama is not running. Start it with: ollama serve',
-          details: errorText
-        }), {
-          status: 503,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-
-      return new Response(JSON.stringify({
-        error: `Ollama error: ${ollamaResponse.status}`,
-        details: errorText
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    if (config.provider === 'anthropic') {
+      generatedPrompt = await callClaude(AI_SYSTEM_PROMPT, fullPrompt, config.model);
+    } else {
+      generatedPrompt = await callOllama(AI_SYSTEM_PROMPT, fullPrompt, config.model);
     }
 
-    const data = await ollamaResponse.json();
-    const generatedPrompt = data.response?.trim() || '';
-
-    console.log('AI Generated Prompt:', generatedPrompt);
+    console.log('AI Generated Prompt:', generatedPrompt.substring(0, 150) + '...');
 
     return new Response(JSON.stringify({
-      prompt: generatedPrompt,
-      model: model,
+      prompt: generatedPrompt.trim(),
+      model: config.model,
+      provider: config.provider,
       mode: context?.mode || 'image'
     }), {
       status: 200,
@@ -87,12 +125,24 @@ Output ONLY the ${context?.mode || 'image'} prompt, nothing else:`;
 
   } catch (error) {
     console.error('AI Prompt API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    // Check for connection errors (Ollama not running)
-    if (error instanceof TypeError && error.message.includes('fetch')) {
+    if (errorMessage.includes('Claude')) {
       return new Response(JSON.stringify({
-        error: 'Cannot connect to Ollama. Make sure Ollama is running.',
-        details: 'Run "ollama serve" in a terminal to start Ollama.'
+        error: 'Claude API error',
+        details: errorMessage,
+        suggestion: 'Check API key and credits'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (errorMessage.includes('Ollama') || errorMessage.includes('ECONNREFUSED')) {
+      return new Response(JSON.stringify({
+        error: 'Ollama not running',
+        details: 'Start with: ollama serve',
+        suggestion: 'Or use claude-sonnet model instead'
       }), {
         status: 503,
         headers: { 'Content-Type': 'application/json' }
@@ -101,7 +151,7 @@ Output ONLY the ${context?.mode || 'image'} prompt, nothing else:`;
 
     return new Response(JSON.stringify({
       error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: errorMessage
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -109,43 +159,14 @@ Output ONLY the ${context?.mode || 'image'} prompt, nothing else:`;
   }
 };
 
-// GET endpoint to check Ollama status
+// GET endpoint to check status
 export const GET: APIRoute = async () => {
-  try {
-    // Check if Ollama is running by hitting the tags endpoint
-    const response = await fetch('http://localhost:11434/api/tags', {
-      method: 'GET',
-    });
-
-    if (!response.ok) {
-      return new Response(JSON.stringify({
-        status: 'error',
-        message: 'Ollama not responding'
-      }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    const data = await response.json();
-    const models = data.models?.map((m: any) => m.name) || [];
-
-    return new Response(JSON.stringify({
-      status: 'ok',
-      models: models,
-      hasMistral: models.some((m: string) => m.includes('mistral'))
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-  } catch (error) {
-    return new Response(JSON.stringify({
-      status: 'error',
-      message: 'Cannot connect to Ollama. Run "ollama serve" to start.'
-    }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+  return new Response(JSON.stringify({
+    status: 'ok',
+    availableModels: Object.keys(MODEL_CONFIG),
+    defaultModel: 'claude-sonnet'
+  }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  });
 };

@@ -16,11 +16,11 @@ export interface CharacterRef {
   ref_url?: string;  // Generated reference image URL
 }
 
-// Generic scene reference (for locations, objects, props)
+// Generic scene reference (for locations, objects, props, vehicles, buildings)
 export interface SceneRef {
   id: string;
   name: string;
-  type: 'location' | 'object' | 'prop' | 'vehicle';
+  type: 'location' | 'object' | 'prop' | 'vehicle' | 'building';
   description: string;
   generate_prompt: string;
   ref_url?: string;  // Generated reference image URL

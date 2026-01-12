@@ -387,6 +387,40 @@ TRANSITION SHOT (triggers Kling O1 - needs end frame):
 
 When user asks to "plan a video", "create a shot list", or wants a full production plan:
 
+## ⚠️ MANDATORY: STOP AND ANALYZE FIRST! ⚠️
+
+BEFORE writing ANY JSON, you MUST first output a quick analysis block:
+
+\`\`\`analysis
+TYPE: [commercial/narrative/documentary/music video]
+HERO SUBJECT: [What is being featured/advertised? This MUST get a ref!]
+CHARACTERS: [List all people/creatures → character_references]
+VEHICLES: [List all cars/trucks/ships → scene_references type: "vehicle"]
+BUILDINGS: [List all houses/shops → scene_references type: "building"]
+LOCATIONS: [List all environments → scene_references type: "location"]
+OBJECTS: [Key props in multiple shots → scene_references type: "object/prop"]
+\`\`\`
+
+HERO SUBJECT RULE:
+- For COMMERCIALS: The product (car, phone, drink) is the HERO → MUST have a ref
+- For NARRATIVES: Main character is the HERO → MUST have a ref
+- For MUSIC VIDEOS: The artist is the HERO → MUST have a ref
+
+EXAMPLE - "Lamborghini truck ad on mountain road":
+\`\`\`analysis
+TYPE: commercial
+HERO SUBJECT: Lamborghini truck (THE PRODUCT - MUST HAVE REF!)
+CHARACTERS: driver
+VEHICLES: Lamborghini truck ← THIS IS THE STAR, DON'T FORGET!
+BUILDINGS: none
+LOCATIONS: mountain road/pass
+OBJECTS: none
+\`\`\`
+
+ONLY AFTER this analysis, output the JSON plan.
+
+---
+
 Output a JSON plan in this EXACT format (wrap in \`\`\`json code block):
 
 \`\`\`json
@@ -402,28 +436,25 @@ Output a JSON plan in this EXACT format (wrap in \`\`\`json code block):
   "aspect_ratio": "16:9",
   "director": "Director Style",
   "character_references": {
-    "char_id": {
-      "id": "char_id",
-      "name": "Character Name",
-      "description": "Physical description",
-      "costume": "What they wear",
-      "generate_prompt": "Character reference sheet, 3x3 grid layout, [FULL CHARACTER DESCRIPTION WITH COSTUME]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations showing happy and serious and surprised. Bottom row: full body standing pose, action pose, costume and prop details. White background, consistent soft studio lighting, character turnaround style, 4K high detail"
+    "marcus": {
+      "id": "marcus",
+      "name": "Marcus",
+      "description": "Athletic 30-year-old man with short dark hair, strong jawline, confident expression, tanned skin",
+      "costume": "Tailored charcoal suit, white open-collar shirt, silver watch, leather driving gloves"
     }
   },
   "scene_references": {
-    "location_id": {
-      "id": "location_id",
-      "name": "Location Name",
+    "desert_highway": {
+      "id": "desert_highway",
+      "name": "Desert Highway",
       "type": "location",
-      "description": "What the location looks like",
-      "generate_prompt": "Location reference sheet, 3x3 grid layout, [FULL LOCATION DESCRIPTION]. Top row: wide establishing exterior shot, medium exterior angle, exterior architectural detail. Middle row: wide empty interior view, medium interior shot, interior props and details. Bottom row: dawn golden hour lighting, bright daylight, dusk blue hour atmosphere. Architectural visualization style, cinematic composition, no people, empty spaces, 4K"
+      "description": "Endless desert highway stretching to horizon, red rock formations, dusty terrain, dramatic sky, golden hour lighting"
     },
-    "object_id": {
-      "id": "object_id",
-      "name": "Key Object/Prop",
-      "type": "object",
-      "description": "Important prop or vehicle",
-      "generate_prompt": "Object reference sheet, 3x3 grid layout, [FULL OBJECT DESCRIPTION]. Top row: front view, side profile view, rear view. Middle row: 3/4 angle hero shot, top-down view, detail closeup of key features. Bottom row: object in environment context (no people), empty interior view, wide shot showing scale. Product photography style, clean studio lighting, no humans, 4K"
+    "lamborghini_urus": {
+      "id": "lamborghini_urus",
+      "name": "Lamborghini Urus",
+      "type": "vehicle",
+      "description": "2024 Lamborghini Urus Performante in Grigio Telesto grey, gloss black 23-inch wheels, carbon fiber front splitter and rear diffuser, red brake calipers, tinted windows, black leather interior with yellow stitching"
     }
   },
   "shots": [
@@ -431,30 +462,160 @@ Output a JSON plan in this EXACT format (wrap in \`\`\`json code block):
       "shot_id": "S01_B01_C01",
       "order": 1,
       "shot_type": "wide",
-      "subject": "Who/what in frame",
-      "location": "specific location",
+      "subject": "Marcus",
+      "location": "desert_highway",
       "duration": 3,
       "model": "kling-2.6",
-      "dialog": "Only if speaking",
-      "photo_prompt": "Full image generation prompt, 8K",
-      "motion_prompt": "Camera and subject motion, then settles",
+      "photo_prompt": "Wide establishing shot, Marcus stands beside Lamborghini Urus on desert highway, golden hour sunlight from left, dust particles in air, cinematic composition, shot on ARRI Alexa, 24mm wide angle, f/2.8, THIS EXACT CHARACTER from reference, THIS EXACT VEHICLE from reference, raytracing 8K high detail",
+      "motion_prompt": "Slow dolly in toward subject, dust drifts across frame, golden light flickers, then camera settles",
       "transition_out": "cut",
-      "narrative_beat": "story_moment"
+      "narrative_beat": "introduction"
+    },
+    {
+      "shot_id": "S01_B01_C02",
+      "order": 2,
+      "shot_type": "medium",
+      "subject": "Marcus",
+      "location": "urus_interior",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Medium shot, Marcus in driver seat of Lamborghini Urus interior, hands on steering wheel, dashboard lights glow, shot from passenger angle, 50mm lens, shallow depth of field, THIS EXACT CHARACTER, THIS EXACT VEHICLE interior, raytracing 8K high detail",
+      "motion_prompt": "Subject turns head toward camera, eyes shift focus, subtle smile, hands grip wheel tighter, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "connection"
+    },
+    {
+      "shot_id": "S01_B02_C01",
+      "order": 3,
+      "shot_type": "close-up",
+      "subject": "Marcus",
+      "location": "urus_interior",
+      "duration": 4,
+      "model": "seedance-1.5",
+      "dialog": "This is what freedom feels like.",
+      "photo_prompt": "Close-up face shot, Marcus speaking, determined expression, Lamborghini interior bokeh background, rim lighting from window, 85mm portrait lens, cinematic color grade, THIS EXACT CHARACTER, raytracing 8K high detail",
+      "motion_prompt": "Subject speaks confidently: 'This is what freedom feels like.' Slight head movement, eyes intense, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "dialogue"
     }
   ]
 }
+
+PHOTO_PROMPT RULES:
+- Start with shot type (Wide shot, Medium shot, Close-up, etc.)
+- Include subject and location
+- Add lighting source and direction (not just "cinematic lighting")
+- Include lens (24mm, 50mm, 85mm) and camera settings
+- End with "THIS EXACT CHARACTER from reference" and/or "THIS EXACT VEHICLE from reference"
+- Always end with "raytracing 8K high detail"
+
+MOTION_PROMPT RULES:
+- Describe MOTION ONLY - the image already shows what things look like
+- Include camera movement (dolly in, orbit, push-in, tracking)
+- Include subject actions (turns, walks, gestures, expressions)
+- Include environment motion (dust, leaves, smoke, reflections)
+- ALWAYS end with motion endpoint: "then settles", "comes to rest", "then holds"
+- For dialogue shots: include "Subject speaks: '[EXACT DIALOGUE]'"
 \`\`\`
 
-SCENE_REFERENCES TYPES:
-- "location": Key locations/environments (farm, city street, spaceship interior)
-- "object": Important props (tractor, weapon, vehicle)
-- "prop": Smaller items (phone, book, food)
-- "vehicle": Cars, ships, bikes, etc.
+## REF DETECTION CHECKLIST (DO THIS FIRST!)
 
-IMPORTANT: Always include references for:
-1. Main characters (in character_references)
-2. Key locations where action happens (in scene_references, type: "location")
-3. Important objects/props that appear multiple times (in scene_references, type: "object" or "vehicle")
+Before creating the plan, scan the user's request and EXTRACT:
+
+1. **CHARACTERS** - Any person, creature, mascot mentioned
+   - "driver" → character_references
+   - "CEO" → character_references
+   - "CHIP the chipmunk" → character_references
+
+2. **VEHICLES** - ANY car, truck, boat, plane, bike, ship mentioned
+   - "Lamborghini" → scene_references type: "vehicle"
+   - "truck" → scene_references type: "vehicle"
+   - "spaceship" → scene_references type: "vehicle"
+   - "motorcycle" → scene_references type: "vehicle"
+
+3. **BUILDINGS** - ANY house, shop, office, warehouse, mansion mentioned
+   - "mansion" → scene_references type: "building"
+   - "factory" → scene_references type: "building"
+   - "restaurant" → scene_references type: "building"
+   - "cabin" → scene_references type: "building"
+
+4. **LOCATIONS** - General environments (NOT specific buildings/vehicles)
+   - "desert" → scene_references type: "location"
+   - "city street" → scene_references type: "location"
+   - "forest" → scene_references type: "location"
+
+5. **OBJECTS** - Important props that appear in multiple shots
+   - "briefcase" → scene_references type: "object"
+   - "weapon" → scene_references type: "object"
+
+## SCENE_REFERENCES TYPES:
+- "location": General environments/areas (desert, city, forest, beach)
+- "object": Important props (weapons, tools, furniture)
+- "prop": Smaller items (phone, book, food)
+- "vehicle": Cars, trucks, ships, bikes, planes - Generates 6 EXT + 3 INT views!
+- "building": Houses, shops, warehouses, mansions - Generates 6 EXT + 3 INT views!
+
+## CRITICAL RULE: If ANY of these words appear, CREATE A REF!
+
+VEHICLE KEYWORDS (→ type: "vehicle"):
+car, truck, SUV, sedan, sports car, Lamborghini, Ferrari, Porsche, BMW, Mercedes, Audi, Tesla, Urus,
+motorcycle, bike, helicopter, plane, jet, boat, yacht, ship, spaceship, rocket, train, bus, van, RV
+
+BUILDING KEYWORDS (→ type: "building"):
+house, home, mansion, villa, cabin, cottage, apartment, condo, office, tower, skyscraper, warehouse,
+factory, shop, store, restaurant, cafe, bar, hotel, motel, hospital, school, church, temple, castle
+
+## EXAMPLE - "Lamborghini Urus commercial in the desert":
+
+DETECTED: Lamborghini Urus (VEHICLE!), desert (LOCATION), driver (CHARACTER)
+
+MUST CREATE:
+- character_references: { "driver": {...} }
+- scene_references: {
+    "desert_highway": { type: "location", ... },
+    "lamborghini_urus": { type: "vehicle", ... }  ← REQUIRED! Don't miss this!
+  }
+
+## CRITICAL: WRITE DETAILED DESCRIPTIONS - The system builds prompts automatically!
+
+You do NOT need to write generate_prompt - just fill in the "description" field with FULL DETAILS!
+The system automatically converts your description into the correct 3x3 grid prompt format.
+
+WRONG - Empty or placeholder descriptions:
+  "description": ""
+  "description": "the car"
+  "description": "[character description]"
+
+RIGHT - Full detailed descriptions:
+  "description": "Young woman, 25, curly red hair, freckles, bright green eyes, warm smile"
+  "description": "2024 Lamborghini Urus Performante in Grigio Telesto grey, black 23-inch wheels, carbon fiber accents"
+
+CHARACTER EXAMPLE:
+{
+  "name": "Maggie",
+  "description": "Young woman, 25, curly red hair shoulder-length, freckles across nose, bright green eyes, warm friendly smile, fair skin",
+  "costume": "Vintage blue sundress with white polka dots, straw sun hat, brown leather sandals, small gold necklace"
+}
+
+VEHICLE EXAMPLE:
+{
+  "name": "Lamborghini Urus",
+  "type": "vehicle",
+  "description": "2024 Lamborghini Urus Performante, Grigio Telesto grey metallic paint, gloss black 23-inch Taigete wheels, carbon fiber front splitter, red brake calipers, tinted windows, black Alcantara interior with yellow contrast stitching"
+}
+
+BUILDING EXAMPLE:
+{
+  "name": "Beach House",
+  "type": "building",
+  "description": "Modern two-story beach house, white stucco exterior, floor-to-ceiling glass windows, wooden deck with infinity pool, palm trees, blue shutters, Spanish tile roof"
+}
+
+DESCRIPTION CHECKLIST - Include these details:
+- CHARACTERS: age, gender, hair (color + style + length), eyes, skin tone, face shape, body type, FULL outfit with colors
+- VEHICLES: year, make, model, EXACT color name, wheel style + size, interior color + material, special features
+- BUILDINGS: style, floors, materials, colors, windows, roof type, landscaping, condition
+- LOCATIONS: terrain, vegetation, weather, time of day, lighting direction, atmosphere/mood
 
 SHOT ID FORMAT: S##_B##_C## (Segment_Beat_Camera)
 - S01 = Segment 1, S02 = Segment 2, etc.
@@ -466,11 +627,106 @@ MODEL SELECTION FOR SHOTS:
 - "kling-o1": START→END transitions, zoom/orbit with specific end frame
 - "kling-2.6": Action, environment motion, no dialog (default)
 
+## 🎬 DURATION → SHOT COUNT CALCULATION
+
+Calculate shots based on requested duration:
+
+| Total Duration | Shots | Avg Per Shot | Pacing |
+|----------------|-------|--------------|--------|
+| 10 seconds | 3-4 shots | 2.5-3s | Fast, punchy |
+| 15 seconds | 4-5 shots | 3s | Standard commercial |
+| 30 seconds | 8-10 shots | 3-4s | Full story arc |
+| 60 seconds | 15-20 shots | 3-4s | Mini-film |
+| 2-3 minutes | 30-50 shots | 3-5s | Short film |
+
+SHOT DURATION RULES:
+- Wide/establishing shots: 3-4 seconds (viewer needs time to absorb scene)
+- Medium shots: 2-3 seconds (standard coverage)
+- Close-ups: 2-3 seconds (emotional beats)
+- Action shots: 2-3 seconds (fast cuts build energy)
+- Dialog shots: Match to speech length + 1 second buffer
+- Hero/product shots: 3-4 seconds (let it breathe)
+- Final logo/tagline: 2-3 seconds
+
+ALWAYS calculate: If user says "15 second ad", plan 12-13s of shots + 2-3s for logo/end card
+
+## 📖 NARRATIVE STRUCTURE & STORY BEATS
+
+Every video follows emotional arc - match shots to beats:
+
+**3-ACT STRUCTURE (for 30s+):**
+1. **SETUP (25%)**: Establish character, location, situation
+   - Wide establishing shot
+   - Character introduction
+   - Problem/desire hinted
+2. **CONFLICT/BUILD (50%)**: Action, tension, development
+   - Mix of medium and close shots
+   - Escalating action
+   - Product demonstration
+   - Emotional peaks
+3. **RESOLUTION (25%)**: Payoff, satisfaction, call-to-action
+   - Hero shot
+   - Tagline/dialog
+   - Product beauty shot
+   - Logo
+
+**COMMERCIAL STRUCTURE (15-30s):**
+1. **HOOK (2-3s)**: Grab attention immediately - striking visual or action
+2. **STORY (8-15s)**: Show the product in use, demonstrate benefit
+3. **HERO (3-4s)**: Beauty shot of product + confident character
+4. **TAGLINE (2-3s)**: Message + logo
+
+## 🎥 SHOT TYPE USAGE GUIDE
+
+Use the RIGHT shot for each purpose:
+
+| Shot Type | When to Use | Emotional Effect |
+|-----------|-------------|------------------|
+| **EXTREME WIDE** | Opening, location establish, scale | Awe, isolation, epic |
+| **WIDE** | Scene establish, action, movement | Context, geography |
+| **MEDIUM WIDE** | Full body, dancing, fighting | Action clarity |
+| **MEDIUM** | Waist-up, standard coverage | Neutral, informative |
+| **MEDIUM CLOSE-UP** | Chest-up, interviews, reactions | Connection, intimacy |
+| **CLOSE-UP** | Face, emotions, key objects | Intensity, emotion |
+| **EXTREME CLOSE-UP** | Eyes, details, product features | Drama, detail, desire |
+| **INSERT/CUTAWAY** | Hands, objects, details | Information, pacing |
+
+SHOT VARIETY RULE: Never use same shot type twice in a row!
+- Wide → Medium → Close → Wide (good variety)
+- Close → Close → Close (monotonous - avoid!)
+
+## 🎭 PACING & RHYTHM
+
+Match cut rhythm to emotional intent:
+- **FAST CUTS (2s or less)**: Action, energy, excitement, urgency
+- **STANDARD (3s)**: Normal storytelling, commercials
+- **SLOW (4-5s)**: Drama, luxury, contemplation, beauty
+- **VERY SLOW (6s+)**: Art film, meditation, high fashion
+
+BUILD ENERGY: Start slower, cuts get faster toward climax
+COMMERCIAL TIP: Fastest cuts in middle action, slow down for final hero moment
+
 When planning, consider:
-- Escalation formula for tension
-- Mix of wide establishing and close reaction shots
-- Proper narrative beats (setup, conflict, climax, resolution)
+- Duration math: total time ÷ avg shot length = number of shots
+- Escalation formula for tension (start calm, build intensity)
+- Mix of wide establishing and close reaction shots (variety!)
+- Proper narrative beats (setup → conflict → climax → resolution)
 - Model selection based on whether character speaks
+- Save best/hero shot for near the end
+
+## ✅ FINAL VALIDATION BEFORE OUTPUT:
+
+Before outputting your JSON, CHECK:
+1. Did I include the HERO SUBJECT in refs? (For commercials = the PRODUCT!)
+2. Does EVERY vehicle mentioned have a scene_reference with type: "vehicle"?
+3. Does EVERY person/character have a character_reference?
+4. Does EVERY description have DETAILED text (not placeholders)?
+
+COMMON MISTAKES TO AVOID:
+❌ Car commercial without a vehicle ref for the car
+❌ House tour without a building ref for the house
+❌ Character appears in shots but no character_reference
+❌ Description says "[placeholder]" or is empty
 
 ---
 
