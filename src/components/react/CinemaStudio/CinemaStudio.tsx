@@ -997,10 +997,10 @@ export default function CinemaStudio() {
       console.log(`[executeFullPlan] 🚀 Launching ALL ${videoPromises.length} videos in PARALLEL!`);
       const videoResults = await Promise.all(videoPromises);
 
-      // STEP 4: AUTO-STITCH all completed videos!
+      // STEP 4: AUTO-RENDER - Stitch all completed videos!
       const successfulVideos = videoResults.filter(r => r.success).length;
       if (successfulVideos >= 2) {
-        setStatusMessage(`🎬 Step 4: Auto-stitching ${successfulVideos} videos...`);
+        setStatusMessage(`🎬 Step 4: RENDERING ${successfulVideos} videos to 1080p 60fps...`);
 
         // Get fresh state to get video URLs
         const freshState = useSceneStore.getState();
@@ -1013,7 +1013,7 @@ export default function CinemaStudio() {
 
           if (videoUrls.length >= 2) {
             try {
-              console.log(`[executeFullPlan] Auto-stitching ${videoUrls.length} videos...`);
+              console.log(`[executeFullPlan] Auto-rendering ${videoUrls.length} videos...`);
               const stitchResponse = await fetch('/api/cinema/stitch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1022,26 +1022,39 @@ export default function CinemaStudio() {
 
               if (stitchResponse.ok) {
                 const stitchData = await stitchResponse.json();
+                console.log(`[executeFullPlan] ✅ Render complete:`, stitchData);
+
+                // Show success with both local path and cloud URL
+                const localPath = stitchData.local_path || 'Downloads folder';
+                const cloudUrl = stitchData.video_url || 'Upload pending...';
+
+                setStatusMessage(`✅ RENDER COMPLETE! Saved to: ${stitchData.file_name || 'CinemaStudio.mp4'}`);
+
+                // Alert with full details
+                alert(`🎬 RENDER COMPLETE!\n\n📁 LOCAL: ${localPath}\n\n🌐 CLOUD: ${cloudUrl}\n\n📐 1920x1080 @ 60fps`);
+
+                // Open cloud URL in new tab if available
                 if (stitchData.video_url) {
-                  console.log(`[executeFullPlan] ✅ Stitched video: ${stitchData.video_url}`);
-                  setStatusMessage(`✅ COMPLETE! Final video: ${stitchData.video_url}`);
-                  // Open the stitched video in new tab
                   window.open(stitchData.video_url, '_blank');
                 }
               } else {
-                console.error('[executeFullPlan] Stitch failed:', await stitchResponse.text());
+                const errText = await stitchResponse.text();
+                console.error('[executeFullPlan] Render failed:', errText);
+                setStatusMessage(`❌ Render failed: ${errText}`);
               }
             } catch (err) {
-              console.error('[executeFullPlan] Stitch error:', err);
+              console.error('[executeFullPlan] Render error:', err);
+              setStatusMessage(`❌ Render error: ${err}`);
             }
           }
         }
+      } else if (successfulVideos === 1) {
+        setStatusMessage(`✅ Complete! Only 1 video - no render needed (need 2+ for stitch)`);
       }
     }
 
     setExecutingPlan(false);
     setPlanProgress(0);
-    setStatusMessage(`✅ Plan complete! ${pendingShots.length} shots generated in parallel!`);
   };
 
   // Stop plan execution
@@ -1119,10 +1132,10 @@ export default function CinemaStudio() {
     console.log(`[executeAllVideos] 🚀 Launching ALL ${videoPromises.length} videos in PARALLEL!`);
     const videoResults = await Promise.all(videoPromises);
 
-    // AUTO-STITCH after all videos complete!
+    // AUTO-RENDER after all videos complete!
     const successfulVideos = videoResults.filter(r => r.success).length;
     if (successfulVideos >= 2) {
-      setStatusMessage(`🎬 Auto-stitching ${successfulVideos} videos...`);
+      setStatusMessage(`🎬 RENDERING ${successfulVideos} videos to 1080p 60fps...`);
 
       // Get fresh state to get video URLs
       const freshState = useSceneStore.getState();
@@ -1135,7 +1148,7 @@ export default function CinemaStudio() {
 
         if (videoUrls.length >= 2) {
           try {
-            console.log(`[executeAllVideos] Auto-stitching ${videoUrls.length} videos...`);
+            console.log(`[executeAllVideos] Auto-rendering ${videoUrls.length} videos...`);
             const stitchResponse = await fetch('/api/cinema/stitch', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1144,24 +1157,35 @@ export default function CinemaStudio() {
 
             if (stitchResponse.ok) {
               const stitchData = await stitchResponse.json();
+              console.log(`[executeAllVideos] ✅ Render complete:`, stitchData);
+
+              const localPath = stitchData.local_path || 'Downloads folder';
+              const cloudUrl = stitchData.video_url || 'Upload pending...';
+
+              setStatusMessage(`✅ RENDER COMPLETE! Saved to: ${stitchData.file_name || 'CinemaStudio.mp4'}`);
+
+              alert(`🎬 RENDER COMPLETE!\n\n📁 LOCAL: ${localPath}\n\n🌐 CLOUD: ${cloudUrl}\n\n📐 1920x1080 @ 60fps`);
+
               if (stitchData.video_url) {
-                console.log(`[executeAllVideos] ✅ Stitched video: ${stitchData.video_url}`);
-                setStatusMessage(`✅ COMPLETE! Final video ready!`);
                 window.open(stitchData.video_url, '_blank');
               }
             } else {
-              console.error('[executeAllVideos] Stitch failed:', await stitchResponse.text());
+              const errText = await stitchResponse.text();
+              console.error('[executeAllVideos] Render failed:', errText);
+              setStatusMessage(`❌ Render failed: ${errText}`);
             }
           } catch (err) {
-            console.error('[executeAllVideos] Stitch error:', err);
+            console.error('[executeAllVideos] Render error:', err);
+            setStatusMessage(`❌ Render error: ${err}`);
           }
         }
       }
+    } else if (successfulVideos === 1) {
+      setStatusMessage(`✅ Complete! Only 1 video - no render needed (need 2+ for stitch)`);
     }
 
     setExecutingPlan(false);
     setPlanProgress(0);
-    setStatusMessage(`✅ All ${shotsNeedingVideo.length} videos generated in parallel!`);
   };
 
   // Generate all reference images (characters + scene refs like locations/objects) - ALL IN PARALLEL!
