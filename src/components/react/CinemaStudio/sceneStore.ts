@@ -106,6 +106,7 @@ interface SceneState {
   loadScene: (sceneOrJson: string | Scene) => void;
   createScene: (metadata: Partial<Scene>) => Scene;
   clearScene: () => void;
+  resetAllGenerated: () => void;  // Reset all images/videos/refs but keep plan
 
   // Shot management
   addShot: (shot: Omit<SceneShot, 'shot_id' | 'order' | 'status'>) => void;
@@ -262,6 +263,40 @@ export const useSceneStore = create<SceneState>()(
         }
         return set({ currentScene: null, selectedShotId: null });
       },
+
+      // Reset all generated content but keep plan structure
+      resetAllGenerated: () => set((state) => {
+        if (!state.currentScene) return state;
+
+        // Reset all shots - clear image_url, video_url, set status to pending
+        const resetShots = state.currentScene.shots.map(shot => ({
+          ...shot,
+          image_url: undefined,
+          video_url: undefined,
+          status: 'pending' as const
+        }));
+
+        // Reset all character refs - clear ref_url
+        const resetCharRefs: Record<string, CharacterRef> = {};
+        Object.entries(state.currentScene.character_references || {}).forEach(([id, char]) => {
+          resetCharRefs[id] = { ...char, ref_url: undefined };
+        });
+
+        // Reset all scene refs - clear ref_url
+        const resetSceneRefs: Record<string, SceneRef> = {};
+        Object.entries(state.currentScene.scene_references || {}).forEach(([id, ref]) => {
+          resetSceneRefs[id] = { ...ref, ref_url: undefined };
+        });
+
+        return {
+          currentScene: {
+            ...state.currentScene,
+            shots: resetShots,
+            character_references: resetCharRefs,
+            scene_references: resetSceneRefs
+          }
+        };
+      }),
 
       // Shot management
       addShot: (shotData) => set((state) => {

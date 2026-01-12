@@ -367,6 +367,32 @@ const useSceneStore = create()(
         }
         return set({ currentScene: null, selectedShotId: null });
       },
+      // Reset all generated content but keep plan structure
+      resetAllGenerated: () => set((state) => {
+        if (!state.currentScene) return state;
+        const resetShots = state.currentScene.shots.map((shot) => ({
+          ...shot,
+          image_url: void 0,
+          video_url: void 0,
+          status: "pending"
+        }));
+        const resetCharRefs = {};
+        Object.entries(state.currentScene.character_references || {}).forEach(([id, char]) => {
+          resetCharRefs[id] = { ...char, ref_url: void 0 };
+        });
+        const resetSceneRefs = {};
+        Object.entries(state.currentScene.scene_references || {}).forEach(([id, ref]) => {
+          resetSceneRefs[id] = { ...ref, ref_url: void 0 };
+        });
+        return {
+          currentScene: {
+            ...state.currentScene,
+            shots: resetShots,
+            character_references: resetCharRefs,
+            scene_references: resetSceneRefs
+          }
+        };
+      }),
       // Shot management
       addShot: (shotData) => set((state) => {
         if (!state.currentScene) return state;
@@ -4086,6 +4112,7 @@ function CinemaStudio() {
     selectedShotId,
     loadScene,
     clearScene,
+    resetAllGenerated,
     exportSceneJSON,
     selectShot: selectSceneShot,
     updateShot: updateSceneShot,
@@ -7173,6 +7200,21 @@ ${ref.description}`,
                       "Videos (",
                       currentScene.shots.filter((s) => s.image_url && !s.video_url).length,
                       ")"
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxs(
+                  "button",
+                  {
+                    onClick: resetAllGenerated,
+                    className: "px-3 py-2.5 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-sm font-medium transition-colors flex items-center gap-1",
+                    title: "Reset all refs, images, videos - keep plan",
+                    children: [
+                      /* @__PURE__ */ jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", className: "w-4 h-4", children: [
+                        /* @__PURE__ */ jsx("path", { d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" }),
+                        /* @__PURE__ */ jsx("path", { d: "M3 3v5h5" })
+                      ] }),
+                      "Reset"
                     ]
                   }
                 )
