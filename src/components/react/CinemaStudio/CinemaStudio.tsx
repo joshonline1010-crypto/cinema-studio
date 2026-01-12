@@ -997,27 +997,68 @@ export default function CinemaStudio() {
       console.log(`[executeFullPlan] 🚀 Launching ALL ${videoPromises.length} videos in PARALLEL!`);
       const videoResults = await Promise.all(videoPromises);
 
-      // STEP 4: AUTO-RENDER - Stitch all completed videos!
+      // STEP 4: AUTO-RENDER - Stitch all completed videos with voiceover!
       const successfulVideos = videoResults.filter(r => r.success).length;
       if (successfulVideos >= 2) {
-        setStatusMessage(`🎬 Step 4: RENDERING ${successfulVideos} videos to 1080p 60fps...`);
-
-        // Get fresh state to get video URLs
+        // Get fresh state to get video URLs and dialog
         const freshState = useSceneStore.getState();
         const freshScene = freshState.scenes[freshState.currentSceneId || ''];
         if (freshScene) {
-          const videoUrls = freshScene.shots
+          const sortedShots = freshScene.shots
             .filter(s => s.video_url)
-            .sort((a, b) => a.order - b.order)
-            .map(s => s.video_url!);
+            .sort((a, b) => a.order - b.order);
+
+          const videoUrls = sortedShots.map(s => s.video_url!);
+
+          // Collect all dialog text for voiceover
+          const dialogTexts = sortedShots
+            .filter(s => s.dialog && s.dialog.trim())
+            .map(s => s.dialog!.trim());
+
+          let voiceoverUrl: string | undefined;
+
+          // Generate TTS voiceover if there's dialog
+          if (dialogTexts.length > 0) {
+            setStatusMessage(`🎙️ Step 4a: Generating voiceover for ${dialogTexts.length} dialog lines...`);
+            const fullScript = dialogTexts.join(' ... ');  // Join with pause
+            console.log(`[executeFullPlan] Generating TTS for: "${fullScript.substring(0, 100)}..."`);
+
+            try {
+              const ttsResponse = await fetch('/api/cinema/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  text: fullScript,
+                  voice: 'rachel'  // Default voice
+                })
+              });
+
+              if (ttsResponse.ok) {
+                const ttsData = await ttsResponse.json();
+                voiceoverUrl = ttsData.audio_url;
+                console.log(`[executeFullPlan] ✅ TTS generated: ${voiceoverUrl}`);
+              } else {
+                console.error('[executeFullPlan] TTS failed:', await ttsResponse.text());
+              }
+            } catch (err) {
+              console.error('[executeFullPlan] TTS error:', err);
+            }
+          }
+
+          setStatusMessage(`🎬 Step 4b: RENDERING ${videoUrls.length} videos to 1080p 60fps${voiceoverUrl ? ' + voiceover' : ''}...`);
 
           if (videoUrls.length >= 2) {
             try {
-              console.log(`[executeFullPlan] Auto-rendering ${videoUrls.length} videos...`);
+              console.log(`[executeFullPlan] Auto-rendering ${videoUrls.length} videos${voiceoverUrl ? ' with voiceover' : ''}...`);
               const stitchResponse = await fetch('/api/cinema/stitch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ videos: videoUrls })
+                body: JSON.stringify({
+                  videos: videoUrls,
+                  voiceover_url: voiceoverUrl,
+                  voiceover_volume: 1.2,  // Voiceover 20% louder
+                  video_volume: 0.25      // Video audio at 25% (background)
+                })
               });
 
               if (stitchResponse.ok) {
@@ -1027,11 +1068,12 @@ export default function CinemaStudio() {
                 // Show success with both local path and cloud URL
                 const localPath = stitchData.local_path || 'Downloads folder';
                 const cloudUrl = stitchData.video_url || 'Upload pending...';
+                const audioInfo = stitchData.has_voiceover ? '🎙️ With voiceover' : '🔊 Video audio only';
 
                 setStatusMessage(`✅ RENDER COMPLETE! Saved to: ${stitchData.file_name || 'CinemaStudio.mp4'}`);
 
                 // Alert with full details
-                alert(`🎬 RENDER COMPLETE!\n\n📁 LOCAL: ${localPath}\n\n🌐 CLOUD: ${cloudUrl}\n\n📐 1920x1080 @ 60fps`);
+                alert(`🎬 RENDER COMPLETE!\n\n📁 LOCAL: ${localPath}\n\n🌐 CLOUD: ${cloudUrl}\n\n📐 1920x1080 @ 60fps\n${audioInfo}`);
 
                 // Open cloud URL in new tab if available
                 if (stitchData.video_url) {
@@ -1132,27 +1174,62 @@ export default function CinemaStudio() {
     console.log(`[executeAllVideos] 🚀 Launching ALL ${videoPromises.length} videos in PARALLEL!`);
     const videoResults = await Promise.all(videoPromises);
 
-    // AUTO-RENDER after all videos complete!
+    // AUTO-RENDER after all videos complete (with voiceover)!
     const successfulVideos = videoResults.filter(r => r.success).length;
     if (successfulVideos >= 2) {
-      setStatusMessage(`🎬 RENDERING ${successfulVideos} videos to 1080p 60fps...`);
-
-      // Get fresh state to get video URLs
+      // Get fresh state to get video URLs and dialog
       const freshState = useSceneStore.getState();
       const freshScene = freshState.scenes[freshState.currentSceneId || ''];
       if (freshScene) {
-        const videoUrls = freshScene.shots
+        const sortedShots = freshScene.shots
           .filter(s => s.video_url)
-          .sort((a, b) => a.order - b.order)
-          .map(s => s.video_url!);
+          .sort((a, b) => a.order - b.order);
+
+        const videoUrls = sortedShots.map(s => s.video_url!);
+
+        // Collect dialog for voiceover
+        const dialogTexts = sortedShots
+          .filter(s => s.dialog && s.dialog.trim())
+          .map(s => s.dialog!.trim());
+
+        let voiceoverUrl: string | undefined;
+
+        // Generate TTS if dialog exists
+        if (dialogTexts.length > 0) {
+          setStatusMessage(`🎙️ Generating voiceover for ${dialogTexts.length} dialog lines...`);
+          const fullScript = dialogTexts.join(' ... ');
+
+          try {
+            const ttsResponse = await fetch('/api/cinema/tts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: fullScript, voice: 'rachel' })
+            });
+
+            if (ttsResponse.ok) {
+              const ttsData = await ttsResponse.json();
+              voiceoverUrl = ttsData.audio_url;
+              console.log(`[executeAllVideos] ✅ TTS generated: ${voiceoverUrl}`);
+            }
+          } catch (err) {
+            console.error('[executeAllVideos] TTS error:', err);
+          }
+        }
+
+        setStatusMessage(`🎬 RENDERING ${videoUrls.length} videos to 1080p 60fps${voiceoverUrl ? ' + voiceover' : ''}...`);
 
         if (videoUrls.length >= 2) {
           try {
-            console.log(`[executeAllVideos] Auto-rendering ${videoUrls.length} videos...`);
+            console.log(`[executeAllVideos] Auto-rendering ${videoUrls.length} videos${voiceoverUrl ? ' with voiceover' : ''}...`);
             const stitchResponse = await fetch('/api/cinema/stitch', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ videos: videoUrls })
+              body: JSON.stringify({
+                videos: videoUrls,
+                voiceover_url: voiceoverUrl,
+                voiceover_volume: 1.2,
+                video_volume: 0.25
+              })
             });
 
             if (stitchResponse.ok) {
@@ -1161,10 +1238,11 @@ export default function CinemaStudio() {
 
               const localPath = stitchData.local_path || 'Downloads folder';
               const cloudUrl = stitchData.video_url || 'Upload pending...';
+              const audioInfo = stitchData.has_voiceover ? '🎙️ With voiceover' : '🔊 Video audio only';
 
               setStatusMessage(`✅ RENDER COMPLETE! Saved to: ${stitchData.file_name || 'CinemaStudio.mp4'}`);
 
-              alert(`🎬 RENDER COMPLETE!\n\n📁 LOCAL: ${localPath}\n\n🌐 CLOUD: ${cloudUrl}\n\n📐 1920x1080 @ 60fps`);
+              alert(`🎬 RENDER COMPLETE!\n\n📁 LOCAL: ${localPath}\n\n🌐 CLOUD: ${cloudUrl}\n\n📐 1920x1080 @ 60fps\n${audioInfo}`);
 
               if (stitchData.video_url) {
                 window.open(stitchData.video_url, '_blank');

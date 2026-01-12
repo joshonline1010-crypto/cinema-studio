@@ -38,7 +38,13 @@ async function uploadToCatbox(filePath: string): Promise<string> {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { videos, uploadToCloud = true } = body;  // Option to skip cloud upload
+    const {
+      videos,
+      voiceover_url,           // Optional voiceover audio URL
+      voiceover_volume = 1.0,  // Voiceover volume (1.0 = normal, 1.5 = 50% louder)
+      video_volume = 0.3,      // Video audio volume (0.3 = 30% = quieter background)
+      uploadToCloud = true
+    } = body;
 
     if (!videos || !Array.isArray(videos) || videos.length < 2) {
       return new Response(JSON.stringify({ error: 'At least 2 video URLs required' }), {
@@ -48,6 +54,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     console.log('Stitching videos:', videos);
+    console.log('Voiceover:', voiceover_url ? 'YES' : 'NO');
 
     // Create temp directory
     const tempDir = path.join(os.tmpdir(), 'cinema-stitch');
@@ -91,7 +98,7 @@ export const POST: APIRoute = async ({ request }) => {
       throw new Error('FFmpeg concat failed');
     }
 
-    // STEP 2: Re-encode to 1080p 60fps
+    // STEP 2: Re-encode to 1080p 60fps (with optional voiceover mixing)
     // Save directly to Downloads folder
     const downloadsFolder = getDownloadsFolder();
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -99,9 +106,29 @@ export const POST: APIRoute = async ({ request }) => {
     const finalFileName = `CinemaStudio_${dateStr}_${timeStr}.mp4`;
     const finalOutputPath = path.join(downloadsFolder, finalFileName);
 
-    // Re-encode: 1080p, 60fps, high quality H.264
-    const encodeCommand = `ffmpeg -i "${concatOutputPath}" -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" -r 60 -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k "${finalOutputPath}" -y`;
-    console.log('Running ffmpeg encode (1080p 60fps):', encodeCommand);
+    let encodeCommand: string;
+
+    if (voiceover_url) {
+      // Download voiceover audio
+      console.log('Downloading voiceover audio...');
+      const voiceoverPath = path.join(tempDir, `voiceover_${timestamp}.mp3`);
+      const voiceResponse = await fetch(voiceover_url);
+      if (!voiceResponse.ok) {
+        throw new Error('Failed to download voiceover audio');
+      }
+      const voiceBuffer = Buffer.from(await voiceResponse.arrayBuffer());
+      fs.writeFileSync(voiceoverPath, voiceBuffer);
+
+      // Re-encode with audio mixing: voiceover LOUDER, video audio QUIETER
+      // Uses amix filter: [video_audio * video_volume] + [voiceover * voiceover_volume]
+      encodeCommand = `ffmpeg -i "${concatOutputPath}" -i "${voiceoverPath}" -filter_complex "[0:a]volume=${video_volume}[va];[1:a]volume=${voiceover_volume}[voa];[va][voa]amix=inputs=2:duration=longest[aout]" -map 0:v -map "[aout]" -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" -r 60 -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k "${finalOutputPath}" -y`;
+      console.log('Running ffmpeg encode with voiceover mixing (1080p 60fps)...');
+    } else {
+      // Re-encode without voiceover: just video with original audio
+      encodeCommand = `ffmpeg -i "${concatOutputPath}" -vf "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2" -r 60 -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k "${finalOutputPath}" -y`;
+      console.log('Running ffmpeg encode (1080p 60fps)...');
+    }
+
     await execAsync(encodeCommand);
 
     if (!fs.existsSync(finalOutputPath)) {
@@ -138,7 +165,9 @@ export const POST: APIRoute = async ({ request }) => {
       file_name: finalFileName,
       video_count: videos.length,
       resolution: '1920x1080',
-      fps: 60
+      fps: 60,
+      has_voiceover: !!voiceover_url,
+      audio_mix: voiceover_url ? `voiceover: ${voiceover_volume}x, video: ${video_volume}x` : 'video audio only'
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
