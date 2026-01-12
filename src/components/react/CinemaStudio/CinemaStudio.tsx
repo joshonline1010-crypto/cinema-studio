@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useCinemaStore, detectBestModel, explainModelSelection, type VideoModel } from './cinemaStore';
 import { useSceneStore, type SceneShot, type CharacterRef } from './sceneStore';
-import { PlanningGrid } from './PlanningGrid';
 import {
   CAMERA_PRESETS,
   LENS_PRESETS,
@@ -346,7 +345,6 @@ export default function CinemaStudio() {
   const [showBatchGenerator, setShowBatchGenerator] = useState(false); // Batch angle generator
   const [showMovieShots, setShowMovieShots] = useState(false); // Movie Shots browser
   const [showContinueFromVideo, setShowContinueFromVideo] = useState(false); // Continue from Video workflow
-  const [showShotGrid, setShowShotGrid] = useState(false); // Shot Grid overlay
   const [userAssets, setUserAssets] = useState<UserAsset[]>([]); // User's custom character/item assets
   const [selectedAssetForSwap, setSelectedAssetForSwap] = useState<UserAsset | null>(null); // Asset to swap into prompts
 
@@ -375,6 +373,7 @@ export default function CinemaStudio() {
   const [aiSessionId] = useState(() => `cinema-${Date.now()}`); // Unique session ID
   const aiChatRef = useRef<HTMLDivElement>(null); // For auto-scroll
   const [aiMode, setAiMode] = useState<'quick' | 'chat'>('quick'); // Toggle between quick prompt and chat mode
+  const [chatView, setChatView] = useState<'messages' | 'plan'>('messages'); // Chat sub-view
   const [aiCopiedIndex, setAiCopiedIndex] = useState<number | null>(null); // Track which message was copied
   const [aiRefImages, setAiRefImages] = useState<Array<{ url: string; description: string | null }>>([]);  // Up to 7 ref images
   const [aiRefLoading, setAiRefLoading] = useState<number | null>(null); // Which image is being analyzed
@@ -1183,7 +1182,7 @@ export default function CinemaStudio() {
     const jsonPlan = extractScenePlan(content);
     if (jsonPlan) {
       loadScene(jsonPlan);
-      setShowShotGrid(true); // Show the planning grid
+      setChatView('plan'); // Switch to plan view inside chat
       return;
     }
 
@@ -2081,17 +2080,6 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
     <div className="min-h-screen bg-[#0d0d0d] text-white flex">
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Planning Grid Toggle Button */}
-        {currentScene && (
-          <button
-            onClick={() => setShowShotGrid(!showShotGrid)}
-            className="absolute top-4 left-4 z-50 px-3 h-8 bg-[#e8ff00] border border-[#d4eb00] rounded-lg flex items-center justify-center text-black text-xs font-semibold hover:bg-[#f0ff4d] transition-all"
-            title="Toggle Planning Grid View"
-          >
-            📋 {showShotGrid ? 'Hide Plan' : 'View Full Plan'}
-          </button>
-        )}
-
         {/* Main Preview Area */}
         <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-5xl">
@@ -3619,15 +3607,155 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
             {/* CHAT MODE */}
             {aiMode === 'chat' && (
               <>
-                {/* Chat History */}
-                <div ref={aiChatRef} className="flex-1 overflow-y-auto mb-4 space-y-3 min-h-0">
-                  {aiChatHistory.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">
-                      <div className="text-lg mb-2">Chat with Qwen3</div>
-                      <div className="text-xs">Ask about cinematography, get prompts, refine ideas...</div>
-                      <div className="text-xs mt-1 text-purple-400">Memory is saved to disk!</div>
+                {/* Chat Sub-View Tabs (Messages / Plan) */}
+                {currentScene && (
+                  <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-800">
+                    <button
+                      onClick={() => setChatView('messages')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        chatView === 'messages'
+                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                          : 'text-gray-400 hover:text-white hover:bg-[#2a2a2a]'
+                      }`}
+                    >
+                      Messages
+                    </button>
+                    <button
+                      onClick={() => setChatView('plan')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                        chatView === 'plan'
+                          ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                          : 'text-gray-400 hover:text-white hover:bg-[#2a2a2a]'
+                      }`}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      Plan ({currentScene.shots.length} shots)
+                    </button>
+                    <button
+                      onClick={() => {
+                        useSceneStore.getState().clearScene();
+                        setChatView('messages');
+                      }}
+                      className="ml-auto px-2 py-1 rounded text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      title="Clear plan"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {/* PLAN VIEW */}
+                {chatView === 'plan' && currentScene ? (
+                  <div className="flex-1 overflow-y-auto min-h-0">
+                    {/* Plan Header */}
+                    <div className="mb-4 p-3 bg-[#1f1f1f] rounded-xl border border-green-500/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-medium text-white">{currentScene.name}</h3>
+                        <span className="text-xs text-gray-400">~{currentScene.duration_estimate}s</span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {currentScene.mood && <span className="mr-3">Mood: {currentScene.mood}</span>}
+                        {currentScene.director && <span>Director: {currentScene.director}</span>}
+                      </div>
+                      {/* Progress */}
+                      <div className="mt-3">
+                        <div className="flex justify-between text-xs text-gray-500 mb-1">
+                          <span>Progress</span>
+                          <span>{currentScene.shots.filter(s => s.status === 'done').length}/{currentScene.shots.length}</span>
+                        </div>
+                        <div className="h-1.5 bg-[#2a2a2a] rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-green-500 transition-all"
+                            style={{ width: `${(currentScene.shots.filter(s => s.status === 'done').length / currentScene.shots.length) * 100}%` }}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  ) : (
+
+                    {/* Shot Cards */}
+                    <div className="space-y-2">
+                      {currentScene.shots.map((shot, idx) => (
+                        <div
+                          key={shot.shot_id}
+                          onClick={() => {
+                            selectSceneShot(shot.shot_id);
+                            handleSceneShotSelect(shot);
+                          }}
+                          className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                            selectedShotId === shot.shot_id
+                              ? 'bg-purple-500/10 border-purple-500/40'
+                              : 'bg-[#1f1f1f] border-gray-800 hover:border-gray-600'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            {/* Status + Thumbnail */}
+                            <div className="relative w-16 h-10 bg-[#2a2a2a] rounded overflow-hidden flex-shrink-0">
+                              {shot.image_url ? (
+                                <img src={shot.image_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-600 text-lg">
+                                  {idx + 1}
+                                </div>
+                              )}
+                              {/* Status badge */}
+                              <div className={`absolute top-0.5 right-0.5 w-2 h-2 rounded-full ${
+                                shot.status === 'done' ? 'bg-green-500' :
+                                shot.status === 'generating' ? 'bg-yellow-500 animate-pulse' :
+                                'bg-gray-600'
+                              }`} />
+                            </div>
+
+                            {/* Shot Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-medium text-white">{shot.shot_id}</span>
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                  shot.model === 'seedance-1.5' ? 'bg-purple-500/20 text-purple-300' :
+                                  shot.model === 'kling-o1' ? 'bg-blue-500/20 text-blue-300' :
+                                  'bg-gray-500/20 text-gray-300'
+                                }`}>
+                                  {shot.model?.split('-')[0] || 'kling'}
+                                </span>
+                                {shot.dialog && (
+                                  <span className="text-yellow-500 text-xs" title="Has dialog">🗣</span>
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-400 truncate">{shot.subject}</div>
+                              <div className="text-[10px] text-gray-600 mt-0.5">{shot.shot_type} • {shot.duration}s</div>
+                            </div>
+
+                            {/* Generate button */}
+                            {shot.status === 'pending' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleGenerateSceneShot(shot);
+                                }}
+                                className="px-2 py-1 rounded bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs transition-colors"
+                              >
+                                Gen
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : chatView === 'messages' || !currentScene ? (
+                  /* MESSAGES VIEW */
+                  <div ref={aiChatRef} className="flex-1 overflow-y-auto mb-4 space-y-3 min-h-0">
+                    {aiChatHistory.length === 0 ? (
+                      <div className="text-center text-gray-500 py-8">
+                        <div className="text-lg mb-2">Chat with Qwen3</div>
+                        <div className="text-xs">Ask about cinematography, get prompts, plan videos...</div>
+                        <div className="text-xs mt-1 text-purple-400">Memory is saved to disk!</div>
+                        <div className="mt-4 text-xs text-gray-600">
+                          Try: "Plan a 30 second video of..."
+                        </div>
+                      </div>
+                    ) : (
                     aiChatHistory.map((msg, idx) => (
                       <div
                         key={idx}
@@ -3695,6 +3823,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                     </div>
                   )}
                 </div>
+                ) : null}
 
                 {/* Sequence Planner Panel */}
                 {plannedSequence.length > 0 && (
@@ -5412,15 +5541,6 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
       </div>
       </div>
 
-      {/* Planning Grid Overlay */}
-      {showShotGrid && currentScene && (
-        <div className="absolute inset-0 z-40">
-          <PlanningGrid
-            onShotSelect={handleSceneShotSelect}
-            onGenerateShot={handleGenerateSceneShot}
-          />
-        </div>
-      )}
     </div>
   );
 }
