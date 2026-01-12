@@ -831,10 +831,50 @@ export default function CinemaStudio() {
           const data = await response.json();
           const imageUrl = data.image_url || data.images?.[0]?.url;
           if (imageUrl) {
+            // Update shot with image
             markShotComplete(shot.shot_id, imageUrl);
-            setStatusMessage(`Shot ${i + 1}/${pendingShots.length} complete!`);
-            // Update reference for next shot
             setStartFrame(imageUrl);
+            setStatusMessage(`Image ${i + 1}/${pendingShots.length} done - generating video...`);
+
+            // Now generate video from the image
+            try {
+              let videoType = 'video-kling';
+              if (shot.model === 'seedance-1.5') {
+                videoType = 'video-seedance';
+              } else if (shot.model === 'kling-o1' || shot.end_frame) {
+                videoType = 'video-kling-o1';
+              }
+
+              const videoResponse = await fetch('/api/cinema/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: videoType,
+                  prompt: shot.motion_prompt || 'subtle motion, cinematic',
+                  start_image_url: imageUrl,
+                  end_image_url: shot.end_frame || undefined,
+                  duration: String(shot.duration || 5),
+                })
+              });
+
+              if (videoResponse.ok) {
+                const videoData = await videoResponse.json();
+                const videoUrl = videoData.video_url;
+                if (videoUrl) {
+                  markShotComplete(shot.shot_id, imageUrl, videoUrl);
+                  setStatusMessage(`Shot ${i + 1}/${pendingShots.length} complete (image + video)!`);
+                } else {
+                  console.log(`No video URL for ${shot.shot_id}, image saved`);
+                  setStatusMessage(`Shot ${i + 1} image done (video pending)`);
+                }
+              } else {
+                console.error(`Video failed for ${shot.shot_id}`);
+                setStatusMessage(`Shot ${i + 1} image done (video failed)`);
+              }
+            } catch (videoErr) {
+              console.error(`Video error for ${shot.shot_id}:`, videoErr);
+              setStatusMessage(`Shot ${i + 1} image done (video error)`);
+            }
           } else {
             console.error(`No image URL in response for ${shot.shot_id}:`, data);
             setStatusMessage(`No image URL: ${shot.shot_id} - continuing...`);
@@ -850,12 +890,12 @@ export default function CinemaStudio() {
       }
 
       // Small delay between shots
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
     setExecutingPlan(false);
     setPlanProgress(0);
-    setStatusMessage(`Plan complete! ${pendingShots.length} shots generated.`);
+    setStatusMessage(`Plan complete! ${pendingShots.length} shots with videos generated.`);
   };
 
   // Stop plan execution
@@ -863,6 +903,73 @@ export default function CinemaStudio() {
     setExecutingPlan(false);
     setPlanProgress(0);
     setStatusMessage('Plan execution stopped.');
+  };
+
+  // Generate all videos for shots that have images but no videos
+  const executeAllVideos = async () => {
+    if (!currentScene || executingPlan) return;
+
+    const shotsNeedingVideo = currentScene.shots.filter(s => s.image_url && !s.video_url);
+    if (shotsNeedingVideo.length === 0) {
+      setStatusMessage('All videos already generated!');
+      return;
+    }
+
+    setExecutingPlan(true);
+    setPlanProgress(0);
+    setStatusMessage(`Generating ${shotsNeedingVideo.length} videos...`);
+
+    for (let i = 0; i < shotsNeedingVideo.length; i++) {
+      const shot = shotsNeedingVideo[i];
+      setPlanProgress(i + 1);
+      setStatusMessage(`Video ${i + 1}/${shotsNeedingVideo.length}: ${shot.shot_id}`);
+
+      try {
+        let videoType = 'video-kling';
+        if (shot.model === 'seedance-1.5') {
+          videoType = 'video-seedance';
+        } else if (shot.model === 'kling-o1' || shot.end_frame) {
+          videoType = 'video-kling-o1';
+        }
+
+        const response = await fetch('/api/cinema/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: videoType,
+            prompt: shot.motion_prompt || 'subtle motion, cinematic',
+            start_image_url: shot.image_url,
+            end_image_url: shot.end_frame || undefined,
+            duration: String(shot.duration || 5),
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.video_url) {
+            markShotComplete(shot.shot_id, shot.image_url!, data.video_url);
+            setStatusMessage(`Video ${i + 1}/${shotsNeedingVideo.length} done!`);
+          } else {
+            console.error(`No video URL for ${shot.shot_id}`);
+            setStatusMessage(`Video ${i + 1} failed - no URL`);
+          }
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error(`Video failed ${shot.shot_id}:`, errorData);
+          setStatusMessage(`Video ${i + 1} failed: ${errorData.error || 'Unknown'}`);
+        }
+      } catch (err) {
+        console.error(`Video error ${shot.shot_id}:`, err);
+        setStatusMessage(`Video ${i + 1} error`);
+      }
+
+      // Delay between videos
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+
+    setExecutingPlan(false);
+    setPlanProgress(0);
+    setStatusMessage(`All ${shotsNeedingVideo.length} videos generated!`);
   };
 
   // Handler for character click - loads into character DNA
@@ -3837,30 +3944,51 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                           </div>
                         </div>
 
-                        {/* Generate All Button */}
-                        <div className="mt-4 flex items-center gap-2">
+                        {/* Generate All Buttons */}
+                        <div className="mt-4 flex flex-col gap-2">
                           {!executingPlan ? (
-                            <button
-                              onClick={executeEntirePlan}
-                              disabled={currentScene.shots.filter(s => s.status === 'pending').length === 0}
-                              className={`flex-1 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all ${
-                                currentScene.shots.filter(s => s.status === 'pending').length === 0
-                                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-400 hover:to-emerald-500'
-                            }`}
-                          >
-                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                              <path d="M8 5v14l11-7z" />
-                            </svg>
-                            Generate All ({currentScene.shots.filter(s => s.status === 'pending').length} pending)
-                            </button>
+                            <div className="flex gap-2">
+                              {/* Generate All Images */}
+                              <button
+                                onClick={executeEntirePlan}
+                                disabled={currentScene.shots.filter(s => s.status === 'pending').length === 0}
+                                className={`flex-1 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all ${
+                                  currentScene.shots.filter(s => s.status === 'pending').length === 0
+                                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                  : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-400 hover:to-emerald-500'
+                                }`}
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                                  <circle cx="8.5" cy="8.5" r="1.5" />
+                                  <path d="M21 15l-5-5L5 21" />
+                                </svg>
+                                Images ({currentScene.shots.filter(s => s.status === 'pending').length})
+                              </button>
+
+                              {/* Generate All Videos */}
+                              <button
+                                onClick={executeAllVideos}
+                                disabled={currentScene.shots.filter(s => s.image_url && !s.video_url).length === 0}
+                                className={`flex-1 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all ${
+                                  currentScene.shots.filter(s => s.image_url && !s.video_url).length === 0
+                                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                  : 'bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:from-purple-400 hover:to-pink-500'
+                                }`}
+                              >
+                                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                  <path d="M8 5v14l11-7z" />
+                                </svg>
+                                Videos ({currentScene.shots.filter(s => s.image_url && !s.video_url).length})
+                              </button>
+                            </div>
                           ) : (
-                            <>
+                            <div className="flex gap-2">
                               <div className="flex-1 py-2.5 rounded-lg bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 text-sm font-medium flex items-center justify-center gap-2">
                                 <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                                 </svg>
-                                Generating {planProgress}/{currentScene.shots.filter(s => s.status === 'pending').length + planProgress}...
+                                Generating {planProgress}...
                               </div>
                               <button
                                 onClick={stopPlanExecution}
@@ -3868,7 +3996,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                               >
                                 Stop
                               </button>
-                            </>
+                            </div>
                           )}
                         </div>
 
