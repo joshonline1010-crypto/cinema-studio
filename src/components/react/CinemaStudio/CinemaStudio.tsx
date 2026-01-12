@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useCinemaStore, detectBestModel, explainModelSelection, type VideoModel } from './cinemaStore';
+import { useSceneStore, type SceneShot, type CharacterRef } from './sceneStore';
+import { SceneSidebar } from './SceneSidebar';
+import { ShotGrid } from './ShotGrid';
 import {
   CAMERA_PRESETS,
   LENS_PRESETS,
@@ -308,6 +311,16 @@ export default function CinemaStudio() {
     markPlannedShotComplete,
   } = useCinemaStore();
 
+  // Scene Planner Store
+  const {
+    currentScene,
+    selectedShotId,
+    selectShot: selectSceneShot,
+    updateShot: updateSceneShot,
+    markShotGenerating,
+    markShotComplete,
+  } = useSceneStore();
+
   const [promptText, setPromptText] = useState('');
   const [promptWarnings, setPromptWarnings] = useState<string[]>([]); // Nano Banana prompting warnings
   const [showCameraPanel, setShowCameraPanel] = useState(false);
@@ -332,6 +345,8 @@ export default function CinemaStudio() {
   const [showBatchGenerator, setShowBatchGenerator] = useState(false); // Batch angle generator
   const [showMovieShots, setShowMovieShots] = useState(false); // Movie Shots browser
   const [showContinueFromVideo, setShowContinueFromVideo] = useState(false); // Continue from Video workflow
+  const [showSceneSidebar, setShowSceneSidebar] = useState(true); // Scene Planner sidebar
+  const [showShotGrid, setShowShotGrid] = useState(false); // Shot Grid overlay
   const [userAssets, setUserAssets] = useState<UserAsset[]>([]); // User's custom character/item assets
   const [selectedAssetForSwap, setSelectedAssetForSwap] = useState<UserAsset | null>(null); // Asset to swap into prompts
 
@@ -382,6 +397,7 @@ export default function CinemaStudio() {
   const [mode, setMode] = useState<'image' | 'video'>('video');
   const [imageTarget, setImageTarget] = useState<'start' | 'end' | null>(null); // null = normal image, 'start'/'end' = transition workflow
   const [includeCameraSettings, setIncludeCameraSettings] = useState(true); // Toggle camera/lens info in prompt
+  const [statusMessage, setStatusMessage] = useState<string | null>(null); // Status feedback to user
   const [showPromptPreview, setShowPromptPreview] = useState(false); // Show what will be sent
   const [shotCount, setShotCount] = useState(1);
 
@@ -620,6 +636,65 @@ export default function CinemaStudio() {
       // DON'T silently fallback - that sends 20MB to Kling which fails!
       throw new Error('Image compression failed. Cannot send to Kling without compressing first.');
     }
+  };
+
+  // ============================================
+  // SCENE SHOT SELECTION HANDLER
+  // ============================================
+  const handleSceneShotSelect = (shot: SceneShot) => {
+    // Load shot data into the generator
+    setPromptText(shot.photo_prompt);
+    setMotionPrompt(shot.motion_prompt);
+
+    // Set the model
+    const modelMap: Record<string, VideoModel> = {
+      'seedance-1.5': 'seedance-1.5',
+      'kling-o1': 'kling-o1',
+      'kling-2.6': 'kling-2.6',
+    };
+    if (modelMap[shot.model]) {
+      setModel(modelMap[shot.model]);
+    }
+
+    // If shot has start_frame, load it
+    if (shot.start_frame) {
+      setStartFrame(shot.start_frame);
+    }
+    if (shot.end_frame) {
+      setEndFrame(shot.end_frame);
+    }
+
+    // If shot has image_url (already generated), load as reference
+    if (shot.image_url) {
+      setReferenceImage(shot.image_url);
+    }
+
+    // Switch to video mode if shot has dialog (needs Seedance)
+    if (shot.dialog && shot.model === 'seedance-1.5') {
+      setMode('video');
+    }
+
+    setStatusMessage(`Loaded shot: ${shot.shot_id} - ${shot.subject}`);
+  };
+
+  // Handler for generating from scene shot
+  const handleGenerateSceneShot = async (shot: SceneShot) => {
+    // Select the shot and load its data
+    selectSceneShot(shot.shot_id);
+    handleSceneShotSelect(shot);
+
+    // Mark as generating
+    markShotGenerating(shot.shot_id);
+
+    // Trigger generation (the existing handleGenerate will be called)
+    // The result will be captured and saved back via markShotComplete
+  };
+
+  // Handler for character click - loads into character DNA
+  const handleCharacterSelect = (char: CharacterRef) => {
+    const dna = `${char.name}: ${char.description}. ${char.costume}`;
+    setCharacterDNA(dna);
+    setStatusMessage(`Loaded character: ${char.name}`);
   };
 
   // ============================================
@@ -1980,9 +2055,41 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
   const summaryText = `${cameras[cameraIndex]?.name || 'Camera'}, ${lenses[lensIndex]?.name || 'Lens'}, ${focalLengths[focalIndex]}mm, ${apertures[apertureIndex]}`;
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] text-white flex flex-col">
-      {/* Main Preview Area */}
-      <div className="flex-1 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-[#0d0d0d] text-white flex">
+      {/* Scene Planner Sidebar */}
+      {showSceneSidebar && (
+        <SceneSidebar
+          onShotSelect={handleSceneShotSelect}
+          onCharacterSelect={handleCharacterSelect}
+        />
+      )}
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Toggle Sidebar Button */}
+        <button
+          onClick={() => setShowSceneSidebar(!showSceneSidebar)}
+          className="absolute top-4 left-4 z-50 w-8 h-8 bg-[#1a1a2e] border border-gray-700 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:border-gray-500 transition-all"
+          style={{ left: showSceneSidebar ? '296px' : '16px' }}
+          title={showSceneSidebar ? 'Hide Scene Planner' : 'Show Scene Planner'}
+        >
+          {showSceneSidebar ? '◀' : '▶'}
+        </button>
+
+        {/* Shot Grid Toggle Button */}
+        {currentScene && (
+          <button
+            onClick={() => setShowShotGrid(!showShotGrid)}
+            className="absolute top-4 z-50 px-3 h-8 bg-[#4f46e5] border border-[#6366f1] rounded-lg flex items-center justify-center text-white text-xs font-medium hover:bg-[#5b52f0] transition-all"
+            style={{ left: showSceneSidebar ? '340px' : '60px' }}
+            title="Toggle Shot Grid View"
+          >
+            🎬 {showShotGrid ? 'Hide Grid' : 'Shot Grid'}
+          </button>
+        )}
+
+        {/* Main Preview Area */}
+        <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-5xl">
           <div className="relative aspect-video bg-[#151515] rounded-xl overflow-hidden border border-gray-800/30">
             {/* If playing a shot from timeline, show that video */}
@@ -5292,6 +5399,19 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
           )}
         </div>
       </div>
+      </div>
+
+      {/* Shot Grid Overlay */}
+      {showShotGrid && currentScene && (
+        <div className="absolute inset-0 z-40 bg-[#0d0d0d]/95 flex">
+          {/* Keep sidebar visible */}
+          {showSceneSidebar && <div style={{ width: '280px', flexShrink: 0 }} />}
+          <ShotGrid
+            onShotSelect={handleSceneShotSelect}
+            onGenerateShot={handleGenerateSceneShot}
+          />
+        </div>
+      )}
     </div>
   );
 }
