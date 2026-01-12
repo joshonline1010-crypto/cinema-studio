@@ -4172,82 +4172,136 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                                 </button>
                               </div>
 
-                              {/* Refs Grid - 3x3 Reference Sheets */}
-                              <div className="flex flex-wrap gap-2 pb-2">
+                              {/* Refs Grid - Same style as shot grid */}
+                              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 pb-2">
                                 {/* Character sheets */}
-                                {charRefs.map(char => (
-                                  <div
-                                    key={char.id}
-                                    className={`relative group cursor-pointer ${char.ref_url ? '' : 'opacity-50'}`}
-                                    title={`${char.name} - Character Sheet\n${char.description}`}
-                                  >
-                                    {char.ref_url ? (
-                                      <img
-                                        src={char.ref_url}
-                                        alt={char.name}
-                                        className="w-14 h-14 rounded object-cover border-2 border-purple-500/50 hover:border-purple-400 transition-colors"
-                                      />
-                                    ) : (
-                                      <div className="w-14 h-14 rounded bg-purple-500/20 border-2 border-dashed border-purple-500/30 flex flex-col items-center justify-center gap-0.5">
-                                        <span className="text-lg">👤</span>
-                                        <span className="text-[8px] text-purple-300">sheet</span>
+                                {charRefs.map(char => {
+                                  const isGenerating = executingPlan && !char.ref_url;
+                                  return (
+                                    <div
+                                      key={char.id}
+                                      className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer group ${
+                                        char.ref_url ? 'ring-2 ring-green-500' :
+                                        isGenerating ? 'ring-2 ring-yellow-500' :
+                                        'ring-1 ring-purple-500/50'
+                                      }`}
+                                      title={`${char.name} - Character Sheet\n${char.description}`}
+                                    >
+                                      {char.ref_url ? (
+                                        <img src={char.ref_url} alt={char.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full bg-purple-500/20 flex flex-col items-center justify-center">
+                                          <span className="text-2xl">👤</span>
+                                        </div>
+                                      )}
+                                      {/* Loading overlay */}
+                                      {isGenerating && (
+                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                          <svg className="w-6 h-6 text-yellow-400 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                          </svg>
+                                        </div>
+                                      )}
+                                      {/* Bottom label */}
+                                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1.5 py-1">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-[9px] text-purple-300 font-medium truncate">{char.name}</span>
+                                          {char.ref_url && (
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 text-green-400">
+                                              <path d="M20 6L9 17l-5-5" />
+                                            </svg>
+                                          )}
+                                        </div>
                                       </div>
-                                    )}
-                                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] text-purple-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 px-1 rounded">
-                                      {char.name}
-                                    </span>
-                                  </div>
-                                ))}
+                                    </div>
+                                  );
+                                })}
 
                                 {/* Location sheets */}
-                                {sceneRefs.filter(r => r.type === 'location').map(ref => (
-                                  <div
-                                    key={ref.id}
-                                    className={`relative group cursor-pointer ${ref.ref_url ? '' : 'opacity-50'}`}
-                                    title={`${ref.name} - Location Sheet (INT/EXT)\n${ref.description}`}
-                                  >
-                                    {ref.ref_url ? (
-                                      <img
-                                        src={ref.ref_url}
-                                        alt={ref.name}
-                                        className="w-14 h-14 rounded object-cover border-2 border-cyan-500/50 hover:border-cyan-400 transition-colors"
-                                      />
-                                    ) : (
-                                      <div className="w-14 h-14 rounded bg-cyan-500/20 border-2 border-dashed border-cyan-500/30 flex flex-col items-center justify-center gap-0.5">
-                                        <span className="text-lg">📍</span>
-                                        <span className="text-[8px] text-cyan-300">INT/EXT</span>
+                                {sceneRefs.filter(r => r.type === 'location').map(ref => {
+                                  const isGenerating = executingPlan && !ref.ref_url;
+                                  return (
+                                    <div
+                                      key={ref.id}
+                                      className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer group ${
+                                        ref.ref_url ? 'ring-2 ring-green-500' :
+                                        isGenerating ? 'ring-2 ring-yellow-500' :
+                                        'ring-1 ring-cyan-500/50'
+                                      }`}
+                                      title={`${ref.name} - Location Sheet (INT/EXT)\n${ref.description}`}
+                                    >
+                                      {ref.ref_url ? (
+                                        <img src={ref.ref_url} alt={ref.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full bg-cyan-500/20 flex flex-col items-center justify-center">
+                                          <span className="text-2xl">📍</span>
+                                        </div>
+                                      )}
+                                      {/* Loading overlay */}
+                                      {isGenerating && (
+                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                          <svg className="w-6 h-6 text-yellow-400 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                          </svg>
+                                        </div>
+                                      )}
+                                      {/* Bottom label */}
+                                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1.5 py-1">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-[9px] text-cyan-300 font-medium truncate">{ref.name}</span>
+                                          {ref.ref_url && (
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 text-green-400">
+                                              <path d="M20 6L9 17l-5-5" />
+                                            </svg>
+                                          )}
+                                        </div>
                                       </div>
-                                    )}
-                                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] text-cyan-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 px-1 rounded">
-                                      {ref.name}
-                                    </span>
-                                  </div>
-                                ))}
+                                    </div>
+                                  );
+                                })}
 
                                 {/* Object/Vehicle sheets */}
-                                {sceneRefs.filter(r => r.type !== 'location').map(ref => (
-                                  <div
-                                    key={ref.id}
-                                    className={`relative group cursor-pointer ${ref.ref_url ? '' : 'opacity-50'}`}
-                                    title={`${ref.name} - ${ref.type === 'vehicle' ? 'Vehicle' : 'Object'} Sheet\n${ref.description}`}
-                                  >
-                                    {ref.ref_url ? (
-                                      <img
-                                        src={ref.ref_url}
-                                        alt={ref.name}
-                                        className="w-14 h-14 rounded object-cover border-2 border-green-500/50 hover:border-green-400 transition-colors"
-                                      />
-                                    ) : (
-                                      <div className="w-14 h-14 rounded bg-green-500/20 border-2 border-dashed border-green-500/30 flex flex-col items-center justify-center gap-0.5">
-                                        <span className="text-lg">{ref.type === 'vehicle' ? '🚗' : '📦'}</span>
-                                        <span className="text-[8px] text-green-300">sheet</span>
+                                {sceneRefs.filter(r => r.type !== 'location').map(ref => {
+                                  const isGenerating = executingPlan && !ref.ref_url;
+                                  return (
+                                    <div
+                                      key={ref.id}
+                                      className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer group ${
+                                        ref.ref_url ? 'ring-2 ring-green-500' :
+                                        isGenerating ? 'ring-2 ring-yellow-500' :
+                                        'ring-1 ring-green-500/50'
+                                      }`}
+                                      title={`${ref.name} - ${ref.type === 'vehicle' ? 'Vehicle' : 'Object'} Sheet\n${ref.description}`}
+                                    >
+                                      {ref.ref_url ? (
+                                        <img src={ref.ref_url} alt={ref.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full bg-green-500/20 flex flex-col items-center justify-center">
+                                          <span className="text-2xl">{ref.type === 'vehicle' ? '🚗' : '📦'}</span>
+                                        </div>
+                                      )}
+                                      {/* Loading overlay */}
+                                      {isGenerating && (
+                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                          <svg className="w-6 h-6 text-yellow-400 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                          </svg>
+                                        </div>
+                                      )}
+                                      {/* Bottom label */}
+                                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1.5 py-1">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-[9px] text-green-300 font-medium truncate">{ref.name}</span>
+                                          {ref.ref_url && (
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 text-green-400">
+                                              <path d="M20 6L9 17l-5-5" />
+                                            </svg>
+                                          )}
+                                        </div>
                                       </div>
-                                    )}
-                                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] text-green-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 px-1 rounded">
-                                      {ref.name}
-                                    </span>
-                                  </div>
-                                ))}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           );
