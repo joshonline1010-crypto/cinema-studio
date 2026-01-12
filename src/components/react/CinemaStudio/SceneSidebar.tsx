@@ -1,6 +1,11 @@
-// Scene Sidebar - AI Chat → Full Plan → Approve → Generate
-import React, { useState, useRef } from 'react';
+// Scene Sidebar - AI Chat with memory → Full Plan → Approve → Generate
+import React, { useState, useRef, useEffect } from 'react';
 import { useSceneStore, getModelDisplayName, type SceneShot, type CharacterRef, type Scene } from './sceneStore';
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 interface SceneSidebarProps {
   onShotSelect?: (shot: SceneShot) => void;
@@ -20,54 +25,96 @@ export function SceneSidebar({ onShotSelect, onCharacterSelect, onGenerateAll }:
     clearScene,
   } = useSceneStore();
 
-  // AI Planning State
+  // Chat state
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [isPlanning, setIsPlanning] = useState(false);
-  const [planError, setPlanError] = useState<string | null>(null);
-  const [pendingPlan, setPendingPlan] = useState<Scene | null>(null); // Plan awaiting approval
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingPlan, setPendingPlan] = useState<Scene | null>(null);
+  const [sessionId] = useState(() => `plan-${Date.now()}`);
 
   const [isExpanded, setIsExpanded] = useState(true);
   const [showCharacters, setShowCharacters] = useState(true);
   const [dragOverShotId, setDragOverShotId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const stats = getStats();
 
-  // Generate plan from AI
-  const handleGeneratePlan = async () => {
-    if (!chatInput.trim()) return;
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
-    setIsPlanning(true);
-    setPlanError(null);
+  // Send message to AI
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || isLoading) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    setError(null);
+
+    // Add user message to UI
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsLoading(true);
 
     try {
       const response = await fetch('/api/cinema/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          description: chatInput,
-          style: 'cinematic', // Could be user-selectable
+          message: userMessage,
+          sessionId: sessionId,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate plan');
+        throw new Error('Failed to get response');
       }
 
-      const plan = await response.json();
+      const data = await response.json();
 
-      if (plan.error) {
-        throw new Error(plan.error);
+      if (data.error) {
+        throw new Error(data.error);
       }
 
-      // Show plan for approval (don't load yet)
-      setPendingPlan(plan);
+      // Add assistant message to UI
+      setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
+
+      // Check if a plan was generated
+      if (data.plan) {
+        setPendingPlan(data.plan);
+      }
 
     } catch (err) {
-      setPlanError(err instanceof Error ? err.message : 'Failed to generate plan');
+      setError(err instanceof Error ? err.message : 'Something went wrong');
+      // Remove the user message if there was an error
+      setMessages(prev => prev.slice(0, -1));
     } finally {
-      setIsPlanning(false);
+      setIsLoading(false);
     }
+  };
+
+  // Handle Enter key
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // Start new chat
+  const handleNewChat = async () => {
+    try {
+      await fetch(`/api/cinema/plan?sessionId=${sessionId}`, { method: 'DELETE' });
+    } catch (e) {
+      // Ignore errors
+    }
+    setMessages([]);
+    setPendingPlan(null);
+    setError(null);
   };
 
   // Approve and load the plan
@@ -75,11 +122,11 @@ export function SceneSidebar({ onShotSelect, onCharacterSelect, onGenerateAll }:
     if (pendingPlan) {
       loadScene(pendingPlan);
       setPendingPlan(null);
-      setChatInput('');
+      setMessages([]);
     }
   };
 
-  // Reject plan and try again
+  // Reject plan and continue chatting
   const handleRejectPlan = () => {
     setPendingPlan(null);
   };
@@ -169,10 +216,10 @@ export function SceneSidebar({ onShotSelect, onCharacterSelect, onGenerateAll }:
           backgroundColor: '#16162a',
         }}>
           <h3 style={{ margin: '0 0 8px', color: '#e8ff00', fontSize: '14px' }}>
-            📋 Review Your Plan
+            Plan Ready!
           </h3>
           <p style={{ margin: 0, fontSize: '12px', color: '#888' }}>
-            AI generated this plan. Review and approve to start generating.
+            Review and approve to load into the grid.
           </p>
         </div>
 
@@ -189,9 +236,9 @@ export function SceneSidebar({ onShotSelect, onCharacterSelect, onGenerateAll }:
             {pendingPlan.description}
           </div>
           <div style={{ display: 'flex', gap: '16px', fontSize: '11px', color: '#666' }}>
-            <span>🎬 {pendingPlan.shots.length} shots</span>
-            <span>⏱ ~{pendingPlan.duration_estimate}s</span>
-            <span>🎨 {pendingPlan.mood}</span>
+            <span>{pendingPlan.shots.length} shots</span>
+            <span>~{pendingPlan.duration_estimate}s</span>
+            <span>{pendingPlan.mood}</span>
           </div>
         </div>
 
@@ -257,13 +304,8 @@ export function SceneSidebar({ onShotSelect, onCharacterSelect, onGenerateAll }:
               </div>
               <div style={{ fontSize: '11px', color: '#666' }}>
                 {shot.shot_type} | {shot.duration}s
-                {shot.dialog && <span style={{ color: '#f59e0b' }}> | 🗣 Dialog</span>}
+                {shot.dialog && <span style={{ color: '#f59e0b' }}> | Dialog</span>}
               </div>
-              {shot.narrative_beat && (
-                <div style={{ fontSize: '10px', color: '#4f46e5', marginTop: '4px' }}>
-                  Beat: {shot.narrative_beat.replace(/_/g, ' ')}
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -288,7 +330,7 @@ export function SceneSidebar({ onShotSelect, onCharacterSelect, onGenerateAll }:
               cursor: 'pointer',
             }}
           >
-            ✕ Try Again
+            Keep Chatting
           </button>
           <button
             onClick={handleApprovePlan}
@@ -304,7 +346,7 @@ export function SceneSidebar({ onShotSelect, onCharacterSelect, onGenerateAll }:
               cursor: 'pointer',
             }}
           >
-            ✓ Approve & Load
+            Approve & Load
           </button>
         </div>
       </div>
@@ -312,7 +354,7 @@ export function SceneSidebar({ onShotSelect, onCharacterSelect, onGenerateAll }:
   }
 
   // ============================================
-  // NO SCENE - AI CHAT INPUT
+  // NO SCENE - AI CHAT INTERFACE
   // ============================================
   if (!currentScene) {
     return (
@@ -325,125 +367,192 @@ export function SceneSidebar({ onShotSelect, onCharacterSelect, onGenerateAll }:
         flexDirection: 'column',
         height: '100%',
       }}>
+        {/* Header */}
         <div style={{
-          padding: '16px',
+          padding: '12px 16px',
           borderBottom: '1px solid #333',
           backgroundColor: '#16162a',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
         }}>
-          <h3 style={{ margin: '0 0 4px', color: '#fff', fontSize: '14px' }}>Scene Planner</h3>
-          <p style={{ margin: 0, fontSize: '11px', color: '#666' }}>
-            Describe your video and AI will plan all the shots
-          </p>
+          <div>
+            <h3 style={{ margin: '0 0 2px', color: '#fff', fontSize: '14px' }}>Scene Planner</h3>
+            <p style={{ margin: 0, fontSize: '10px', color: '#666' }}>
+              Chat with AI to plan your video
+            </p>
+          </div>
+          {messages.length > 0 && (
+            <button
+              onClick={handleNewChat}
+              style={{
+                padding: '6px 12px',
+                fontSize: '11px',
+                backgroundColor: '#333',
+                border: '1px solid #444',
+                borderRadius: '4px',
+                color: '#888',
+                cursor: 'pointer',
+              }}
+            >
+              New Chat
+            </button>
+          )}
         </div>
 
-        {/* AI Chat Input */}
-        <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <textarea
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            placeholder="Describe your video...
-
-Example:
-• 2 minute video of Yode discovering the ship is sinking
-• Opening shot of calm ocean, then chaos erupts
-• Include Peely and Fishstick as side characters
-• Dramatic climax with ship tilting"
-            style={{
-              flex: 1,
-              minHeight: '200px',
-              padding: '12px',
-              fontSize: '13px',
-              backgroundColor: '#222',
-              border: '1px solid #333',
-              borderRadius: '8px',
-              color: '#fff',
-              resize: 'none',
-              fontFamily: 'inherit',
-            }}
-          />
-
-          {planError && (
-            <div style={{
-              marginTop: '12px',
-              padding: '10px',
-              fontSize: '12px',
-              backgroundColor: '#ef444433',
-              border: '1px solid #ef4444',
-              borderRadius: '6px',
-              color: '#ef4444',
-            }}>
-              {planError}
+        {/* Chat Messages */}
+        <div
+          ref={chatContainerRef}
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            padding: '12px',
+          }}
+        >
+          {messages.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#666' }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.5 }}>💬</div>
+              <p style={{ fontSize: '12px', lineHeight: 1.5 }}>
+                Describe the video you want to make.<br />
+                I'll help you plan all the shots.
+              </p>
+              <div style={{ marginTop: '16px', fontSize: '11px', color: '#555', textAlign: 'left' }}>
+                <div style={{ marginBottom: '8px', fontWeight: 600, color: '#888' }}>Try:</div>
+                <div style={{ marginBottom: '4px' }}>• "2 min video of a ship sinking"</div>
+                <div style={{ marginBottom: '4px' }}>• "CHIP discovers a haunted house"</div>
+                <div style={{ marginBottom: '4px' }}>• "Dramatic cooking competition"</div>
+              </div>
             </div>
+          ) : (
+            messages.map((msg, idx) => (
+              <div
+                key={idx}
+                style={{
+                  marginBottom: '12px',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  backgroundColor: msg.role === 'user' ? '#4f46e533' : '#333',
+                  borderLeft: msg.role === 'user' ? '3px solid #4f46e5' : '3px solid #666',
+                }}
+              >
+                <div style={{
+                  fontSize: '10px',
+                  color: '#888',
+                  marginBottom: '4px',
+                  textTransform: 'uppercase',
+                }}>
+                  {msg.role === 'user' ? 'You' : 'AI Director'}
+                </div>
+                <div style={{
+                  fontSize: '12px',
+                  color: '#fff',
+                  lineHeight: 1.5,
+                  whiteSpace: 'pre-wrap',
+                }}>
+                  {msg.content}
+                </div>
+              </div>
+            ))
           )}
 
-          <button
-            onClick={handleGeneratePlan}
-            disabled={isPlanning || !chatInput.trim()}
-            style={{
-              marginTop: '16px',
-              padding: '14px',
-              fontSize: '14px',
-              fontWeight: 600,
-              backgroundColor: isPlanning ? '#333' : '#e8ff00',
-              border: 'none',
+          {isLoading && (
+            <div style={{
+              marginBottom: '12px',
+              padding: '10px 12px',
               borderRadius: '8px',
-              color: isPlanning ? '#666' : '#000',
-              cursor: isPlanning || !chatInput.trim() ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-            }}
-          >
-            {isPlanning ? (
-              <>
-                <span className="animate-spin" style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid #666',
-                  borderTopColor: '#fff',
-                  borderRadius: '50%',
-                  display: 'inline-block',
-                }} />
-                Planning...
-              </>
-            ) : (
-              <>🎬 Generate Plan</>
-            )}
-          </button>
+              backgroundColor: '#333',
+              borderLeft: '3px solid #666',
+            }}>
+              <div style={{ fontSize: '10px', color: '#888', marginBottom: '4px' }}>AI DIRECTOR</div>
+              <div style={{ fontSize: '12px', color: '#888' }}>Thinking...</div>
+            </div>
+          )}
         </div>
 
-        {/* Or Import */}
-        <div style={{
-          padding: '16px',
-          borderTop: '1px solid #333',
-          textAlign: 'center',
-        }}>
-          <div style={{ fontSize: '11px', color: '#666', marginBottom: '12px' }}>
-            Or import an existing plan
+        {/* Error */}
+        {error && (
+          <div style={{
+            margin: '0 12px 12px',
+            padding: '10px',
+            fontSize: '11px',
+            backgroundColor: '#ef444433',
+            border: '1px solid #ef4444',
+            borderRadius: '6px',
+            color: '#ef4444',
+          }}>
+            {error}
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleImport}
-            style={{ display: 'none' }}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              padding: '10px 20px',
-              fontSize: '12px',
-              backgroundColor: '#333',
-              border: '1px solid #444',
-              borderRadius: '6px',
-              color: '#888',
-              cursor: 'pointer',
-            }}
-          >
-            Import JSON
-          </button>
+        )}
+
+        {/* Input */}
+        <div style={{
+          padding: '12px',
+          borderTop: '1px solid #333',
+        }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <textarea
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Describe your video..."
+              disabled={isLoading}
+              style={{
+                flex: 1,
+                minHeight: '60px',
+                maxHeight: '120px',
+                padding: '10px',
+                fontSize: '13px',
+                backgroundColor: '#222',
+                border: '1px solid #333',
+                borderRadius: '6px',
+                color: '#fff',
+                resize: 'none',
+                fontFamily: 'inherit',
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                padding: '10px 16px',
+                fontSize: '12px',
+                backgroundColor: '#333',
+                border: '1px solid #444',
+                borderRadius: '6px',
+                color: '#888',
+                cursor: 'pointer',
+              }}
+            >
+              Import
+            </button>
+            <button
+              onClick={handleSendMessage}
+              disabled={isLoading || !chatInput.trim()}
+              style={{
+                flex: 1,
+                padding: '10px',
+                fontSize: '13px',
+                fontWeight: 600,
+                backgroundColor: isLoading || !chatInput.trim() ? '#333' : '#e8ff00',
+                border: 'none',
+                borderRadius: '6px',
+                color: isLoading || !chatInput.trim() ? '#666' : '#000',
+                cursor: isLoading || !chatInput.trim() ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {isLoading ? 'Thinking...' : 'Send'}
+            </button>
+          </div>
         </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleImport}
+          style={{ display: 'none' }}
+        />
       </div>
     );
   }
@@ -484,8 +593,7 @@ Example:
             alignItems: 'center',
             gap: '8px',
           }}>
-            <span>🎬</span>
-            <span style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {currentScene.name}
             </span>
           </h3>
@@ -563,7 +671,7 @@ Example:
               gap: '8px',
             }}
           >
-            ⚡ Generate All ({stats.pending} pending)
+            Generate All ({stats.pending} pending)
           </button>
         </div>
       )}
@@ -635,7 +743,7 @@ Example:
           SHOTS ({stats.done}/{stats.total} done)
         </div>
 
-        {currentScene.shots.map((shot, index) => (
+        {currentScene.shots.map((shot) => (
           <div
             key={shot.shot_id}
             onClick={() => handleShotClick(shot)}
