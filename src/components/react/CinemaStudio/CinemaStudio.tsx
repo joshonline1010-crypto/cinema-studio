@@ -315,6 +315,8 @@ export default function CinemaStudio() {
     currentScene,
     selectedShotId,
     loadScene,
+    clearScene,
+    exportSceneJSON,
     selectShot: selectSceneShot,
     updateShot: updateSceneShot,
     markShotGenerating,
@@ -372,8 +374,7 @@ export default function CinemaStudio() {
   const [aiChatHistory, setAiChatHistory] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
   const [aiSessionId] = useState(() => `cinema-${Date.now()}`); // Unique session ID
   const aiChatRef = useRef<HTMLDivElement>(null); // For auto-scroll
-  const [aiMode, setAiMode] = useState<'quick' | 'chat'>('quick'); // Toggle between quick prompt and chat mode
-  const [chatView, setChatView] = useState<'messages' | 'plan'>('messages'); // Chat sub-view
+  const [aiMode, setAiMode] = useState<'quick' | 'chat' | 'settings'>('chat'); // Toggle between quick prompt, chat, and settings
   const [aiCopiedIndex, setAiCopiedIndex] = useState<number | null>(null); // Track which message was copied
   const [aiRefImages, setAiRefImages] = useState<Array<{ url: string; description: string | null }>>([]);  // Up to 7 ref images
   const [aiRefLoading, setAiRefLoading] = useState<number | null>(null); // Which image is being analyzed
@@ -387,6 +388,7 @@ export default function CinemaStudio() {
 
   // Plan Execution State
   const [executingPlan, setExecutingPlan] = useState(false);
+  const [planCollapsed, setPlanCollapsed] = useState(false);
   const [planProgress, setPlanProgress] = useState(0);
 
   // Video Prompt Builder State
@@ -688,9 +690,97 @@ export default function CinemaStudio() {
 
     // Mark as generating
     markShotGenerating(shot.shot_id);
+    setStatusMessage(`Generating: ${shot.shot_id}...`);
 
-    // Trigger generation (the existing handleGenerate will be called)
-    // The result will be captured and saved back via markShotComplete
+    try {
+      const prompt = shot.photo_prompt || `${shot.subject}, ${shot.shot_type} shot, ${shot.location || ''}, cinematic, 8K`;
+
+      // Get reference from start_frame or current startFrame
+      const refImage = shot.start_frame || currentShot.startFrame;
+
+      const response = await fetch('/api/cinema/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: refImage ? 'edit' : 'image',
+          prompt: prompt,
+          aspect_ratio: currentScene?.aspect_ratio || '16:9',
+          resolution: '4K',
+          reference_image: refImage || undefined,
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const imageUrl = data.image_url || data.images?.[0]?.url;
+        if (imageUrl) {
+          markShotComplete(shot.shot_id, imageUrl);
+          setStartFrame(imageUrl); // Update for chaining
+          setStatusMessage(`Generated: ${shot.shot_id}`);
+        } else {
+          console.error(`No image URL for ${shot.shot_id}:`, data);
+          setStatusMessage(`No image URL returned for ${shot.shot_id}`);
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`Failed ${shot.shot_id}:`, errorData);
+        setStatusMessage(`Failed: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error(`Error generating ${shot.shot_id}:`, err);
+      setStatusMessage(`Error: ${err instanceof Error ? err.message : 'Unknown'}`);
+    }
+  };
+
+  // Handler for generating video from scene shot
+  const handleGenerateSceneVideo = async (shot: SceneShot) => {
+    if (!shot.image_url) {
+      setStatusMessage('Generate image first!');
+      return;
+    }
+
+    setStatusMessage(`Generating video for ${shot.shot_id}...`);
+
+    try {
+      // Determine video type based on shot model
+      let videoType = 'video-kling';
+      if (shot.model === 'seedance-1.5') {
+        videoType = 'video-seedance';
+      } else if (shot.model === 'kling-o1' || shot.end_frame) {
+        videoType = 'video-kling-o1';
+      }
+
+      const response = await fetch('/api/cinema/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: videoType,
+          prompt: shot.motion_prompt || 'subtle motion, cinematic',
+          start_image_url: shot.image_url,
+          end_image_url: shot.end_frame || undefined,
+          duration: String(shot.duration || 5),
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const videoUrl = data.video_url;
+        if (videoUrl) {
+          markShotComplete(shot.shot_id, shot.image_url, videoUrl);
+          setStatusMessage(`Video ready: ${shot.shot_id}`);
+        } else {
+          console.error(`No video URL for ${shot.shot_id}:`, data);
+          setStatusMessage(`No video URL returned`);
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`Video failed ${shot.shot_id}:`, errorData);
+        setStatusMessage(`Video failed: ${errorData.error || 'Unknown'}`);
+      }
+    } catch (err) {
+      console.error(`Video error ${shot.shot_id}:`, err);
+      setStatusMessage(`Video error: ${err instanceof Error ? err.message : 'Unknown'}`);
+    }
   };
 
   // Execute entire plan - generate all pending shots
@@ -717,36 +807,46 @@ export default function CinemaStudio() {
       handleSceneShotSelect(shot);
       markShotGenerating(shot.shot_id);
 
-      // Generate the image
+      // Generate the image using /api/cinema/generate
       try {
         const prompt = shot.photo_prompt || `${shot.subject}, ${shot.shot_type} shot, ${shot.location || ''}, cinematic, 8K`;
 
-        const response = await fetch('/api/fal/generate', {
+        // Get reference image from previous shot if chained
+        const prevShot = i > 0 ? pendingShots[i - 1] : null;
+        const chainedRef = prevShot?.image_url || currentShot.startFrame;
+
+        const response = await fetch('/api/cinema/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            type: chainedRef ? 'edit' : 'image',  // Use edit if we have a reference
             prompt: prompt,
-            model: 'fal-ai/flux-pro/v1.1',
-            aspectRatio: currentScene.aspect_ratio || '16:9',
-            resolution: '2K',
-            referenceImage: referenceImage,
+            aspect_ratio: currentScene.aspect_ratio || '16:9',
+            resolution: '4K',
+            reference_image: chainedRef || undefined,
           })
         });
 
         if (response.ok) {
           const data = await response.json();
-          const imageUrl = data.imageUrl || data.images?.[0]?.url;
+          const imageUrl = data.image_url || data.images?.[0]?.url;
           if (imageUrl) {
             markShotComplete(shot.shot_id, imageUrl);
             setStatusMessage(`Shot ${i + 1}/${pendingShots.length} complete!`);
+            // Update reference for next shot
+            setStartFrame(imageUrl);
+          } else {
+            console.error(`No image URL in response for ${shot.shot_id}:`, data);
+            setStatusMessage(`No image URL: ${shot.shot_id} - continuing...`);
           }
         } else {
-          console.error(`Failed to generate shot ${shot.shot_id}`);
-          setStatusMessage(`Failed: ${shot.shot_id} - continuing...`);
+          const errorData = await response.json().catch(() => ({}));
+          console.error(`Failed to generate shot ${shot.shot_id}:`, errorData);
+          setStatusMessage(`Failed: ${shot.shot_id} - ${errorData.error || 'Unknown error'}`);
         }
       } catch (err) {
         console.error(`Error generating shot ${shot.shot_id}:`, err);
-        setStatusMessage(`Error: ${shot.shot_id} - continuing...`);
+        setStatusMessage(`Error: ${shot.shot_id} - ${err instanceof Error ? err.message : 'Unknown'}`);
       }
 
       // Small delay between shots
@@ -1258,7 +1358,7 @@ export default function CinemaStudio() {
     const jsonPlan = extractScenePlan(content);
     if (jsonPlan) {
       loadScene(jsonPlan);
-      setChatView('plan'); // Switch to plan view inside chat
+      setPlanCollapsed(false); // Expand the plan card to show loaded plan
       return;
     }
 
@@ -3546,16 +3646,6 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                 {/* Mode Toggle */}
                 <div className="flex bg-[#2a2a2a] rounded-lg p-0.5">
                   <button
-                    onClick={() => setAiMode('quick')}
-                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                      aiMode === 'quick'
-                        ? 'bg-yellow-500 text-black'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    Quick (Mistral)
-                  </button>
-                  <button
                     onClick={() => setAiMode('chat')}
                     className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                       aiMode === 'chat'
@@ -3563,7 +3653,27 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                         : 'text-gray-400 hover:text-white'
                     }`}
                   >
-                    Chat (Qwen3)
+                    Chat
+                  </button>
+                  <button
+                    onClick={() => setAiMode('quick')}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                      aiMode === 'quick'
+                        ? 'bg-yellow-500 text-black'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Prompt
+                  </button>
+                  <button
+                    onClick={() => setAiMode('settings')}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                      aiMode === 'settings'
+                        ? 'bg-gray-600 text-white'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Settings
                   </button>
                 </div>
               </div>
@@ -3683,80 +3793,58 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
             {/* CHAT MODE */}
             {aiMode === 'chat' && (
               <>
-                {/* Chat Sub-View Tabs (Messages / Plan) */}
+                {/* Plan Card - Collapsible at top of chat */}
                 {currentScene && (
-                  <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-800">
-                    <button
-                      onClick={() => setChatView('messages')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                        chatView === 'messages'
-                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                          : 'text-gray-400 hover:text-white hover:bg-[#2a2a2a]'
-                      }`}
-                    >
-                      Messages
-                    </button>
-                    <button
-                      onClick={() => setChatView('plan')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                        chatView === 'plan'
-                          ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                          : 'text-gray-400 hover:text-white hover:bg-[#2a2a2a]'
-                      }`}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
-                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                      Plan ({currentScene.shots.length} shots)
-                    </button>
-                    <button
-                      onClick={() => {
-                        useSceneStore.getState().clearScene();
-                        setChatView('messages');
-                      }}
-                      className="ml-auto px-2 py-1 rounded text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      title="Clear plan"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                )}
-
-                {/* PLAN VIEW */}
-                {chatView === 'plan' && currentScene ? (
-                  <div className="flex-1 overflow-y-auto min-h-0">
-                    {/* Plan Header */}
-                    <div className="mb-4 p-3 bg-[#1f1f1f] rounded-xl border border-green-500/20">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-medium text-white">{currentScene.name}</h3>
-                        <span className="text-xs text-gray-400">~{currentScene.duration_estimate}s</span>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {currentScene.mood && <span className="mr-3">Mood: {currentScene.mood}</span>}
-                        {currentScene.director && <span>Director: {currentScene.director}</span>}
-                      </div>
-                      {/* Progress */}
-                      <div className="mt-3">
-                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                          <span>Progress</span>
-                          <span>{currentScene.shots.filter(s => s.status === 'done').length}/{currentScene.shots.length}</span>
+                  <div className="mb-4 rounded-xl border border-green-500/30 overflow-hidden">
+                    {/* Plan Header - Clickable to collapse */}
+                    <div
+                      onClick={() => setPlanCollapsed(!planCollapsed)}
+                      className="p-3 bg-[#1f1f1f] cursor-pointer hover:bg-[#252525] transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className={`w-4 h-4 text-gray-400 transition-transform ${planCollapsed ? '' : 'rotate-90'}`}
+                          >
+                            <path d="M9 18l6-6-6-6" />
+                          </svg>
+                          <h3 className="text-sm font-medium text-white">{currentScene.name}</h3>
+                          <span className="text-xs text-gray-500">{currentScene.shots.filter(s => s.status === 'done').length}/{currentScene.shots.length} shots</span>
                         </div>
-                        <div className="h-1.5 bg-[#2a2a2a] rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-green-500 transition-all"
-                            style={{ width: `${(currentScene.shots.filter(s => s.status === 'done').length / currentScene.shots.length) * 100}%` }}
-                          />
-                        </div>
+                        <span className="text-xs text-green-400">~{currentScene.duration_estimate}s</span>
                       </div>
+                    </div>
 
-                      {/* Generate All Button */}
-                      <div className="mt-4 flex items-center gap-2">
-                        {!executingPlan ? (
-                          <button
-                            onClick={executeEntirePlan}
-                            disabled={currentScene.shots.filter(s => s.status === 'pending').length === 0}
-                            className={`flex-1 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all ${
-                              currentScene.shots.filter(s => s.status === 'pending').length === 0
+                    {/* Collapsible Content */}
+                    {!planCollapsed && (
+                      <div className="p-3 bg-[#1a1a1a] border-t border-gray-800/50 max-h-[300px] overflow-y-auto">
+                        {/* Mood & Director */}
+                        <div className="text-xs text-gray-500 mb-3">
+                          {currentScene.mood && <span className="mr-3">Mood: {currentScene.mood}</span>}
+                          {currentScene.director && <span>Director: {currentScene.director}</span>}
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="mb-3">
+                          <div className="h-1.5 bg-[#2a2a2a] rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-green-500 transition-all"
+                              style={{ width: `${(currentScene.shots.filter(s => s.status === 'done').length / currentScene.shots.length) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Generate All Button */}
+                        <div className="mt-4 flex items-center gap-2">
+                          {!executingPlan ? (
+                            <button
+                              onClick={executeEntirePlan}
+                              disabled={currentScene.shots.filter(s => s.status === 'pending').length === 0}
+                              className={`flex-1 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all ${
+                                currentScene.shots.filter(s => s.status === 'pending').length === 0
                                 ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                                 : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-400 hover:to-emerald-500'
                             }`}
@@ -3765,47 +3853,46 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                               <path d="M8 5v14l11-7z" />
                             </svg>
                             Generate All ({currentScene.shots.filter(s => s.status === 'pending').length} pending)
-                          </button>
-                        ) : (
-                          <>
-                            <div className="flex-1 py-2.5 rounded-lg bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 text-sm font-medium flex items-center justify-center gap-2">
-                              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-                              </svg>
-                              Generating {planProgress}/{currentScene.shots.filter(s => s.status === 'pending').length + planProgress}...
-                            </div>
-                            <button
-                              onClick={stopPlanExecution}
-                              className="px-4 py-2.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-medium transition-colors"
-                            >
-                              Stop
                             </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                          ) : (
+                            <>
+                              <div className="flex-1 py-2.5 rounded-lg bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 text-sm font-medium flex items-center justify-center gap-2">
+                                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                </svg>
+                                Generating {planProgress}/{currentScene.shots.filter(s => s.status === 'pending').length + planProgress}...
+                              </div>
+                              <button
+                                onClick={stopPlanExecution}
+                                className="px-4 py-2.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-medium transition-colors"
+                              >
+                                Stop
+                              </button>
+                            </>
+                          )}
+                        </div>
 
-                    {/* Shot Cards - Detailed View */}
-                    <div className="space-y-3">
-                      {currentScene.shots.map((shot, idx) => {
-                        const prevShot = idx > 0 ? currentScene.shots[idx - 1] : null;
-                        const isChained = prevShot?.image_url || prevShot?.video_url;
-                        const hasEndFrame = shot.end_frame || shot.model === 'kling-o1';
-                        const hasDialog = !!shot.dialog;
+                        {/* Shot Cards - Detailed View */}
+                        <div className="space-y-3">
+                          {currentScene.shots.map((shot, idx) => {
+                            const prevShot = idx > 0 ? currentScene.shots[idx - 1] : null;
+                            const isChained = prevShot?.image_url || prevShot?.video_url;
+                            const hasEndFrame = shot.end_frame || shot.model === 'kling-o1';
+                            const hasDialog = !!shot.dialog;
 
-                        return (
-                          <div
-                            key={shot.shot_id}
-                            onClick={() => {
-                              selectSceneShot(shot.shot_id);
-                              handleSceneShotSelect(shot);
-                            }}
-                            className={`rounded-xl border cursor-pointer transition-all overflow-hidden ${
-                              selectedShotId === shot.shot_id
-                                ? 'bg-purple-500/10 border-purple-500/40'
-                                : 'bg-[#1f1f1f] border-gray-800 hover:border-gray-600'
-                            }`}
-                          >
+                            return (
+                              <div
+                                key={shot.shot_id}
+                                onClick={() => {
+                                  selectSceneShot(shot.shot_id);
+                                  handleSceneShotSelect(shot);
+                                }}
+                                className={`rounded-xl border cursor-pointer transition-all overflow-hidden ${
+                                  selectedShotId === shot.shot_id
+                                    ? 'bg-purple-500/10 border-purple-500/40'
+                                    : 'bg-[#1f1f1f] border-gray-800 hover:border-gray-600'
+                                }`}
+                              >
                             {/* Header Row */}
                             <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-800/50">
                               {/* Status indicator */}
@@ -3930,7 +4017,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      // TODO: Generate video from image
+                                      handleGenerateSceneVideo(shot);
                                     }}
                                     className="px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs font-medium transition-colors"
                                   >
@@ -3951,10 +4038,13 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                         );
                       })}
                     </div>
+                      </div>
+                    )}
                   </div>
-                ) : chatView === 'messages' || !currentScene ? (
-                  /* MESSAGES VIEW */
-                  <div ref={aiChatRef} className="flex-1 overflow-y-auto mb-4 space-y-3 min-h-0">
+                )}
+
+                {/* MESSAGES VIEW - Always shown */}
+                <div ref={aiChatRef} className="flex-1 overflow-y-auto mb-4 space-y-3 min-h-0">
                     {aiChatHistory.length === 0 ? (
                       <div className="text-center text-gray-500 py-8">
                         <div className="text-lg mb-2">Chat with Qwen3</div>
@@ -4032,7 +4122,6 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                     </div>
                   )}
                 </div>
-                ) : null}
 
                 {/* Sequence Planner Panel */}
                 {plannedSequence.length > 0 && (
@@ -4276,6 +4365,128 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                   </div>
                 </div>
               </>
+            )}
+
+            {/* SETTINGS MODE */}
+            {aiMode === 'settings' && (
+              <div className="flex-1 overflow-y-auto p-4">
+                <h3 className="text-sm font-medium text-white mb-4">AI Assistant Settings</h3>
+
+                {/* Character DNA */}
+                <div className="mb-4">
+                  <label className="text-xs text-gray-400 mb-2 block">Character DNA</label>
+                  <textarea
+                    value={characterDNA || ''}
+                    onChange={(e) => setCharacterDNA(e.target.value || null)}
+                    placeholder="Describe your consistent character (e.g., 'Asian man, 40s, tan flight suit, short black hair')"
+                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500/50 min-h-[80px] resize-none"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">Applied to all generated prompts for consistency</p>
+                </div>
+
+                {/* Current Scene Info */}
+                {currentScene && (
+                  <div className="mb-4 p-3 bg-[#1f1f1f] rounded-xl border border-gray-700">
+                    <div className="text-xs text-gray-400 mb-2">Loaded Scene</div>
+                    <div className="text-sm text-white font-medium">{currentScene.name}</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {currentScene.shots.length} shots • {currentScene.shots.filter(s => s.status === 'done').length} complete
+                    </div>
+                    <button
+                      onClick={() => {
+                        clearScene();
+                        setPlanCollapsed(false);
+                      }}
+                      className="mt-2 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs transition-colors"
+                    >
+                      Clear Scene
+                    </button>
+                  </div>
+                )}
+
+                {/* Import Scene */}
+                <div className="mb-4">
+                  <label className="text-xs text-gray-400 mb-2 block">Import Scene Plan</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            try {
+                              const json = event.target?.result as string;
+                              loadScene(json);
+                              setAiMode('chat');
+                            } catch (err) {
+                              console.error('Failed to parse scene JSON:', err);
+                            }
+                          };
+                          reader.readAsText(file);
+                        }
+                      }}
+                      className="hidden"
+                      id="scene-file-input"
+                    />
+                    <label
+                      htmlFor="scene-file-input"
+                      className="flex-1 py-2 px-4 rounded-lg bg-[#2a2a2a] hover:bg-gray-700 text-gray-300 text-sm text-center cursor-pointer transition-colors border border-gray-700 border-dashed"
+                    >
+                      Choose JSON file...
+                    </label>
+                  </div>
+                </div>
+
+                {/* Export Scene */}
+                {currentScene && (
+                  <div className="mb-4">
+                    <label className="text-xs text-gray-400 mb-2 block">Export Scene</label>
+                    <button
+                      onClick={() => {
+                        const json = exportSceneJSON();
+                        const blob = new Blob([json], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${currentScene.name.replace(/\s+/g, '_')}_export.json`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="w-full py-2 px-4 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-400 text-sm transition-colors"
+                    >
+                      Download Scene JSON
+                    </button>
+                  </div>
+                )}
+
+                {/* Ollama Status */}
+                <div className="mb-4 p-3 bg-[#1f1f1f] rounded-xl border border-gray-700">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-400">Ollama Status</span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      ollamaStatus === 'ok' ? 'bg-green-500/20 text-green-400' :
+                      ollamaStatus === 'unknown' ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-red-500/20 text-red-400'
+                    }`}>
+                      {ollamaStatus === 'ok' ? 'Connected' :
+                       ollamaStatus === 'unknown' ? 'Checking...' :
+                       'Offline'}
+                    </span>
+                  </div>
+                  {ollamaStatus === 'error' && (
+                    <p className="text-[10px] text-gray-500">
+                      Make sure Ollama is running with Qwen3:4B model
+                    </p>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="text-[10px] text-gray-500 text-center mt-4">
+                  Cinema Studio v2.0 • AI Assistant powered by Qwen3
+                </div>
+              </div>
             )}
           </div>
         </div>
