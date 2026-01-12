@@ -385,6 +385,10 @@ export default function CinemaStudio() {
   const [sequenceProgress, setSequenceProgress] = useState(0); // Which shot is being processed
   const [sequenceNeedsRef, setSequenceNeedsRef] = useState(false); // Pause if ref needed
 
+  // Plan Execution State
+  const [executingPlan, setExecutingPlan] = useState(false);
+  const [planProgress, setPlanProgress] = useState(0);
+
   // Video Prompt Builder State
   const [videoCameraMovement, setVideoCameraMovement] = useState<string | null>(null);
   const [videoSubjectMotion, setVideoSubjectMotion] = useState<string | null>(null);
@@ -687,6 +691,78 @@ export default function CinemaStudio() {
 
     // Trigger generation (the existing handleGenerate will be called)
     // The result will be captured and saved back via markShotComplete
+  };
+
+  // Execute entire plan - generate all pending shots
+  const executeEntirePlan = async () => {
+    if (!currentScene || executingPlan) return;
+
+    const pendingShots = currentScene.shots.filter(s => s.status === 'pending');
+    if (pendingShots.length === 0) {
+      setStatusMessage('All shots already generated!');
+      return;
+    }
+
+    setExecutingPlan(true);
+    setPlanProgress(0);
+    setStatusMessage(`Starting plan execution: ${pendingShots.length} shots to generate...`);
+
+    for (let i = 0; i < pendingShots.length; i++) {
+      const shot = pendingShots[i];
+      setPlanProgress(i + 1);
+      setStatusMessage(`Generating shot ${i + 1}/${pendingShots.length}: ${shot.shot_id}`);
+
+      // Select and load the shot
+      selectSceneShot(shot.shot_id);
+      handleSceneShotSelect(shot);
+      markShotGenerating(shot.shot_id);
+
+      // Generate the image
+      try {
+        const prompt = shot.photo_prompt || `${shot.subject}, ${shot.shot_type} shot, ${shot.location || ''}, cinematic, 8K`;
+
+        const response = await fetch('/api/fal/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: prompt,
+            model: 'fal-ai/flux-pro/v1.1',
+            aspectRatio: currentScene.aspect_ratio || '16:9',
+            resolution: '2K',
+            referenceImage: referenceImage,
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const imageUrl = data.imageUrl || data.images?.[0]?.url;
+          if (imageUrl) {
+            markShotComplete(shot.shot_id, imageUrl);
+            setStatusMessage(`Shot ${i + 1}/${pendingShots.length} complete!`);
+          }
+        } else {
+          console.error(`Failed to generate shot ${shot.shot_id}`);
+          setStatusMessage(`Failed: ${shot.shot_id} - continuing...`);
+        }
+      } catch (err) {
+        console.error(`Error generating shot ${shot.shot_id}:`, err);
+        setStatusMessage(`Error: ${shot.shot_id} - continuing...`);
+      }
+
+      // Small delay between shots
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    setExecutingPlan(false);
+    setPlanProgress(0);
+    setStatusMessage(`Plan complete! ${pendingShots.length} shots generated.`);
+  };
+
+  // Stop plan execution
+  const stopPlanExecution = () => {
+    setExecutingPlan(false);
+    setPlanProgress(0);
+    setStatusMessage('Plan execution stopped.');
   };
 
   // Handler for character click - loads into character DNA
@@ -3671,6 +3747,41 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                             style={{ width: `${(currentScene.shots.filter(s => s.status === 'done').length / currentScene.shots.length) * 100}%` }}
                           />
                         </div>
+                      </div>
+
+                      {/* Generate All Button */}
+                      <div className="mt-4 flex items-center gap-2">
+                        {!executingPlan ? (
+                          <button
+                            onClick={executeEntirePlan}
+                            disabled={currentScene.shots.filter(s => s.status === 'pending').length === 0}
+                            className={`flex-1 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all ${
+                              currentScene.shots.filter(s => s.status === 'pending').length === 0
+                                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-400 hover:to-emerald-500'
+                            }`}
+                          >
+                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                            Generate All ({currentScene.shots.filter(s => s.status === 'pending').length} pending)
+                          </button>
+                        ) : (
+                          <>
+                            <div className="flex-1 py-2.5 rounded-lg bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 text-sm font-medium flex items-center justify-center gap-2">
+                              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                              </svg>
+                              Generating {planProgress}/{currentScene.shots.filter(s => s.status === 'pending').length + planProgress}...
+                            </div>
+                            <button
+                              onClick={stopPlanExecution}
+                              className="px-4 py-2.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-medium transition-colors"
+                            >
+                              Stop
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
 
