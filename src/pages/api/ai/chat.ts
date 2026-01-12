@@ -8,6 +8,9 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const OLLAMA_CHAT_URL = 'http://localhost:11434/api/chat';
 
+// Check if Claude API is available
+const CLAUDE_AVAILABLE = ANTHROPIC_API_KEY.length > 10;
+
 // Model options
 type ModelOption = 'claude-sonnet' | 'claude-opus' | 'qwen' | 'mistral';
 
@@ -17,6 +20,9 @@ const MODEL_MAP: Record<ModelOption, { provider: 'anthropic' | 'ollama'; model: 
   'qwen': { provider: 'ollama', model: 'qwen3:8b' },
   'mistral': { provider: 'ollama', model: 'mistral' }
 };
+
+// Log API availability at startup
+console.log(`[AI Chat] Claude API key: ${CLAUDE_AVAILABLE ? 'CONFIGURED' : 'MISSING - will use Ollama fallback'}`);
 
 // Memory storage directory
 const MEMORY_DIR = path.join(process.cwd(), 'ai-memory');
@@ -256,25 +262,52 @@ export const POST: APIRoute = async ({ request }) => {
     console.log(`========================================\n`);
 
     let assistantMessage = '';
+    let actualModel = model;
+    let actualProvider = '';
 
-    // Determine provider and model
-    const modelConfig = MODEL_MAP[model as ModelOption] || MODEL_MAP['claude-sonnet'];
+    // Determine provider and model - AUTO FALLBACK to Ollama if Claude unavailable
+    let modelConfig = MODEL_MAP[model as ModelOption] || MODEL_MAP['qwen'];
+
+    // If Claude requested but API key missing, fallback to Ollama
+    if (modelConfig.provider === 'anthropic' && !CLAUDE_AVAILABLE) {
+      console.log(`[AI Chat] Claude requested but API key missing - falling back to Ollama qwen3:8b`);
+      modelConfig = MODEL_MAP['qwen'];
+      actualModel = 'qwen';
+    }
 
     if (modelConfig.provider === 'anthropic') {
       // Use Claude
-      assistantMessage = await callClaude(
-        AI_SYSTEM_PROMPT,
-        messages,
-        modelConfig.model,
-        extendedThinking
-      );
+      try {
+        assistantMessage = await callClaude(
+          AI_SYSTEM_PROMPT,
+          messages,
+          modelConfig.model,
+          extendedThinking
+        );
+        actualProvider = 'anthropic';
+      } catch (claudeError) {
+        // Claude failed - try Ollama as fallback
+        console.log(`[AI Chat] Claude failed, falling back to Ollama:`, claudeError);
+        try {
+          assistantMessage = await callOllama(
+            AI_SYSTEM_PROMPT,
+            messages,
+            'qwen3:8b'
+          );
+          actualProvider = 'ollama (fallback)';
+          actualModel = 'qwen';
+        } catch (ollamaError) {
+          throw new Error(`Both Claude and Ollama failed. Claude: ${claudeError}. Ollama: ${ollamaError}`);
+        }
+      }
     } else {
-      // Fallback to Ollama
+      // Use Ollama
       assistantMessage = await callOllama(
         AI_SYSTEM_PROMPT,
         messages,
         modelConfig.model
       );
+      actualProvider = 'ollama';
     }
 
     // Save to chat history
@@ -284,11 +317,12 @@ export const POST: APIRoute = async ({ request }) => {
 
     return new Response(JSON.stringify({
       response: assistantMessage,
-      model: modelConfig.model,
-      provider: modelConfig.provider,
+      model: actualModel,
+      provider: actualProvider || modelConfig.provider,
       sessionId: sessionId,
       historyLength: history.length + 1,
-      extendedThinking: extendedThinking
+      extendedThinking: extendedThinking,
+      note: actualProvider === 'ollama (fallback)' ? 'Claude unavailable, using Ollama' : undefined
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

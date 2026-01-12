@@ -6,6 +6,9 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const OLLAMA_URL = 'http://localhost:11434/api/generate';
 
+// Check if Claude API is available
+const CLAUDE_AVAILABLE = ANTHROPIC_API_KEY.length > 10;
+
 // Model options
 type ModelOption = 'claude-sonnet' | 'claude-opus' | 'mistral' | 'qwen';
 
@@ -15,6 +18,9 @@ const MODEL_CONFIG: Record<ModelOption, { provider: 'anthropic' | 'ollama'; mode
   'mistral': { provider: 'ollama', model: 'mistral' },
   'qwen': { provider: 'ollama', model: 'qwen3:8b' }
 };
+
+// Log API availability at startup
+console.log(`[AI Prompt] Claude API key: ${CLAUDE_AVAILABLE ? 'CONFIGURED' : 'MISSING - will use Ollama fallback'}`);
 
 // Call Claude API
 async function callClaude(systemPrompt: string, userPrompt: string, model: string): Promise<string> {
@@ -101,23 +107,47 @@ Output ONLY the ${context?.mode || 'image'} prompt, nothing else:`;
 
     console.log('AI Prompt Request:', { userInput, model, mode: context?.mode });
 
-    // Determine provider
-    const config = MODEL_CONFIG[model as ModelOption] || MODEL_CONFIG['claude-sonnet'];
+    // Determine provider - AUTO FALLBACK to Ollama if Claude unavailable
+    let config = MODEL_CONFIG[model as ModelOption] || MODEL_CONFIG['mistral'];
     let generatedPrompt = '';
+    let actualModel = model;
+    let actualProvider = '';
+
+    // If Claude requested but API key missing, fallback to Ollama
+    if (config.provider === 'anthropic' && !CLAUDE_AVAILABLE) {
+      console.log(`[AI Prompt] Claude requested but API key missing - falling back to Ollama mistral`);
+      config = MODEL_CONFIG['mistral'];
+      actualModel = 'mistral';
+    }
 
     if (config.provider === 'anthropic') {
-      generatedPrompt = await callClaude(AI_SYSTEM_PROMPT, fullPrompt, config.model);
+      try {
+        generatedPrompt = await callClaude(AI_SYSTEM_PROMPT, fullPrompt, config.model);
+        actualProvider = 'anthropic';
+      } catch (claudeError) {
+        // Claude failed - try Ollama as fallback
+        console.log(`[AI Prompt] Claude failed, falling back to Ollama:`, claudeError);
+        try {
+          generatedPrompt = await callOllama(AI_SYSTEM_PROMPT, fullPrompt, 'mistral');
+          actualProvider = 'ollama (fallback)';
+          actualModel = 'mistral';
+        } catch (ollamaError) {
+          throw new Error(`Both Claude and Ollama failed. Start Ollama with: ollama serve`);
+        }
+      }
     } else {
       generatedPrompt = await callOllama(AI_SYSTEM_PROMPT, fullPrompt, config.model);
+      actualProvider = 'ollama';
     }
 
     console.log('AI Generated Prompt:', generatedPrompt.substring(0, 150) + '...');
 
     return new Response(JSON.stringify({
       prompt: generatedPrompt.trim(),
-      model: config.model,
-      provider: config.provider,
-      mode: context?.mode || 'image'
+      model: actualModel,
+      provider: actualProvider || config.provider,
+      mode: context?.mode || 'image',
+      note: actualProvider === 'ollama (fallback)' ? 'Claude unavailable, using Ollama' : undefined
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
