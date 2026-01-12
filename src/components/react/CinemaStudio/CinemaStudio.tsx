@@ -794,23 +794,48 @@ export default function CinemaStudio() {
     setPlanProgress(0);
 
     // STEP 1: Generate all refs FIRST (in parallel)
-    const charRefs = Object.values(currentScene.character_references || {}).filter(c => !c.ref_url && c.generate_prompt);
-    const sceneRefs = Object.values(currentScene.scene_references || {}).filter(r => !r.ref_url && r.generate_prompt);
+    // Helper: Build proper 3x3 character sheet prompt
+    const buildCharacterSheetPrompt = (char: CharacterRef): string => {
+      if (char.generate_prompt && char.generate_prompt.includes('3x3')) {
+        return char.generate_prompt;  // AI provided good prompt
+      }
+      const desc = `${char.description || char.name}${char.costume ? `, wearing ${char.costume}` : ''}`;
+      return `Character reference sheet, 3x3 grid layout, ${desc}. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations showing happy and serious and surprised. Bottom row: full body standing pose, action pose, costume and prop details. White background, consistent soft studio lighting, character turnaround style, 4K high detail`;
+    };
+
+    // Helper: Build proper 3x3 location/object sheet prompt
+    const buildSceneRefSheetPrompt = (ref: SceneRef): string => {
+      if (ref.generate_prompt && ref.generate_prompt.includes('3x3')) {
+        return ref.generate_prompt;  // AI provided good prompt
+      }
+      const desc = ref.description || ref.name;
+      if (ref.type === 'location') {
+        return `Location reference sheet, 3x3 grid layout, ${desc}. Top row: wide establishing exterior shot, medium exterior angle, exterior architectural detail. Middle row: wide empty interior view, medium interior shot, interior props and details. Bottom row: dawn golden hour lighting, bright daylight, dusk blue hour atmosphere. Architectural visualization style, cinematic composition, no people, empty spaces, 4K`;
+      } else {
+        // object, vehicle, prop
+        return `Object reference sheet, 3x3 grid layout, ${desc}. Top row: front view, side profile view, rear view. Middle row: 3/4 angle hero shot, top-down view, detail closeup of key features. Bottom row: object in environment context (no people), empty interior view, wide shot showing scale. Product photography style, clean studio lighting, white background, no humans, 4K`;
+      }
+    };
+
+    const charRefs = Object.values(currentScene.character_references || {}).filter(c => !c.ref_url);
+    const sceneRefs = Object.values(currentScene.scene_references || {}).filter(r => !r.ref_url);
     const totalRefs = charRefs.length + sceneRefs.length;
 
     if (totalRefs > 0) {
-      setStatusMessage(`Step 1: Generating ${totalRefs} reference sheets in parallel...`);
+      setStatusMessage(`Step 1: Generating ${totalRefs} reference sheets (3x3 grids) in parallel...`);
 
       // Generate ALL refs in parallel
       const refPromises = [
         ...charRefs.map(async (char) => {
           try {
+            const prompt = buildCharacterSheetPrompt(char);
+            console.log(`Generating char ref: ${char.name}`, prompt);
             const response = await fetch('/api/cinema/generate', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 type: 'image',
-                prompt: char.generate_prompt,
+                prompt: prompt,
                 aspect_ratio: '1:1',  // Square for ref sheets
                 resolution: '4K'
               })
@@ -826,12 +851,14 @@ export default function CinemaStudio() {
         }),
         ...sceneRefs.map(async (ref) => {
           try {
+            const prompt = buildSceneRefSheetPrompt(ref);
+            console.log(`Generating scene ref: ${ref.name} (${ref.type})`, prompt);
             const response = await fetch('/api/cinema/generate', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 type: 'image',
-                prompt: ref.generate_prompt,
+                prompt: prompt,
                 aspect_ratio: '1:1',
                 resolution: '4K'
               })
