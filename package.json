@@ -17,6 +17,7 @@
     "@types/three": "^0.182.0",
     "astro": "^5.0.0",
     "bcryptjs": "^2.4.3",
+    "dotenv": "^17.2.3",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-markdown": "^10.1.0",
