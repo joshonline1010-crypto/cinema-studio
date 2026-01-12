@@ -4491,62 +4491,60 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                       />
                     </div>
 
-                    {/* Shot List */}
-                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {/* Shot Grid - Compact */}
+                    <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-1.5 max-h-40 overflow-y-auto p-1">
                       {plannedSequence.map((shot, idx) => (
                         <div
                           key={idx}
-                          className={`flex items-center gap-2 p-1.5 rounded text-xs ${
-                            shot.status === 'completed' ? 'bg-green-500/10 border border-green-500/30' :
-                            shot.status === 'generating-image' || shot.status === 'generating-video' ? 'bg-yellow-500/10 border border-yellow-500/30' :
-                            shot.status === 'error' ? 'bg-red-500/10 border border-red-500/30' :
-                            'bg-[#2a2a2a] border border-gray-700'
+                          className={`relative aspect-video rounded overflow-hidden cursor-pointer group ${
+                            shot.status === 'completed' ? 'ring-1 ring-green-500' :
+                            shot.status === 'generating-image' || shot.status === 'generating-video' ? 'ring-1 ring-yellow-500' :
+                            shot.status === 'error' ? 'ring-1 ring-red-500' :
+                            'ring-1 ring-gray-700'
                           }`}
+                          title={`${shot.shotType}: ${shot.prompt.substring(0, 60)}...`}
                         >
-                          {/* Status Icon */}
-                          <div className="w-4 h-4 flex items-center justify-center">
-                            {shot.status === 'completed' ? (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 text-green-400">
-                                <path d="M20 6L9 17l-5-5" />
+                          {/* Thumbnail or Placeholder */}
+                          {shot.imageUrl ? (
+                            <img src={shot.imageUrl} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-[#2a2a2a] flex items-center justify-center">
+                              <span className="text-[10px] text-gray-500">{shot.shotNumber}</span>
+                            </div>
+                          )}
+
+                          {/* Status Overlay */}
+                          <div className={`absolute inset-0 flex items-center justify-center ${
+                            shot.status === 'generating-image' || shot.status === 'generating-video' ? 'bg-black/50' : ''
+                          }`}>
+                            {(shot.status === 'generating-image' || shot.status === 'generating-video') && (
+                              <svg className="w-4 h-4 text-yellow-400 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                               </svg>
-                            ) : shot.status === 'generating-image' || shot.status === 'generating-video' ? (
-                              <svg className="w-3 h-3 text-yellow-400 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="32" />
-                              </svg>
-                            ) : shot.status === 'error' ? (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 text-red-400">
-                                <path d="M18 6L6 18M6 6l12 12" />
-                              </svg>
-                            ) : (
-                              <span className="text-gray-500">{shot.shotNumber}</span>
                             )}
                           </div>
 
-                          {/* Shot Info */}
-                          <div className="flex-1 truncate">
-                            <span className="text-cyan-300 font-medium">{shot.shotType}</span>
-                            <span className="text-gray-400 ml-1">- {shot.prompt.substring(0, 40)}...</span>
+                          {/* Bottom Info Bar */}
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[8px] text-cyan-300 font-medium truncate">{shot.shotType}</span>
+                              {shot.status === 'completed' && (
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-2.5 h-2.5 text-green-400">
+                                  <path d="M20 6L9 17l-5-5" />
+                                </svg>
+                              )}
+                              {shot.status === 'error' && (
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-2.5 h-2.5 text-red-400">
+                                  <path d="M18 6L6 18M6 6l12 12" />
+                                </svg>
+                              )}
+                            </div>
                           </div>
 
-                          {/* Status Text */}
-                          <span className={`text-[10px] ${
-                            shot.status === 'generating-image' ? 'text-yellow-400' :
-                            shot.status === 'generating-video' ? 'text-blue-400' :
-                            shot.status === 'completed' ? 'text-green-400' :
-                            shot.status === 'error' ? 'text-red-400' :
-                            'text-gray-500'
-                          }`}>
-                            {shot.status === 'generating-image' ? 'Image...' :
-                             shot.status === 'generating-video' ? 'Video...' :
-                             shot.status === 'completed' ? 'Done' :
-                             shot.status === 'error' ? 'Failed' :
-                             'Pending'}
-                          </span>
-
-                          {/* Thumbnails */}
-                          {shot.imageUrl && (
-                            <img src={shot.imageUrl} alt="" className="w-6 h-6 rounded object-cover" />
-                          )}
+                          {/* Hover Overlay */}
+                          <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-1">
+                            <span className="text-[8px] text-white text-center line-clamp-2">{shot.prompt.substring(0, 30)}...</span>
+                          </div>
                         </div>
                       ))}
                     </div>
