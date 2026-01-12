@@ -1,0 +1,171 @@
+# AI Chat Memory - Session: cinema-1768218238872
+# Created: 2026-01-12T11:45:23.593Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: make me a 20 secound ad for a LAMBO TRUCK AD using imax cameras make it look sexy
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "lambo_urus_ad",
+  "name": "Lamborghini Urus - Unleashed",
+  "description": "A sexy, cinematic 20-second commercial showcasing the Lamborghini Urus in dramatic desert twilight, emphasizing power, curves, and luxury",
+  "duration_estimate": 20,
+  "mood": "sexy, powerful, luxurious",
+  "aspect_ratio": "16:9",
+  "color_palette": "deep blacks, warm amber, chrome highlights",
+  "director": "Ridley Scott meets Michael Bay",
+  "character_references": {
+    "driver": {
+      "id": "driver",
+      "name": "The Driver",
+      "description": "Strikingly handsome man, early 30s, chiseled jawline with light stubble, intense dark brown eyes, slicked-back dark hair, olive Mediterranean skin, athletic build, confident commanding presence",
+      "costume": "Tailored black Tom Ford suit jacket over black silk t-shirt, no tie, silver Panerai watch, black leather driving gloves, designer sunglasses pushed up on head",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, Strikingly handsome man, early 30s, chiseled jawline with light stubble, intense dark brown eyes, slicked-back dark hair, olive Mediterranean skin, athletic build, wearing tailored black suit jacket over black silk t-shirt, silver watch, black leather driving gloves. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "desert_canyon": {
+      "id": "desert_canyon",
+      "name": "Desert Canyon Road",
+      "type": "location",
+      "description": "Winding asphalt road cutting through dramatic red rock canyon, towering sandstone formations, golden hour light casting long shadows, heat shimmer rising from pavement, dust particles floating in amber light, empty endless road stretching to horizon",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, Winding asphalt road through dramatic red rock canyon, towering sandstone formations, golden hour lighting. Top row: wide exterior road view, medium canyon walls, rock texture detail. Middle row: road perspective shot, curve in canyon, road surface detail. Bottom row: dawn lighting, golden hour, blue hour dusk. IMAX cinematic, no people, 4K"
+    },
+    "lamborghini_urus": {
+      "id": "lamborghini_urus",
+      "name": "Lamborghini Urus Performante",
+      "type": "vehicle",
+      "description": "2024 Lamborghini Urus Performante in Nero Noctis gloss black, 23-inch Taigete forged wheels in gloss black, carbon fiber front splitter and rear diffuser, yellow brake calipers, blacked-out badges, aggressive front fascia with Y-shaped LED headlights, muscular rear haunches, quad hexagonal exhaust tips, black Alcantara interior with yellow contrast stitching, carbon fiber steering wheel, 12.3-inch digital cockpit",
+      "generate_prompt": "Vehicle reference sheet, 3x3 grid layout, 2024 Lamborghini Urus Performante in Nero Noctis gloss black, 23-inch Taigete black wheels, carbon fiber accents, yellow brake calipers, aggressive Y-shaped LED headlights, quad exhaust. Top row: front 3/4 exterior, side profile exterior, rear 3/4 exterior. Middle row: front view, rear view, wheel and brake detail. Bottom row: interior dashboard wide, steering wheel detail, seat detail. Studio lighting, automotive photography, 8K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "extreme_wide",
+      "subject": "lamborghini_urus",
+      "location": "desert_canyon",
+      "duration": 4,
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme wide IMAX shot, Lamborghini Urus Performante in Nero Noctis black sitting on desert canyon road, towering red rock formations framing vehicle, golden hour sunlight streaming through canyon gap, long dramatic shadows, dust particles floating in amber light beams, vehicle small but commanding in vast landscape, shot on ARRI Alexa 65 IMAX, 24mm anamorphic, f/4, epic scale composition, THIS EXACT VEHICLE from reference, raytracing 8K high detail",
+      "motion_prompt": "Slow aerial drone push-in toward vehicle, dust particles drift through golden light beams, heat shimmer ripples off road, camera descends gradually, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "establishing"
+    },
+    {
+      "shot_id": "S01_B01_C02",
+      "order": 2,
+      "shot_type": "detail",
+      "subject": "lamborghini_urus",
+      "location": "desert_canyon",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme close-up detail shot, Lamborghini Urus Performante front quarter panel, sensual curve of muscular fender flowing into aggressive wheel arch, 23-inch gloss black Taigete wheel with yellow brake caliper visible, golden hour light caressing black paint creating amber highlights, shallow depth of field, macro automotive photography, IMAX 65mm, f/1.4, THIS EXACT VEHICLE from reference, raytracing 8K high detail",
+      "motion_prompt": "Slow sensual dolly along body curve, light plays across glossy black paint surface, reflections shift and dance, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "seduction"
+    },
+    {
+      "shot_id": "S01_B02_C01",
+      "order": 3,
+      "shot_type": "medium",
+      "subject": "driver",
+      "location": "lamborghini_urus",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Medium shot from passenger side, Driver settling into Lamborghini Urus black Alcantara interior, hands gripping carbon fiber steering wheel, golden hour light streaming through window illuminating his profile, digital cockpit glowing, confident smirk, shot on IMAX 65mm, 50mm lens, shallow depth of field, THIS EXACT CHARACTER from reference, THIS EXACT VEHICLE interior from reference, raytracing 8K high detail",
+      "motion_prompt": "Driver's hands slide onto steering wheel, fingers grip leather, he turns head slightly, eyes forward with determination, subtle confident smile forms, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "connection"
+    },
+    {
+      "shot_id": "S01_B02_C02",
+      "order": 4,
+      "shot_type": "tracking",
+      "subject": "lamborghini_urus",
+      "location": "desert_canyon",
+      "duration": 4,
+      "model": "kling-2.6",
+      "photo_prompt": "Dynamic tracking shot, Lamborghini Urus Performante speeding through desert canyon road, vehicle in sharp focus with motion-blurred red rock background, dust trail behind, golden hour rim lighting on black paint, aggressive stance visible, low camera angle emphasizing power, shot on IMAX 65mm from chase vehicle, 35mm anamorphic, 1/500 shutter, THIS EXACT VEHICLE from reference, raytracing 8K high detail",
+      "motion_prompt": "Camera tracks alongside speeding Urus, vehicle surges forward with power, dust kicks up from tires, light flares across windshield, canyon walls blur past, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "action"
+    },
+    {
+      "shot_id": "S01_B03_C01",
+      "order": 5,
+      "shot_type": "close-up",
+      "subject": "driver",
+      "location": "lamborghini_urus",
+      "duration": 2,
+      "model": "kling-2.6",
+      "photo_prompt": "Close-up on Driver's face, intense focused expression, eyes reflecting road ahead, golden light and shadow playing across chiseled features, stubble defined, slight smile of exhilaration, steering wheel blur in foreground, shot on IMAX 65mm, 85mm portrait lens, f/1.8, ultra shallow depth of field, THIS EXACT CHARACTER from reference, raytracing 8K high detail",
+      "motion_prompt": "Driver's eyes shift with confidence, subtle smile widens, light flickers across face from passing canyon walls, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "emotion"
+    },
+    {
+      "shot_id": "S01_B03_C02",
+      "order": 6,
+      "shot_type": "wide",
+      "subject": "lamborghini_urus",
+      "location": "desert_canyon",
+      "duration": 4,
+      "model": "kling-2.6",
+      "photo_prompt": "Hero wide shot, Lamborghini Urus Performante stopped on canyon overlook at blue hour dusk, vehicle in profile silhouette against deep orange and purple twilight sky, headlights glowing yellow, city lights twinkling in distant valley below, dramatic compositional framing, IMAX 65mm, 24mm anamorphic ultra-wide, f/8 deep focus, THIS EXACT VEHICLE from reference, raytracing 8K high detail",
+      "motion_prompt": "Slow push-in toward vehicle silhouette, sky colors shift deeper, headlights glow brighter, distant city lights twinkle, then settles on hero framing",
+      "transition_out": "fade",
+      "narrative_beat": "resolution"
+    }
+  ]
+}
+```
+---

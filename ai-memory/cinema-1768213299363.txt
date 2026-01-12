@@ -1,0 +1,120 @@
+# AI Chat Memory - Session: cinema-1768213299363
+# Created: 2026-01-12T10:22:35.000Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: plan epic 10 secound imax ad FOR A CAR AD THERE NEW LAMBO TRUCK SHOW HOW BIG AWESOME BAD ASS IT IS IN IMAX
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "lambo_truck_imax_ad",
+  "name": "Lambo Truck: Unleashed Power",
+  "description": "A dramatic desert landscape reveals a massive Lambo truck roaring into frame, showcasing its monstrous size and raw power. The truck's aggressive design and thunderous engine dominate the scene.",
+  "duration_estimate": 10,
+  "mood": "cinematic",
+  "aspect_ratio": "21:9",
+  "character_references": {
+    "driver_001": {
+      "id": "driver_001",
+      "name": "The Driver",
+      "description": "A rugged, athletic figure with a confident posture, muscles defined, and a determined expression",
+      "costume": "Black leather jacket, tactical gear, and tinted sunglasses",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "desert_mountain_001": {
+      "id": "desert_mountain_001",
+      "name": "Desert Majesty",
+      "type": "location",
+      "description": "A vast, sun-baked desert with jagged mountain ranges in the distance and a sky transitioning from orange to purple",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "desert_mountain_001",
+      "location": "desert_mountain_001",
+      "duration": 2,
+      "model": "kling-2.6",
+      "photo_prompt": "Aerial view of the desert landscape with the Lambo truck in the distance, massive tires buried in sand, sunset lighting, 8K",
+      "motion_prompt": "Drone zooms in slowly toward the truck, revealing its scale, then cuts to the driver's perspective",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S01_B01_C02",
+      "order": 2,
+      "shot_type": "close-up",
+      "subject": "driver_001",
+      "location": "desert_mountain_001",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Driver's face in extreme close-up, sweat glistening, intense gaze, sunglasses reflecting the truck's headlights, 8K",
+      "motion_prompt": "Camera tracks the driver's movement as they climb into the truck, slow-motion with dramatic lighting",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S01_B01_C03",
+      "order": 3,
+      "shot_type": "low-angle",
+      "subject": "driver_001",
+      "location": "desert_mountain_001",
+      "duration": 5,
+      "model": "kling-2.6",
+      "photo_prompt": "Low-angle shot of the Lambo truck with the driver in the driver's seat, massive wheels, and a shadow stretching across the desert, 8K",
+      "motion_prompt": "Camera slowly rises to reveal the full scale of the truck, with a final wide shot of the desert and truck, then cuts to black",
+      "transition_out": "fade"
+    }
+  ]
+}
+```
+---

@@ -1,0 +1,96 @@
+# AI Chat Memory - Session: cinema-1768221818949
+# Created: 2026-01-12T12:43:56.374Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: hi
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "intro_scene",
+  "name": "Scene Name",
+  "description": "A character walks through a city street at sunset.",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_001": {
+      "id": "char_001",
+      "name": "Main Protagonist",
+      "description": "A tall, athletic man in his late 20s",
+      "costume": "Streetwear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, A tall, athletic man in streetwear. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_001": {
+      "id": "location_001",
+      "name": "City Street",
+      "type": "location",
+      "description": "A busy urban street with tall buildings and pedestrians",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, A busy urban street with tall buildings and pedestrians. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "char_001",
+      "location": "location_001",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "A tall, athletic man in streetwear walking through a busy city street at sunset, 8K",
+      "motion_prompt": "Camera follows the character as he walks, then pans to show the street, then settles on a close-up of his face",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+---

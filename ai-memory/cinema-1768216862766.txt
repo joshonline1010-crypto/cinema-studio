@@ -1,0 +1,127 @@
+# AI Chat Memory - Session: cinema-1768216862766
+# Created: 2026-01-12T11:21:37.326Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: Plan a 10 second IMAX ad for a donut shop
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "donut_shop_ad",
+  "name": "Sweet Dreams Donut Shop",
+  "description": "A vibrant donut shop with fresh pastries, warm lighting, and happy customers.",
+  "duration_estimate": 10,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_001": {
+      "id": "char_001",
+      "name": "Milo",
+      "description": "Tall, lean, with a warm smile and flour-dusted hands",
+      "costume": "Chef's apron, rolled-up sleeves, faded jeans",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    },
+    "char_002": {
+      "id": "char_002",
+      "name": "Lila",
+      "description": "Curvy, energetic, with a playful grin",
+      "costume": "Pastel sweater, jeans, sneakers",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "loc_001": {
+      "id": "loc_001",
+      "name": "Donut Shop",
+      "type": "location",
+      "description": "Pastel-colored storefront with a glass counter, donut display, and warm golden lights",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "loc_001",
+      "location": "loc_001",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "IMAX wide shot of the donut shop's exterior with pastel colors, glowing sign, and a line of customers. 8K detail.",
+      "motion_prompt": "Drone zooms in from across the street, revealing the shop's vibrant facade.",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S01_B02_C01",
+      "order": 2,
+      "shot_type": "close",
+      "subject": "char_001",
+      "location": "loc_001",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Close-up of Milo glazing a donut with a golden drizzle, hands covered in powdered sugar. 8K detail.",
+      "motion_prompt": "Camera tracks Milo's hand as he drizzles the glaze, then pans to the donut.",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S01_B03_C02",
+      "order": 3,
+      "shot_type": "close",
+      "subject": "char_002",
+      "location": "loc_001",
+      "duration": 4,
+      "model": "kling-2.6",
+      "photo_prompt": "Lila bites into a jelly-filled donut, eyes closed, smiling, with crumbs on her chin. 8K detail.",
+      "motion_prompt": "Slow-motion bite, then quick cut to her satisfied expression.",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+---

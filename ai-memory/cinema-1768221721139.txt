@@ -1,0 +1,96 @@
+# AI Chat Memory - Session: cinema-1768221721139
+# Created: 2026-01-12T12:42:22.213Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: hi
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "forest_walk",
+  "name": "Forest Walk",
+  "description": "A character walks through a serene forest at dawn.",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_001": {
+      "id": "char_001",
+      "name": "Aria",
+      "description": "A tall, slender woman with a calm demeanor",
+      "costume": "a green hiking jacket and jeans",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, A tall, slender woman with a calm demeanor, green hiking jacket and jeans. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "loc_forest": {
+      "id": "loc_forest",
+      "name": "Misty Forest",
+      "type": "location",
+      "description": "A dense forest with misty mornings and tall trees",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, A dense forest with misty mornings and tall trees. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "char_001",
+      "location": "loc_forest",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "A serene forest path with mist, tall trees, and a woman walking. 8K",
+      "motion_prompt": "Camera slowly pans from the forest path to the woman walking, then settles on her face.",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+---

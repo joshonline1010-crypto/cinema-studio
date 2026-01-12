@@ -1,0 +1,148 @@
+# AI Chat Memory - Session: cinema-1768222602131
+# Created: 2026-01-12T12:57:49.029Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "FULL physical description - age, hair color/style, eye color, skin tone, body type, distinguishing features",
+      "costume": "FULL outfit - colors, materials, accessories, shoes"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "FULL description - terrain, vegetation, architecture, atmosphere, lighting mood, weather"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: make me 20 secound ad in IMAX for A MILTARY HELICOPTER
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "military_helicopter_imax_ad",
+  "name": "Military Helicopter IMAX Commercial",
+  "description": "Epic 20-second military helicopter advertisement showcasing raw power, precision, and dominance in dramatic IMAX cinematography",
+  "duration_estimate": 20,
+  "location": "Mountain terrain and dramatic skies",
+  "time_of_day": "golden_hour",
+  "mood": "epic, powerful, awe-inspiring",
+  "color_palette": "desaturated military tones, golden highlights, deep shadows",
+  "aspect_ratio": "16:9",
+  "director": "Christopher Nolan",
+  "character_references": {
+    "pilot": {
+      "id": "pilot",
+      "name": "Pilot",
+      "description": "Male military pilot, 35, strong jawline, steely blue eyes, tanned weathered skin, clean-shaven, focused intense expression, athletic build",
+      "costume": "Olive drab flight suit with unit patches, black tactical flight helmet with dark visor, oxygen mask hanging, black flight gloves, combat boots"
+    }
+  },
+  "scene_references": {
+    "attack_helicopter": {
+      "id": "attack_helicopter",
+      "name": "Military Attack Helicopter",
+      "type": "vehicle",
+      "description": "AH-64 Apache attack helicopter, matte olive drab military paint with black anti-glare panels, four-blade main rotor, tandem cockpit with armored glass canopy, stub wings with Hellfire missiles and rocket pods, 30mm chain gun under nose, tail rotor, US Army markings, weathered combat-worn finish with dust and minor battle damage"
+    },
+    "mountain_valley": {
+      "id": "mountain_valley",
+      "name": "Mountain Valley",
+      "type": "location",
+      "description": "Dramatic mountain valley with jagged snow-capped peaks, deep gorge with rushing river below, pine forests on slopes, low clouds weaving through peaks, golden hour sunlight breaking through clouds, dust and haze in the air, epic scale wilderness"
+    },
+    "dramatic_sky": {
+      "id": "dramatic_sky",
+      "name": "Dramatic Sky",
+      "type": "location",
+      "description": "Vast cloudscape at golden hour, towering cumulus clouds with golden edges, deep blue sky above, god rays piercing through cloud breaks, atmospheric haze, cinematic IMAX scale, heavenly dramatic lighting"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "extreme_wide",
+      "subject": "attack_helicopter",
+      "location": "dramatic_sky",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme wide IMAX shot, military Apache attack helicopter silhouetted against dramatic golden hour cloudscape, god rays piercing through towering cumulus clouds, helicopter small in vast epic sky, Christopher Nolan style, shot on IMAX 65mm, deep focus, practical lighting, desaturated military color grade, THIS EXACT VEHICLE from reference, awe-inspiring scale, raytracing 8K high detail",
+      "motion_prompt": "Helicopter flies from left toward center frame, rotors spinning rapidly creating visible rotor wash, clouds drift slowly, god rays shift subtly, camera static capturing epic scale, then helicopter banks slightly and settles into frame",
+      "transition_out": "cut",
+      "narrative_beat": "establishing"
+    },
+    {
+      "shot_id": "S01_B01_C02",
+      "order": 2,
+      "shot_type": "wide",
+      "subject": "attack_helicopter",
+      "location": "mountain_valley",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Wide IMAX tracking shot, Apache helicopter flying low through mountain valley, jagged snow-capped peaks in background, pine forests below, dust trail behind helicopter, golden hour side lighting, dramatic shadows on mountains, Christopher Nolan practical effects aesthetic, shot on IMAX 65mm, THIS EXACT VEHICLE from reference, epic landscape scale, raytracing 8K high detail",
+      "motion_prompt": "Helicopter banks hard right through valley, rotors tilt, dust kicks up from downwash, camera tracks alongside at matching speed, mountains parallax in background, trees rush past below, then helicopter levels out and settles",
+      "transition_out": "cut",
+      "narrative_beat": "action"
+    },
+    {
+      "shot_id": "S01_B02_C01",
+      "order": 3,
+      "shot_type": "close_up",
+      "subject": "pilot",
+      "location": "attack_helicopter",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Close-up IMAX shot, military pilot in Apache cockpit, helmet visor reflecting clouds and terrain, intense focused eyes visible, gloved hands on cyclic control, cockpit instruments glowing, golden light through canopy glass, shallow depth of field on eyes, Christopher Nolan style, THIS EXACT CHARACTER from reference, THIS EXACT VEHICLE interior, raytracing 8K high detail",
+      "motion_prompt": "Pilot's eyes scan horizon then lock forward with steely determination, subtle head movement, visor reflections shift showing passing terrain, cockpit vibrates slightly, hand adjusts grip on control, then expression hardens and settles",
+      "transition_out": "cut",
+      "narrative_beat": "connection"
+    },
+    {
+      "shot_id": "S01_B02_C02",
+      "order": 4,
+      "shot_type": "hero_wide",
+      "subject": "attack_helicopter",
+      "location": "dramatic_sky",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Hero IMAX beauty shot, Apache attack helicopter in dramatic three-quarter angle climbing into golden sky, sun behind creating powerful rim light and lens flare, rotors frozen in motion, missiles visible on stub wings, chain gun prominent, clouds below and around, Christopher Nolan epic scale, shot on IMAX 65mm, THIS EXACT VEHICLE from reference, military power and dominance, raytracing 8K high detail",
+      "motion_prompt": "Helicopter climbs powerfully toward camera, nose pitches up heroically, rotors spin creating heat distortion, sun flares intensify as angle changes, slow dramatic dolly out revealing full aircraft against epic cloudscape, then helicopter holds heroic pose and settles",
+      "transition_out": "fade",
+      "narrative_beat": "hero_climax"
+    }
+  ]
+}
+```
+---

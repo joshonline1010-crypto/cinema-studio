@@ -4167,7 +4167,7 @@ function CinemaStudio() {
   const [aiChatHistory, setAiChatHistory] = useState([]);
   const [aiSessionId] = useState(() => `cinema-${Date.now()}`);
   const aiChatRef = useRef(null);
-  const [aiMode, setAiMode] = useState("chat");
+  const [aiMode, setAiMode] = useState("plan");
   const [aiCopiedIndex, setAiCopiedIndex] = useState(null);
   const [aiRefImages, setAiRefImages] = useState([]);
   const [aiRefLoading, setAiRefLoading] = useState(null);
@@ -4858,8 +4858,57 @@ function CinemaStudio() {
     }, 100);
     try {
       const sessionContext = buildChatContext();
-      const messageWithContext = sessionContext ? `${userMessage}
-${sessionContext}` : userMessage;
+      const planModePrefix = aiMode === "plan" ? `YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in \`\`\`json code block):
+\`\`\`json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+\`\`\`
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: ` : "";
+      const messageWithContext = sessionContext ? `${planModePrefix}${userMessage}
+${sessionContext}` : `${planModePrefix}${userMessage}`;
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -4874,6 +4923,14 @@ ${sessionContext}` : userMessage;
         throw new Error(data.error || data.details || "Chat failed");
       }
       setAiChatHistory((prev) => [...prev, { role: "assistant", content: data.response }]);
+      if (aiMode === "plan") {
+        const jsonPlan = extractScenePlan(data.response);
+        if (jsonPlan) {
+          console.log("Plan mode: Auto-loading detected JSON plan with", jsonPlan.shots?.length, "shots");
+          loadScene(jsonPlan);
+          setPlanCollapsed(false);
+        }
+      }
       setTimeout(() => {
         if (aiChatRef.current) {
           aiChatRef.current.scrollTop = aiChatRef.current.scrollHeight;
@@ -6933,8 +6990,18 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
             /* @__PURE__ */ jsx(
               "button",
               {
+                onClick: () => setAiMode("plan"),
+                className: `px-3 py-1 rounded-md text-xs font-medium transition-all ${aiMode === "plan" ? "bg-green-500 text-white" : "text-gray-400 hover:text-white"}`,
+                title: "Plan Mode - AI outputs full plans with refs & shots",
+                children: "Plan"
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
                 onClick: () => setAiMode("chat"),
                 className: `px-3 py-1 rounded-md text-xs font-medium transition-all ${aiMode === "chat" ? "bg-purple-500 text-white" : "text-gray-400 hover:text-white"}`,
+                title: "Chat Mode - General conversation",
                 children: "Chat"
               }
             ),
@@ -6943,6 +7010,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
               {
                 onClick: () => setAiMode("quick"),
                 className: `px-3 py-1 rounded-md text-xs font-medium transition-all ${aiMode === "quick" ? "bg-yellow-500 text-black" : "text-gray-400 hover:text-white"}`,
+                title: "Prompt Mode - Quick single prompts",
                 children: "Prompt"
               }
             ),
@@ -6957,7 +7025,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
           ] })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-          aiMode === "chat" && aiChatHistory.length > 0 && /* @__PURE__ */ jsx(
+          (aiMode === "chat" || aiMode === "plan") && aiChatHistory.length > 0 && /* @__PURE__ */ jsx(
             "button",
             {
               onClick: clearAIChatHistory,
@@ -6970,7 +7038,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 px-6 py-2 bg-[#1a1a1a] border-b border-gray-800/30 flex-shrink-0", children: [
         /* @__PURE__ */ jsx("div", { className: `w-2 h-2 rounded-full ${ollamaStatus === "ok" ? "bg-green-500" : ollamaStatus === "error" ? "bg-red-500" : "bg-yellow-500"}` }),
-        /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-400", children: ollamaStatus === "ok" ? `Ollama connected (${aiMode === "chat" ? "Qwen3" : "Mistral"})` : ollamaStatus === "error" ? "Ollama not running - start with: ollama serve" : "Checking Ollama..." }),
+        /* @__PURE__ */ jsx("span", { className: "text-xs text-gray-400", children: ollamaStatus === "ok" ? `Ollama connected (${aiMode === "chat" || aiMode === "plan" ? "Qwen3" : "Mistral"})` : ollamaStatus === "error" ? "Ollama not running - start with: ollama serve" : "Checking Ollama..." }),
         /* @__PURE__ */ jsx("span", { className: `ml-auto px-2 py-0.5 rounded text-xs font-medium ${mode === "image" ? "bg-blue-500/20 text-blue-300" : "bg-green-500/20 text-green-300"}`, children: mode === "image" ? "Image" : "Video" })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "flex-1 overflow-hidden flex flex-col p-6", children: [
@@ -7019,7 +7087,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
           ),
           /* @__PURE__ */ jsx("div", { className: "mt-4 text-[10px] text-gray-500 text-center", children: "Quick mode: One-shot prompt generation with Mistral" })
         ] }),
-        aiMode === "chat" && /* @__PURE__ */ jsxs(Fragment, { children: [
+        (aiMode === "chat" || aiMode === "plan") && /* @__PURE__ */ jsxs(Fragment, { children: [
           currentScene && /* @__PURE__ */ jsxs("div", { className: "mb-4 rounded-xl border border-green-500/30 overflow-hidden", children: [
             /* @__PURE__ */ jsx(
               "div",
@@ -7290,9 +7358,10 @@ ${shot.shot_type} • ${shot.duration}s`,
           ] }),
           /* @__PURE__ */ jsxs("div", { ref: aiChatRef, className: "flex-1 overflow-y-auto mb-4 space-y-3 min-h-0", children: [
             aiChatHistory.length === 0 ? /* @__PURE__ */ jsxs("div", { className: "text-center text-gray-500 py-8", children: [
-              /* @__PURE__ */ jsx("div", { className: "text-lg mb-2", children: "Chat with Qwen3" }),
-              /* @__PURE__ */ jsx("div", { className: "text-xs", children: "Ask about cinematography, get prompts, plan videos..." }),
+              /* @__PURE__ */ jsx("div", { className: "text-lg mb-2", children: aiMode === "plan" ? "Plan Mode" : "Chat with Qwen3" }),
+              /* @__PURE__ */ jsx("div", { className: "text-xs", children: aiMode === "plan" ? "Describe your video idea - Qwen will output a full plan with refs & shots" : "Ask about cinematography, get prompts, plan videos..." }),
               /* @__PURE__ */ jsx("div", { className: "text-xs mt-1 text-purple-400", children: "Memory is saved to disk!" }),
+              aiMode === "plan" && /* @__PURE__ */ jsx("div", { className: "mt-2 px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-lg inline-block", children: /* @__PURE__ */ jsx("span", { className: "text-green-400 text-xs", children: 'Try: "Plan a 10 second IMAX ad for a donut shop"' }) }),
               /* @__PURE__ */ jsx("div", { className: "mt-4 text-xs text-gray-600", children: 'Try: "Plan a 30 second video of..."' })
             ] }) : aiChatHistory.map((msg, idx) => /* @__PURE__ */ jsx(
               "div",
@@ -7484,7 +7553,7 @@ ${shot.shot_type} • ${shot.duration}s`,
                     handleAIChat();
                   }
                 },
-                placeholder: "Ask about cinematography, get prompts, refine ideas...",
+                placeholder: aiMode === "plan" ? "Describe your video (e.g., '10 sec IMAX ad for donut shop')..." : "Ask about cinematography, get prompts, refine ideas...",
                 className: "flex-1 bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500/50",
                 disabled: aiGenerating
               }

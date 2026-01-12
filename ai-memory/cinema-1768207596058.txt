@@ -1,0 +1,103 @@
+# AI Chat Memory - Session: cinema-1768207596058
+# Created: 2026-01-12T08:47:04.136Z
+
+[USER]: IMPORTANT: You MUST output a FULL VIDEO PLAN in JSON format. Include:
+1. character_references - all characters with 3x3 sheet generate_prompts
+2. scene_references - all locations/objects with 3x3 sheet generate_prompts
+3. shots - array of shots with shot_id, photo_prompt, motion_prompt, model selection
+
+The user request is: Plan a 10 second IMAX ad for a donut shop"
+---
+[ASSISTANT]: {
+  "character_references": [
+    {
+      "character": "Baker",
+      "generate_prompts": [
+        "A cheerful baker in a red chef's hat and apron, flour on face, hands shaping a glazed donut, studio lighting",
+        "Baker with a wide smile, steam rising from a fresh donut, professional portrait with soft shadows",
+        "Baker mid-motion flipping a stack of donuts, dynamic action shot with motion blur"
+      ]
+    },
+    {
+      "character": "Barista",
+      "generate_prompts": [
+        "Friendly barista with a ponytail, wearing a white shirt and donut-shaped earrings, handing a donut to a customer",
+        "Barista in a bright apron, eye contact with viewer, holding a coffee cup and donut, natural lighting",
+        "Barista laughing while sprinkling cinnamon on a donut, candid shot with warm tones"
+      ]
+    },
+    {
+      "character": "Customer",
+      "generate_prompts": [
+        "Happy customer with a golden retriever, holding a box of donuts, outdoor scene with sunlight",
+        "Teen customer trying a donut, wide-eyed expression, close-up with glossy donut details",
+        "Family sharing donuts at a picnic table, golden hour lighting, joyful atmosphere"
+      ]
+    }
+  ],
+  "scene_references": [
+    {
+      "scene": "Donut Shop Interior",
+      "generate_prompts": [
+        "Colorful donut display case with pastel donuts, wooden counter, modern signage, soft ambient lighting",
+        "Cozy shop with exposed brick walls, hanging donut art, warm lighting highlighting donut racks",
+        "Dramatic lighting on a single donut tower, moody atmosphere with glowing donut highlights"
+      ]
+    },
+    {
+      "scene": "Donut Shop Exterior",
+      "generate_prompts": [
+        "Bright storefront with neon donut sign, bustling sidewalk, drone view of busy street",
+        "Morning shot of donut shop with steam rising from windows, morning light hitting sign",
+        "Nighttime exterior with glowing neon sign, cars passing by, cinematic lighting"
+      ]
+    },
+    {
+      "scene": "Donut Display",
+      "generate_prompts": [
+        "Close-up of a donut with glaze dripping, 300mm lens shot with shallow depth of field",
+        "Stack of 12 donuts with sprinkles, dramatic lighting to highlight textures",
+        "Donut in a glass case with refracted light, hyper-detailed close-up"
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "shot_id": 1,
+      "photo_prompt": "IMAX wide shot of donut shop exterior with drone flyover, glowing neon sign, busy street",
+      "motion_prompt": "Drone ascends past storefront with slow motion, emphasizing sign details",
+      "model_selection": "8k resolution, cinematic lens"
+    },
+    {
+      "shot_id": 2,
+      "photo_prompt": "Baker mid-motion flipping donuts in kitchen, golden hour lighting",
+      "motion_prompt": "Slow-motion capture of donut flipping with trailing light streaks",
+      "model_selection": "8k resolution, dynamic range"
+    },
+    {
+      "shot_id": 3,
+      "photo_prompt": "Close-up of glazed donut with steam rising, shallow depth of field",
+      "motion_prompt": "Static shot with slight focus shift to highlight donut textures",
+      "model_selection": "8k resolution, macro lens"
+    },
+    {
+      "shot_id": 4,
+      "photo_prompt": "Barista handing donut to customer with eye contact, natural lighting",
+      "motion_prompt": "Smooth dolly zoom to emphasize interaction",
+      "model_selection": "8k resolution, portrait mode"
+    },
+    {
+      "shot_id": 5,
+      "photo_prompt": "Nighttime exterior with glowing sign and passing cars",
+      "motion_prompt": "Steadicam tracking shot along street with moving lights",
+      "model_selection": "8k resolution, low-light capture"
+    },
+    {
+      "shot_id": 6,
+      "photo_prompt": "Family sharing donuts at picnic table with golden hour lighting",
+      "motion_prompt": "Panoramic shot with slow zoom to include entire scene",
+      "model_selection": "8k resolution, wide-angle lens"
+    }
+  ]
+}
+---

@@ -1,0 +1,257 @@
+# AI Chat Memory - Session: cinema-1768225424970
+# Created: 2026-01-12T13:46:03.815Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "FULL physical description - age, hair color/style, eye color, skin tone, body type, distinguishing features",
+      "costume": "FULL outfit - colors, materials, accessories, shoes"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "FULL description - terrain, vegetation, architecture, atmosphere, lighting mood, weather"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: use all the made refs for alex predator ad and instead now do a one min movie intro to the start of the movie
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "predator_movie_intro",
+  "name": "PREDATOR: HUNTED - Opening Sequence",
+  "description": "Atmospheric movie intro establishing Alex as elite soldier on jungle mission before first Predator encounter. Building dread, mystery, and action.",
+  "duration_estimate": 60,
+  "location": "Central American jungle, military operation",
+  "time_of_day": "dusk",
+  "mood": "tense, atmospheric, foreboding",
+  "color_palette": "deep greens, orange firelight, blue moonlight, thermal neon",
+  "aspect_ratio": "21:9",
+  "director": "John McTiernan meets Denis Villeneuve",
+  "character_references": {
+    "alex": {
+      "id": "alex",
+      "name": "Alex",
+      "description": "Rugged male soldier, early 30s, sharp jawline with stubble, intense steel-blue eyes, weathered tan skin with small scar above left eyebrow, athletic muscular build, short-cropped dark brown hair with military fade, determined expression",
+      "costume": "Olive drab tactical vest over black compression shirt, camouflage cargo pants, black combat boots, dog tags, mud and sweat on skin, night vision goggles pushed up on forehead, tactical radio earpiece"
+    },
+    "predator": {
+      "id": "predator",
+      "name": "The Hunter",
+      "description": "Massive 7-foot alien hunter, mottled reptilian skin in brown and black patterns, biomechanical armor with tribal markings, dreadlock-like appendages, mandibles behind bio-mask, glowing red targeting laser from shoulder cannon, muscular inhuman physique, clawed hands, wrist blades retracted"
+    }
+  },
+  "scene_references": {
+    "jungle_canopy": {
+      "id": "jungle_canopy",
+      "name": "Dense Jungle",
+      "type": "location",
+      "description": "Impenetrable Central American rainforest, massive ancient trees with twisted roots, thick humid mist between vegetation, shafts of dying golden sunlight piercing canopy, exotic plants with large leaves, vines hanging everywhere, mysterious and primordial atmosphere"
+    },
+    "jungle_clearing": {
+      "id": "jungle_clearing",
+      "name": "Jungle Clearing",
+      "type": "location",
+      "description": "Small clearing in dense jungle, destroyed military helicopter wreckage still smoking, scattered equipment and shell casings, blood trails leading into darkness, emergency flares casting red glow, signs of violent struggle"
+    },
+    "thermal_vision": {
+      "id": "thermal_vision",
+      "name": "Predator Thermal POV",
+      "type": "location",
+      "description": "Alien thermal vision view, heat signatures in bright oranges yellows and reds against cool blue-purple background, targeting reticle overlays, alien text symbols on edges, infrared distortion effects"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "extreme_wide",
+      "subject": "jungle_canopy",
+      "location": "jungle_canopy",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme wide aerial shot, endless dense jungle canopy stretching to misty mountains on horizon, golden sunset bleeding through storm clouds, atmosphere thick with humidity, single plume of black smoke rising from somewhere deep in forest, ominous scale, shot on ARRI Alexa 65mm IMAX, Denis Villeneuve style, epic foreboding atmosphere, raytracing 8K high detail",
+      "motion_prompt": "Slow drone push forward over jungle canopy, camera descends gradually toward smoke plume, mist drifts across frame, clouds shift in sky, then settles",
+      "transition_out": "dissolve",
+      "narrative_beat": "establishing"
+    },
+    {
+      "shot_id": "S01_B01_C02",
+      "order": 2,
+      "shot_type": "wide",
+      "subject": "jungle_clearing",
+      "location": "jungle_clearing",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Wide shot, destroyed helicopter wreckage in jungle clearing, smoke rising, red emergency flares illuminating scene with hellish glow, jungle darkness encroaching from all sides, scattered military equipment, pools of rainwater reflecting flames, shot on Panavision anamorphic, tension and dread, horror atmosphere, raytracing 8K high detail",
+      "motion_prompt": "Static shot with subtle camera drift, smoke billows from wreckage, flares flicker casting dancing shadows, leaves drift down from disturbed canopy, embers float upward, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "mystery"
+    },
+    {
+      "shot_id": "S01_B02_C01",
+      "order": 3,
+      "shot_type": "close_up",
+      "subject": "alex",
+      "location": "jungle_canopy",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme close-up on eyes, Alex's intense steel-blue eyes scanning through darkness, sweat beading on brow, flare light reflecting in pupils, shallow depth of field, tension visible in micro-expressions, 85mm anamorphic lens, John McTiernan style, THIS EXACT CHARACTER from reference, raytracing 8K high detail",
+      "motion_prompt": "Eyes dart left then right scanning for threat, subtle blink, jaw clenches, sweat drips down temple, red flare light flickers across face, then holds gaze forward",
+      "transition_out": "cut",
+      "narrative_beat": "character_intro"
+    },
+    {
+      "shot_id": "S01_B02_C02",
+      "order": 4,
+      "shot_type": "medium",
+      "subject": "alex",
+      "location": "jungle_canopy",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Medium shot, Alex crouched in dense jungle vegetation, tactical vest and gear, rifle raised and ready, moonlight filtering through canopy creating blue rim light, foreground leaves soft focus, background darkness impenetrable, wet skin glistening, 50mm lens f/1.4, THIS EXACT CHARACTER, THIS EXACT LIGHTING, raytracing 8K high detail",
+      "motion_prompt": "Alex moves slowly forward through vegetation, parts leaves with rifle barrel, head turns checking flanks, controlled tactical movement, foliage rustles with his passing, then freezes suddenly",
+      "transition_out": "cut",
+      "narrative_beat": "tension"
+    },
+    {
+      "shot_id": "S01_B03_C01",
+      "order": 5,
+      "shot_type": "pov",
+      "subject": "predator",
+      "location": "thermal_vision",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Predator thermal vision POV, human heat signature glowing bright orange-yellow against cool blue jungle, alien targeting reticle tracking movement, foreign symbols and data readouts on screen edges, trees appear as cool purple silhouettes, otherworldly perspective, sci-fi horror aesthetic, raytracing 8K high detail",
+      "motion_prompt": "POV slowly pans tracking the heat signature, targeting reticle locks on and adjusts, alien symbols scroll and update, slight zoom enhancement on target, breathing movement in frame, then locks position",
+      "transition_out": "cut",
+      "narrative_beat": "threat_reveal"
+    },
+    {
+      "shot_id": "S01_B03_C02",
+      "order": 6,
+      "shot_type": "wide",
+      "subject": "jungle_canopy",
+      "location": "jungle_canopy",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Low angle wide shot looking up into jungle canopy, massive trees towering overhead, something shimmers and distorts against moonlit sky like heat haze, Predator cloaking effect barely visible, mysterious and terrifying, branches silhouetted, alien presence implied, Ridley Scott atmosphere, raytracing 8K high detail",
+      "motion_prompt": "Camera tilts slowly upward, shimmer effect moves between branches, leaves rustle without wind, three red laser dots suddenly appear pointing downward, then holds on empty canopy",
+      "transition_out": "cut",
+      "narrative_beat": "horror"
+    },
+    {
+      "shot_id": "S01_B04_C01",
+      "order": 7,
+      "shot_type": "close_up",
+      "subject": "alex",
+      "location": "jungle_canopy",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Close-up profile shot, Alex's face half-lit by moonlight half in shadow, three red laser dots visible on tree beside him, dawning realization in expression, breath visible in cool air, extreme tension, 85mm lens shallow depth, THIS EXACT CHARACTER, cinematic horror lighting, raytracing 8K high detail",
+      "motion_prompt": "Alex's eyes widen slowly in recognition, breath catches, head begins to turn toward laser source, adam's apple bobs with swallow, then freezes mid-turn",
+      "transition_out": "cut",
+      "narrative_beat": "realization"
+    },
+    {
+      "shot_id": "S01_B04_C02",
+      "order": 8,
+      "shot_type": "medium",
+      "subject": "predator",
+      "location": "jungle_canopy",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Medium shot, Predator decloaking on thick tree branch above, shimmer effect dissolving to reveal massive alien hunter, biomechanical armor gleaming, bio-mask with glowing red eye ports, shoulder cannon tracking, mandibles behind mask, moonlight catching metallic surfaces, THIS EXACT CHARACTER from reference, terrifying and majestic, raytracing 8K high detail",
+      "motion_prompt": "Cloaking shimmer dissolves revealing creature, Predator tilts head studying prey below, shoulder cannon rotates and locks, slight movement of dreadlocks, chest rises with alien breath, then holds perfectly still",
+      "transition_out": "cut",
+      "narrative_beat": "confrontation"
+    },
+    {
+      "shot_id": "S01_B05_C01",
+      "order": 9,
+      "shot_type": "extreme_close_up",
+      "subject": "alex",
+      "location": "jungle_canopy",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme close-up, Alex's eyes reflecting the three red targeting lasers, pupils dilated with fear and adrenaline, sweat and grime on skin, every pore visible, moment before violence, 100mm macro lens, THIS EXACT CHARACTER, THIS EXACT LIGHTING, hyperreal detail, raytracing 8K high detail",
+      "motion_prompt": "Red laser reflection drifts slowly across eye surface, pupil contracts, single blink in slow motion, then eyes snap to determined expression",
+      "transition_out": "smash_cut",
+      "narrative_beat": "decision"
+    },
+    {
+      "shot_id": "S01_B05_C02",
+      "order": 10,
+      "shot_type": "wide",
+      "subject": "alex",
+      "location": "jungle_canopy",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Dynamic wide shot, Alex diving sideways as plasma blast explodes tree behind him, blue-white energy illuminating entire jungle, debris and splinters flying, action frozen mid-motion, orange explosion against blue moonlit jungle, THIS EXACT CHARACTER, Michael Bay meets Ridley Scott, raytracing 8K high detail",
+      "motion_prompt": "Alex dives desperately to the right, plasma blast streaks through frame, tree explodes in shower of sparks and fragments, camera shakes from impact, smoke and debris scatter, then settles on smoking crater",
+      "transition_out": "cut",
+      "narrative_beat": "action"
+    },
+    {
+      "shot_id": "S01_B06_C01",
+      "order": 11,
+      "shot_type": "medium_wide",
+      "subject": "alex",
+      "location": "jungle_canopy",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Medium wide shot, Alex rolling to feet and sprinting through dense jungle, explosions lighting up background, branches whipping past, desperate survival run, camera tracking alongside, motion blur on edges, THIS EXACT CHARACTER, adrenaline and terror, Bourne meets Predator, raytracing 8K high detail",
+      "motion_prompt": "Alex sprints desperately through jungle, tracking shot follows from side, branches break as he crashes through, another plasma blast illuminates background, camera pushes forward matching his speed, then he slides behind massive tree trunk",
+      "transition_out": "cut_to_black",
+      "narrative_beat": "chase"
+    },
+    {
+      "shot_id": "S01_B06_C02",
+      "order": 12,
+      "shot_type": "title_card",
+      "subject": "title",
+      "location": "black",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Black screen with metallic chrome title PREDATOR: HUNTED emerging from darkness, alien symbols etched into letters, three red targeting dots appear on title, jungle heat distortion effect, menacing typography, movie poster aesthetic, 8K title card",
+      "motion_prompt": "Title materializes from particles, chrome surface catches invisible light source, red targeting lasers sweep across and lock onto title letters, subtle pulse effect, then holds as tagline fades in below: THE HUNT BEGINS",
+      "transition_out": "fade_to_black",
+      "narrative_beat": "title_reveal"
+    }
+  ]
+}
+```
+---

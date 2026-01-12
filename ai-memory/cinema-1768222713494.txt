@@ -1,0 +1,625 @@
+# AI Chat Memory - Session: cinema-1768222713494
+# Created: 2026-01-12T12:59:38.677Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "FULL physical description - age, hair color/style, eye color, skin tone, body type, distinguishing features",
+      "costume": "FULL outfit - colors, materials, accessories, shoes"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "FULL description - terrain, vegetation, architecture, atmosphere, lighting mood, weather"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: make me 20secound ad for a miltray helcopter SHOWING IT OFF AND ALL ITS FEAUTHERS LIKE MISSILES AND STRONG PROTECTION AGASINT BULLETS SHOW IT IN COMBAT GETTIGN SHOT AT GLAS AND SIDES ECT  SHOW IT BEEN PARKED OUTSIDE HOUSE AND FAMILY LOOKING AT IT use big lens big shots ect make it feel epic
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "apex_predator_helicopter_ad",
+  "name": "APEX PREDATOR - Military Helicopter Ad",
+  "description": "Epic 20-second military helicopter commercial showcasing combat capabilities, armor protection, weapons systems, and ending with aspirational family moment",
+  "duration_estimate": 20,
+  "location": "Combat zone and suburban America",
+  "time_of_day": "golden_hour",
+  "mood": "epic_powerful",
+  "color_palette": "military_teal_orange",
+  "aspect_ratio": "21:9",
+  "director": "Michael Bay meets Christopher Nolan",
+  "character_references": {
+    "father": {
+      "id": "father",
+      "name": "Commander Dad",
+      "description": "Strong athletic man, 38 years old, short military-style dark brown hair with subtle grey at temples, steel blue eyes, square jaw, clean shaven, tanned weathered skin, broad shoulders, 6 foot 1, confident authoritative presence",
+      "costume": "Crisp navy blue polo shirt, khaki chinos, brown leather belt, aviator sunglasses pushed up on head, silver wedding band, black leather watch"
+    },
+    "mother": {
+      "id": "mother",
+      "name": "Sarah",
+      "description": "Beautiful woman, 35 years old, long flowing chestnut brown hair past shoulders, warm hazel eyes, soft features, radiant smile, fair skin with light freckles, slender athletic build, 5 foot 7",
+      "costume": "White linen blouse with rolled sleeves, fitted dark blue jeans, tan leather sandals, small gold hoop earrings, delicate gold necklace"
+    },
+    "son": {
+      "id": "son",
+      "name": "Jake",
+      "description": "Excited young boy, 8 years old, messy sandy blonde hair, bright blue eyes wide with wonder, gap-toothed smile, freckles across nose and cheeks, energetic athletic build",
+      "costume": "Red graphic t-shirt with jet design, cargo shorts in olive green, white sneakers with velcro straps, digital watch on wrist"
+    },
+    "daughter": {
+      "id": "daughter",
+      "name": "Emma",
+      "description": "Adorable young girl, 6 years old, long wavy light brown hair in ponytail with pink scrunchie, big brown doe eyes, rosy cheeks, sweet curious expression, petite build",
+      "costume": "Lavender summer dress with small white flowers, white cardigan, pink canvas shoes, small butterfly clip in hair"
+    }
+  },
+  "scene_references": {
+    "attack_helicopter": {
+      "id": "attack_helicopter",
+      "name": "AH-64 Apache Attack Helicopter",
+      "type": "vehicle",
+      "description": "Menacing AH-64 Apache Longbow attack helicopter, matte olive drab military green with black accents, angular aggressive fuselage, tandem cockpit with armored ballistic-resistant glass canopy, distinctive radar dome mounted above main rotor, stub wings carrying full weapons loadout, AGM-114 Hellfire missiles on outboard pylons, Hydra 70 rocket pods on inboard stations, M230 30mm chain gun under nose, infrared countermeasures, exhaust heat suppressors, armored pilot seats, self-sealing fuel tanks, blade tip vortices visible, battle-worn with minor scratches showing combat history"
+    },
+    "combat_zone": {
+      "id": "combat_zone",
+      "name": "Desert Combat Zone",
+      "type": "location",
+      "description": "Intense Middle Eastern desert battlefield at golden hour, vast sandy terrain with rocky outcrops, distant mountain range, billowing dust clouds and smoke plumes, tracer fire streaking through amber sky, explosions on horizon, dramatic god rays piercing through haze, heat shimmer rising from sand, scattered debris and tactical vehicles below, apocalyptic orange and teal color grade"
+    },
+    "suburban_home": {
+      "id": "suburban_home",
+      "name": "American Dream Home",
+      "type": "building",
+      "description": "Beautiful two-story American suburban home, warm cream-colored siding with dark grey stone accents, black shingled roof, large front porch with white columns, manicured green lawn, mature oak tree in yard, attached three-car garage, American flag on pole, flower beds with colorful blooms, white picket fence detail, warm interior lights glowing through windows"
+    },
+    "home_exterior": {
+      "id": "home_exterior",
+      "name": "Suburban Driveway",
+      "type": "location",
+      "description": "Spacious suburban driveway and front yard at golden hour sunset, perfectly manicured green grass, concrete driveway, peaceful neighborhood backdrop with similar homes, warm golden sunlight casting long shadows, clear blue sky with wispy clouds turning orange and pink, American dream atmosphere, safe prosperous feeling"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "extreme_wide",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme wide epic shot, AH-64 Apache attack helicopter banking hard through desert combat zone, missiles launching from stub wings with dramatic smoke trails, tracer fire and muzzle flashes streaking past fuselage, explosions blooming on ground below, golden hour sun backlighting scene creating dramatic silhouette and god rays, dust storms and smoke creating atmospheric haze, shot on ARRI Alexa 65 with Panavision Ultra Vista 40mm anamorphic lens, f/4, Michael Bay style epic action cinematography, IMAX quality, extreme scale, THIS EXACT VEHICLE from reference, teal and orange color grade, lens flares, raytracing 8K high detail",
+      "motion_prompt": "Helicopter BANKS SHARPLY right, missiles LAUNCH with explosive smoke trails, tracers STREAK past camera, rotor wash KICKS UP massive dust cloud, camera TRACKS alongside helicopter movement maintaining epic framing, explosions BLOOM in background, then helicopter LEVELS OUT and camera settles",
+      "transition_out": "cut",
+      "narrative_beat": "hook_action"
+    },
+    {
+      "shot_id": "S01_B02_C01",
+      "order": 2,
+      "shot_type": "medium",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Dynamic medium shot, AH-64 Apache helicopter armored cockpit glass being struck by enemy fire, bullet impacts creating dramatic spiderweb cracks but glass holding strong, sparks flying off armored fuselage panels, pilot visible through ballistic glass maintaining control, side armor deflecting incoming rounds with visible spark impacts, battle damage evident but helicopter unfazed, 200mm telephoto compression, f/2.8 shallow depth of field, slow motion feel, intense combat cinematography, THIS EXACT VEHICLE from reference, dramatic orange backlight through dust, raytracing 8K high detail",
+      "motion_prompt": "BULLETS IMPACT armored glass creating spider cracks, SPARKS FLY off side armor panels in rapid succession, helicopter SHUDDERS slightly from impacts but POWERS FORWARD unstoppable, camera PUSHES IN toward cockpit revealing pilot's determined face through cracked but intact glass, smoke and debris SWIRL past frame, then settles on hero angle",
+      "transition_out": "cut",
+      "narrative_beat": "demonstration_armor"
+    },
+    {
+      "shot_id": "S01_B03_C01",
+      "order": 3,
+      "shot_type": "wide_low_angle",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Epic low angle hero shot looking up at AH-64 Apache helicopter hovering dominantly overhead, full weapons loadout visible including Hellfire missiles and rocket pods, 30mm chain gun rotating menacingly, rotor blades creating powerful downdraft visible in swirling dust, setting sun directly behind creating dramatic backlit silhouette with lens flares, extreme power and dominance composition, shot on 14mm ultra wide angle, ground level perspective, debris swirling around frame edges, THIS EXACT VEHICLE from reference, golden hour god rays, IMAX epic scale, raytracing 8K high detail",
+      "motion_prompt": "Helicopter HOVERS with raw power, rotors THUNDER creating visible pressure waves, chain gun ROTATES scanning for targets, camera performs slow PUSH UP toward aircraft underbelly, dust and debris SPIRAL dramatically in rotor wash, lens flare SHIFTS as sun peeks around fuselage, then camera settles on dominant hero angle",
+      "transition_out": "cut",
+      "narrative_beat": "hero_power"
+    },
+    {
+      "shot_id": "S01_B04_C01",
+      "order": 4,
+      "shot_type": "wide",
+      "subject": "father",
+      "location": "home_exterior",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Cinematic wide shot, beautiful American family standing in awe on suburban driveway looking up at parked AH-64 Apache helicopter on their front lawn, father with arm around wife, young son pointing excitedly, daughter holding mother's hand in wonder, helicopter perfectly framed against golden sunset sky and beautiful family home, American flag visible, warm golden hour lighting, aspirational American dream composition, 35mm anamorphic lens, f/2.8, Spielberg-style family moment, THIS EXACT CHARACTER father from reference, THIS EXACT CHARACTER mother from reference, THIS EXACT CHARACTER son from reference, THIS EXACT CHARACTER daughter from reference, THIS EXACT VEHICLE from reference, THIS EXACT BUILDING from reference, emotional warmth, raytracing 8K high detail",
+      "motion_prompt": "Family GAZES UP in wonder at helicopter, son POINTS excitedly jumping slightly, father PULLS family closer protectively with pride, daughter TUGS mother's hand stepping forward curiously, helicopter rotors SLOW TO STOP with gentle wind dying down, golden light SHIFTS warmly across family faces, camera performs gentle DOLLY IN toward family creating intimate connection, then settles on perfect family portrait moment",
+      "transition_out": "fade_black",
+      "narrative_beat": "resolution_aspiration"
+    }
+  ]
+}
+```
+---
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "FULL physical description - age, hair color/style, eye color, skin tone, body type, distinguishing features",
+      "costume": "FULL outfit - colors, materials, accessories, shoes"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "FULL description - terrain, vegetation, architecture, atmosphere, lighting mood, weather"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: do it
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "apex_predator_helicopter_ad",
+  "name": "APEX PREDATOR - Military Helicopter Ad",
+  "description": "Epic 20-second military helicopter commercial showcasing combat capabilities, armor protection, weapons systems, and ending with aspirational family moment",
+  "duration_estimate": 20,
+  "location": "Combat zone and suburban America",
+  "time_of_day": "golden_hour",
+  "mood": "epic_powerful",
+  "color_palette": "military_teal_orange",
+  "aspect_ratio": "21:9",
+  "director": "Michael Bay meets Christopher Nolan",
+  "character_references": {
+    "father": {
+      "id": "father",
+      "name": "Commander Dad",
+      "description": "Strong athletic man, 38 years old, short military-style dark brown hair with subtle grey at temples, steel blue eyes, square jaw, clean shaven, tanned weathered skin, broad shoulders, 6 foot 1, confident authoritative presence",
+      "costume": "Crisp navy blue polo shirt, khaki chinos, brown leather belt, aviator sunglasses pushed up on head, silver wedding band, black leather watch"
+    },
+    "mother": {
+      "id": "mother",
+      "name": "Sarah",
+      "description": "Beautiful woman, 35 years old, long flowing chestnut brown hair past shoulders, warm hazel eyes, soft features, radiant smile, fair skin with light freckles, slender athletic build, 5 foot 7",
+      "costume": "White linen blouse with rolled sleeves, fitted dark blue jeans, tan leather sandals, small gold hoop earrings, delicate gold necklace"
+    },
+    "son": {
+      "id": "son",
+      "name": "Jake",
+      "description": "Excited young boy, 8 years old, messy sandy blonde hair, bright blue eyes wide with wonder, gap-toothed smile, freckles across nose and cheeks, energetic athletic build",
+      "costume": "Red graphic t-shirt with jet design, cargo shorts in olive green, white sneakers with velcro straps, digital watch on wrist"
+    },
+    "daughter": {
+      "id": "daughter",
+      "name": "Emma",
+      "description": "Adorable young girl, 6 years old, long wavy light brown hair in ponytail with pink scrunchie, big brown doe eyes, rosy cheeks, sweet curious expression, petite build",
+      "costume": "Lavender summer dress with small white flowers, white cardigan, pink canvas shoes, small butterfly clip in hair"
+    }
+  },
+  "scene_references": {
+    "attack_helicopter": {
+      "id": "attack_helicopter",
+      "name": "AH-64 Apache Attack Helicopter",
+      "type": "vehicle",
+      "description": "Menacing AH-64 Apache Longbow attack helicopter, matte olive drab military green with black accents, angular aggressive fuselage, tandem cockpit with armored ballistic-resistant glass canopy, distinctive radar dome mounted above main rotor, stub wings carrying full weapons loadout, AGM-114 Hellfire missiles on outboard pylons, Hydra 70 rocket pods on inboard stations, M230 30mm chain gun under nose, infrared countermeasures, exhaust heat suppressors, armored pilot seats, self-sealing fuel tanks, blade tip vortices visible, battle-worn with minor scratches showing combat history"
+    },
+    "combat_zone": {
+      "id": "combat_zone",
+      "name": "Desert Combat Zone",
+      "type": "location",
+      "description": "Intense Middle Eastern desert battlefield at golden hour, vast sandy terrain with rocky outcrops, distant mountain range, billowing dust clouds and smoke plumes, tracer fire streaking through amber sky, explosions on horizon, dramatic god rays piercing through haze, heat shimmer rising from sand, scattered debris and tactical vehicles below, apocalyptic orange and teal color grade"
+    },
+    "suburban_home": {
+      "id": "suburban_home",
+      "name": "American Dream Home",
+      "type": "building",
+      "description": "Beautiful two-story American suburban home, warm cream-colored siding with dark grey stone accents, black shingled roof, large front porch with white columns, manicured green lawn, mature oak tree in yard, attached three-car garage, American flag on pole, flower beds with colorful blooms, white picket fence detail, warm interior lights glowing through windows"
+    },
+    "home_exterior": {
+      "id": "home_exterior",
+      "name": "Suburban Driveway",
+      "type": "location",
+      "description": "Spacious suburban driveway and front yard at golden hour sunset, perfectly manicured green grass, concrete driveway, peaceful neighborhood backdrop with similar homes, warm golden sunlight casting long shadows, clear blue sky with wispy clouds turning orange and pink, American dream atmosphere, safe prosperous feeling"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "extreme_wide",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme wide epic shot, AH-64 Apache attack helicopter banking hard through desert combat zone, missiles launching from stub wings with dramatic smoke trails, tracer fire and muzzle flashes streaking past fuselage, explosions blooming on ground below, golden hour sun backlighting scene creating dramatic silhouette and god rays, dust storms and smoke creating atmospheric haze, shot on ARRI Alexa 65 with Panavision Ultra Vista 40mm anamorphic lens, f/4, Michael Bay style epic action cinematography, IMAX quality, extreme scale, THIS EXACT VEHICLE from reference, teal and orange color grade, lens flares, raytracing 8K high detail",
+      "motion_prompt": "Helicopter BANKS SHARPLY right, missiles LAUNCH with explosive smoke trails, tracers STREAK past camera, rotor wash KICKS UP massive dust cloud, camera TRACKS alongside helicopter movement maintaining epic framing, explosions BLOOM in background, then helicopter LEVELS OUT and camera settles",
+      "transition_out": "cut",
+      "narrative_beat": "hook_action"
+    },
+    {
+      "shot_id": "S01_B02_C01",
+      "order": 2,
+      "shot_type": "medium",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Dynamic medium shot, AH-64 Apache helicopter armored cockpit glass being struck by enemy fire, bullet impacts creating dramatic spiderweb cracks but glass holding strong, sparks flying off armored fuselage panels, pilot visible through ballistic glass maintaining control, side armor deflecting incoming rounds with visible spark impacts, battle damage evident but helicopter unfazed, 200mm telephoto compression, f/2.8 shallow depth of field, slow motion feel, intense combat cinematography, THIS EXACT VEHICLE from reference, dramatic orange backlight through dust, raytracing 8K high detail",
+      "motion_prompt": "BULLETS IMPACT armored glass creating spider cracks, SPARKS FLY off side armor panels in rapid succession, helicopter SHUDDERS slightly from impacts but POWERS FORWARD unstoppable, camera PUSHES IN toward cockpit revealing pilot's determined face through cracked but intact glass, smoke and debris SWIRL past frame, then settles on hero angle",
+      "transition_out": "cut",
+      "narrative_beat": "demonstration_armor"
+    },
+    {
+      "shot_id": "S01_B03_C01",
+      "order": 3,
+      "shot_type": "wide_low_angle",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Epic low angle hero shot looking up at AH-64 Apache helicopter hovering dominantly overhead, full weapons loadout visible including Hellfire missiles and rocket pods, 30mm chain gun rotating menacingly, rotor blades creating powerful downdraft visible in swirling dust, setting sun directly behind creating dramatic backlit silhouette with lens flares, extreme power and dominance composition, shot on 14mm ultra wide angle, ground level perspective, debris swirling around frame edges, THIS EXACT VEHICLE from reference, golden hour god rays, IMAX epic scale, raytracing 8K high detail",
+      "motion_prompt": "Helicopter HOVERS with raw power, rotors THUNDER creating visible pressure waves, chain gun ROTATES scanning for targets, camera performs slow PUSH UP toward aircraft underbelly, dust and debris SPIRAL dramatically in rotor wash, lens flare SHIFTS as sun peeks around fuselage, then camera settles on dominant hero angle",
+      "transition_out": "cut",
+      "narrative_beat": "hero_power"
+    },
+    {
+      "shot_id": "S01_B04_C01",
+      "order": 4,
+      "shot_type": "wide",
+      "subject": "father",
+      "location": "home_exterior",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Cinematic wide shot, beautiful American family standing in awe on suburban driveway looking up at parked AH-64 Apache helicopter on their front lawn, father with arm around wife, young son pointing excitedly, daughter holding mother's hand in wonder, helicopter perfectly framed against golden sunset sky and beautiful family home, American flag visible, warm golden hour lighting, aspirational American dream composition, 35mm anamorphic lens, f/2.8, Spielberg-style family moment, THIS EXACT CHARACTER father from reference, THIS EXACT CHARACTER mother from reference, THIS EXACT CHARACTER son from reference, THIS EXACT CHARACTER daughter from reference, THIS EXACT VEHICLE from reference, THIS EXACT BUILDING from reference, emotional warmth, raytracing 8K high detail",
+      "motion_prompt": "Family GAZES UP in wonder at helicopter, son POINTS excitedly jumping slightly, father PULLS family closer protectively with pride, daughter TUGS mother's hand stepping forward curiously, helicopter rotors SLOW TO STOP with gentle wind dying down, golden light SHIFTS warmly across family faces, camera performs gentle DOLLY IN toward family creating intimate connection, then settles on perfect family portrait moment",
+      "transition_out": "fade_black",
+      "narrative_beat": "resolution_aspiration"
+    }
+  ]
+}
+```
+---
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "FULL physical description - age, hair color/style, eye color, skin tone, body type, distinguishing features",
+      "costume": "FULL outfit - colors, materials, accessories, shoes"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "FULL description - terrain, vegetation, architecture, atmosphere, lighting mood, weather"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: NOW USE ALL THESE SAME ALREADY MADE REFS BUT NOW MAKE IT 1MIN LONG
+
+
+=== CURRENT SHOT ===
+HAS IMAGE: Yes
+MODEL: kling-2.6
+MODE: Video
+ASPECT: 16:9 | RES: 2K
+
+---
+You can: modify prompts, plan sequences, suggest next shots, explain cinematography.
+
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "apex_predator_helicopter_ad_extended",
+  "name": "APEX PREDATOR - Military Helicopter Ad (60s)",
+  "description": "Epic 60-second military helicopter commercial showcasing full combat capabilities, armor protection, weapons systems, agility, and ending with emotional aspirational family moment",
+  "duration_estimate": 60,
+  "location": "Combat zone and suburban America",
+  "time_of_day": "golden_hour",
+  "mood": "epic_powerful",
+  "color_palette": "military_teal_orange",
+  "aspect_ratio": "21:9",
+  "director": "Michael Bay meets Christopher Nolan",
+  "character_references": {
+    "father": {
+      "id": "father",
+      "name": "Commander Dad",
+      "description": "Strong athletic man, 38 years old, short military-style dark brown hair with subtle grey at temples, steel blue eyes, square jaw, clean shaven, tanned weathered skin, broad shoulders, 6 foot 1, confident authoritative presence",
+      "costume": "Crisp navy blue polo shirt, khaki chinos, brown leather belt, aviator sunglasses pushed up on head, silver wedding band, black leather watch"
+    },
+    "mother": {
+      "id": "mother",
+      "name": "Sarah",
+      "description": "Beautiful woman, 35 years old, long flowing chestnut brown hair past shoulders, warm hazel eyes, soft features, radiant smile, fair skin with light freckles, slender athletic build, 5 foot 7",
+      "costume": "White linen blouse with rolled sleeves, fitted dark blue jeans, tan leather sandals, small gold hoop earrings, delicate gold necklace"
+    },
+    "son": {
+      "id": "son",
+      "name": "Jake",
+      "description": "Excited young boy, 8 years old, messy sandy blonde hair, bright blue eyes wide with wonder, gap-toothed smile, freckles across nose and cheeks, energetic athletic build",
+      "costume": "Red graphic t-shirt with jet design, cargo shorts in olive green, white sneakers with velcro straps, digital watch on wrist"
+    },
+    "daughter": {
+      "id": "daughter",
+      "name": "Emma",
+      "description": "Adorable young girl, 6 years old, long wavy light brown hair in ponytail with pink scrunchie, big brown doe eyes, rosy cheeks, sweet curious expression, petite build",
+      "costume": "Lavender summer dress with small white flowers, white cardigan, pink canvas shoes, small butterfly clip in hair"
+    }
+  },
+  "scene_references": {
+    "attack_helicopter": {
+      "id": "attack_helicopter",
+      "name": "AH-64 Apache Attack Helicopter",
+      "type": "vehicle",
+      "description": "Menacing AH-64 Apache Longbow attack helicopter, matte olive drab military green with black accents, angular aggressive fuselage, tandem cockpit with armored ballistic-resistant glass canopy, distinctive radar dome mounted above main rotor, stub wings carrying full weapons loadout, AGM-114 Hellfire missiles on outboard pylons, Hydra 70 rocket pods on inboard stations, M230 30mm chain gun under nose, infrared countermeasures, exhaust heat suppressors, armored pilot seats, self-sealing fuel tanks, blade tip vortices visible, battle-worn with minor scratches showing combat history"
+    },
+    "combat_zone": {
+      "id": "combat_zone",
+      "name": "Desert Combat Zone",
+      "type": "location",
+      "description": "Intense Middle Eastern desert battlefield at golden hour, vast sandy terrain with rocky outcrops, distant mountain range, billowing dust clouds and smoke plumes, tracer fire streaking through amber sky, explosions on horizon, dramatic god rays piercing through haze, heat shimmer rising from sand, scattered debris and tactical vehicles below, apocalyptic orange and teal color grade"
+    },
+    "suburban_home": {
+      "id": "suburban_home",
+      "name": "American Dream Home",
+      "type": "building",
+      "description": "Beautiful two-story American suburban home, warm cream-colored siding with dark grey stone accents, black shingled roof, large front porch with white columns, manicured green lawn, mature oak tree in yard, attached three-car garage, American flag on pole, flower beds with colorful blooms, white picket fence detail, warm interior lights glowing through windows"
+    },
+    "home_exterior": {
+      "id": "home_exterior",
+      "name": "Suburban Driveway",
+      "type": "location",
+      "description": "Spacious suburban driveway and front yard at golden hour sunset, perfectly manicured green grass, concrete driveway, peaceful neighborhood backdrop with similar homes, warm golden sunlight casting long shadows, clear blue sky with wispy clouds turning orange and pink, American dream atmosphere, safe prosperous feeling"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "extreme_wide",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme wide epic establishing shot, AH-64 Apache attack helicopter BURSTING through massive dust cloud over desert battlefield, rotors slicing through smoke, golden hour sun creating dramatic god rays and silhouette, distant explosions on horizon, heat shimmer rising from sand, shot on ARRI Alexa 65 with 40mm anamorphic lens, IMAX quality, Christopher Nolan scale, THIS EXACT VEHICLE from reference, teal and orange color grade, raytracing 8K high detail",
+      "motion_prompt": "Helicopter EMERGES dramatically from dust cloud at high speed, rotors CUTTING through smoke creating swirling vortices, camera performs sweeping CRANE UP revealing vast battlefield scale, dust BILLOWS behind aircraft, golden light FLARES through haze, then helicopter banks and camera settles",
+      "transition_out": "cut",
+      "narrative_beat": "epic_hook"
+    },
+    {
+      "shot_id": "S01_B01_C02",
+      "order": 2,
+      "shot_type": "close_up",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme close-up on AH-64 Apache stub wing weapons pylon, AGM-114 Hellfire missiles locked and loaded, intricate mechanical detail visible, warning labels and serial numbers, missile fins catching golden light, smoke wisps drifting past, shallow depth of field with bokeh background of burning battlefield, macro lens detail, military hardware photography, THIS EXACT VEHICLE weapons detail from reference, raytracing 8K high detail",
+      "motion_prompt": "Camera RACKS FOCUS from background explosions to missile in sharp detail, missile LOCKS INTO FIRING POSITION with mechanical click, warning lights FLICKER on pylon, smoke DRIFTS past lens, sudden LAUNCH - missile STREAKS away with explosive thrust and smoke trail, camera SHAKES from blast, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "weapons_detail"
+    },
+    {
+      "shot_id": "S01_B02_C01",
+      "order": 3,
+      "shot_type": "wide_tracking",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Dynamic wide tracking shot, AH-64 Apache helicopter launching full salvo of Hydra 70 rockets, brilliant orange exhaust flames and smoke trails streaming behind, rockets SCREAMING toward targets below, helicopter banking hard right during attack run, tracer fire streaking through frame, explosions blooming on ground, 200mm telephoto compression, Michael Bay style action cinematography, THIS EXACT VEHICLE from reference, dramatic backlight, lens flares, raytracing 8K high detail",
+      "motion_prompt": "Rockets LAUNCH in rapid sequence creating wall of smoke and fire, helicopter BANKS HARD right maintaining attack angle, camera TRACKS alongside matching helicopter speed, tracers STREAK past frame creating light trails, explosions BLOOM below in sequence, smoke trails CURL and dissipate, then helicopter levels out and camera settles",
+      "transition_out": "cut",
+      "narrative_beat": "weapons_power"
+    },
+    {
+      "shot_id": "S01_B02_C02",
+      "order": 4,
+      "shot_type": "medium",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Intense medium shot, AH-64 Apache 30mm M230 chain gun FIRING under nose, massive muzzle flash illuminating aircraft underbelly, spent brass casings ejecting in stream, gun barrel rotating with mechanical precision, smoke and gun gases swirling, ground targets being decimated below, shot from low three-quarter angle, high-speed photography feel, THIS EXACT VEHICLE from reference, orange muzzle flash lighting, raytracing 8K high detail",
+      "motion_prompt": "Chain gun SPINS UP with mechanical whir then UNLEASHES devastating fire, muzzle flash STROBES creating dramatic lighting, brass casings EJECT in golden stream catching light, gun SWEEPS left to right tracking targets, recoil SHUDDERS through airframe, smoke BILLOWS from barrel, then firing stops and barrel SPINS DOWN, camera settles",
+      "transition_out": "cut",
+      "narrative_beat": "firepower_demo"
+    },
+    {
+      "shot_id": "S01_B03_C01",
+      "order": 5,
+      "shot_type": "close_up",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Dramatic close-up, AH-64 Apache armored cockpit canopy being struck by enemy fire, multiple bullet impacts creating spider-web cracks in ballistic glass, each impact creating bright spark, glass holding strong showing incredible strength, pilot's silhouette visible behind damaged but intact glass, reflections of explosions in glass surface, 135mm portrait lens, shallow depth of field, THIS EXACT VEHICLE cockpit from reference, intense orange backlight, raytracing 8K high detail",
+      "motion_prompt": "BULLETS IMPACT glass in rapid succession - CRACK CRACK CRACK - each creating spider-web pattern, SPARKS fly on impact, glass FLEXES but HOLDS, pilot inside FLINCHES slightly but maintains control, reflection of explosions DANCE across cracked surface, camera performs slow PUSH IN emphasizing glass strength, then settles on damaged but unbroken canopy",
+      "transition_out": "cut",
+      "narrative_beat": "armor_glass"
+    },
+    {
+      "shot_id": "S01_B03_C02",
+      "order": 6,
+      "shot_type": "medium_side",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Side profile medium shot, AH-64 Apache fuselage being peppered with enemy fire, brilliant sparks flying off armored side panels, bullet ricochets visible, armor plating deflecting rounds, paint scratches and minor dents appearing but helicopter completely unfazed, dust and debris swirling, helicopter maintaining steady flight despite barrage, 100mm lens, THIS EXACT VEHICLE from reference, dramatic cross-lighting, raytracing 8K high detail",
+      "motion_prompt": "Bullets PEPPER side armor in continuous barrage, SPARKS EXPLODE off panels in rapid succession, armor DEFLECTS rounds with metallic pings, paint CHIPS but structure holds, helicopter POWERS FORWARD completely unstoppable through the fire, camera TRACKS alongside showing relentless punishment, debris SWIRLS past frame, then barrage ends and camera settles on battle-scarred but flying helicopter",
+      "transition_out": "cut",
+      "narrative_beat": "armor_body"
+    },
+    {
+      "shot_id": "S01_B04_C01",
+      "order": 7,
+      "shot_type": "low_angle_wide",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Epic low angle hero shot, AH-64 Apache hovering dominantly directly overhead, looking straight up at aircraft underbelly, full weapons loadout visible, rotors creating powerful downdraft visible in swirling dust and debris, setting sun directly behind creating dramatic backlit silhouette with lens flares and god rays, extreme power composition, 14mm ultra wide from ground level, THIS EXACT VEHICLE from reference, IMAX epic scale, raytracing 8K high detail",
+      "motion_prompt": "Helicopter HOVERS with thunderous power overhead, rotors BEAT creating visible pressure waves in dust below, debris SPIRALS upward toward camera, chain gun ROTATES scanning, sun FLARES around aircraft creating divine halo effect, camera performs slow ROTATION beneath helicopter showing full underside, then settles on dominant hero angle",
+      "transition_out": "cut",
+      "narrative_beat": "power_dominance"
+    },
+    {
+      "shot_id": "S01_B04_C02",
+      "order": 8,
+      "shot_type": "extreme_wide",
+      "subject": "attack_helicopter",
+      "location": "combat_zone",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Breathtaking extreme wide shot, AH-64 Apache performing aggressive banking maneuver against dramatic sunset sky, aircraft silhouetted against orange and purple clouds, rotor disc visible as blur, vapor trails forming off blade tips, distant mountains on horizon, god rays streaming through cloud breaks, cinematic scale showing agility despite size, 24mm anamorphic wide, THIS EXACT VEHICLE from reference, golden hour magic, raytracing 8K high detail",
+      "motion_prompt": "Helicopter BANKS HARD into dramatic turn, vapor trails STREAM off rotor tips, aircraft ROLLS showing incredible agility, sun FLARES between rotor blades creating strobe effect, clouds DRIFT past in background, camera performs sweeping PAN following the maneuver, helicopter LEVELS OUT and flies toward sunset, then camera settles",
+      "transition_out": "dissolve",
+      "narrative_beat": "agility_beauty"
+    },
+    {
+      "shot_id": "S02_B01_C01",
+      "order": 9,
+      "shot_type": "wide",
+      "subject": "attack_helicopter",
+      "location": "home_exterior",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Cinematic wide shot, AH-64 Apache helicopter descending for landing on suburban front lawn, beautiful American home in background, golden sunset sky, rotor wash bending grass and rustling nearby trees, peaceful neighborhood contrasting with military power, American flag waving from porch, dust gently swirling, magical golden hour light, Spielberg-style wonder composition, THIS EXACT VEHICLE from reference, THIS EXACT BUILDING from reference, raytracing 8K high detail",
+      "motion_prompt": "Helicopter DESCENDS gracefully toward lawn, rotors SLOW creating diminishing downdraft, grass BENDS and RIPPLES outward from landing zone, trees SWAY gently, American flag FLUTTERS in rotor wash, dust SWIRLS then begins to SETTLE, skids TOUCH DOWN gently on grass, rotors continue SPINNING DOWN, camera performs slow DOLLY IN toward aircraft, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "arrival_transition"
+    },
+    {
+      "shot_id": "S02_B02_C01",
+      "order": 10,
+      "shot_type": "medium_wide",
+      "subject": "mother",
+      "location": "home_exterior",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Warm medium wide shot, mother Sarah standing on porch holding daughter Emma's hand, both looking out with wonder at helicopter on lawn, mother's hair gently blowing in remaining rotor wash, daughter pointing excitedly, beautiful home porch framing them, warm golden backlight creating rim lighting on hair, emotional family moment, 50mm lens, f/2.0 shallow depth, THIS EXACT CHARACTER mother from reference, THIS EXACT CHARACTER daughter from reference, THIS EXACT BUILDING porch from reference, Spielberg warmth, raytracing 8K high detail",
+      "motion_prompt": "Mother's hair SWAYS gently in dying rotor wash, daughter POINTS excitedly at helicopter bouncing on feet, mother SMILES warmly looking down at daughter then back at helicopter, daughter TUGS mother's hand wanting to go closer, golden light SHIFTS warmly across their faces, camera performs gentle PUSH IN on their expressions of wonder, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "family_wonder"
+    },
+    {
+      "shot_id": "S02_B02_C02",
+      "order": 11,
+      "shot_type": "medium",
+      "subject": "father",
+      "location": "home_exterior",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Proud medium shot, father and son walking together toward parked Apache helicopter on lawn, father's hand on son's shoulder guiding him, son looking up in absolute awe, helicopter massive in background with rotors now still, golden hour rim lighting father and son from behind, emotional bonding moment, 85mm portrait lens, f/1.8 creamy bokeh, THIS EXACT CHARACTER father from reference, THIS EXACT CHARACTER son from reference, THIS EXACT VEHICLE in background from reference, raytracing 8K high detail",
+      "motion_prompt": "Father and son WALK forward together toward helicopter, father's hand GUIDES son's shoulder protectively, son LOOKS UP at father then back at helicopter with amazement, father SMILES down with pride, their footsteps CRUNCH on grass, golden light WRAPS around them warmly, camera TRACKS backward maintaining framing as they approach, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "father_son_bond"
+    },
+    {
+      "shot_id": "S02_B03_C01",
+      "order": 12,
+      "shot_type": "wide_hero",
+      "subject": "father",
+      "location": "home_exterior",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Epic final wide hero shot, complete American family gathered together beside parked AH-64 Apache helicopter on their front lawn, father with arm around mother, son standing proudly in front, daughter on father's other side, beautiful suburban home in background, American flag visible, helicopter massive and impressive behind them, perfect golden hour sunset creating warm rim lighting, aspirational American dream composition, family portrait meets military power, 35mm anamorphic, f/2.8, THIS EXACT CHARACTER father from reference, THIS EXACT CHARACTER mother from reference, THIS EXACT CHARACTER son from reference, THIS EXACT CHARACTER daughter from reference, THIS EXACT VEHICLE from reference, THIS EXACT BUILDING from reference, emotional warmth, raytracing 8K high detail",
+      "motion_prompt": "Family STANDS together in proud formation, father PULLS family closer with both arms, mother LEANS into father smiling, son PUFFS chest proudly, daughter WAVES at camera sweetly, helicopter sits majestically behind them, golden sunlight FLARES creating warm glow, American flag RIPPLES gently in breeze, camera performs slow CRANE UP revealing full epic tableau - family, helicopter, home, sunset, then settles on perfect aspirational final frame",
+      "transition_out": "fade_black",
+      "narrative_beat": "resolution_aspiration"
+    }
+  ]
+}
+```
+---

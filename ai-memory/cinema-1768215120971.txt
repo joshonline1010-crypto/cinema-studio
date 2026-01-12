@@ -1,0 +1,214 @@
+# AI Chat Memory - Session: cinema-1768215120971
+# Created: 2026-01-12T10:52:26.024Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: Lamborghini Urus commercial in the desert"
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "urus_desert_commercial",
+  "name": "Lamborghini Urus Desert Commercial",
+  "description": "A high-performance Lamborghini Urus navigates through endless desert dunes under a vast, starry sky, showcasing its power and luxury.",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "driver_001": {
+      "id": "driver_001",
+      "name": "Alex Voss",
+      "description": "Mid-30s, athletic build, confident demeanor with a rugged yet refined appearance.",
+      "costume": "Black leather jacket, tailored jeans, matte-black boots, and a sleek watch.",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "desert_001": {
+      "id": "desert_001",
+      "name": "Sahara Desert Dunes",
+      "type": "location",
+      "description": "Vast golden dunes stretching infinitely under a twilight sky, with a crescent moon and distant stars.",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "driver_001",
+      "location": "desert_001",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Lamborghini Urus black matte finish with LED accents, driving through undulating dunes under a starry sky. Reflections on the car's windshield show the vast desert landscape. 8K, ultra-detailed textures, cinematic lighting.",
+      "motion_prompt": "Camera slowly tracks the car's movement across the dunes, then zooms in on the vehicle's rear view mirror reflecting the night sky. Smooth transition with a slight tilt-up to emphasize scale.",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+---
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: MAKE ME 10 SECS AD FOR  Lamborghini Urus commercial in the desert"
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "desert_urus_ad",
+  "name": "Lamborghini Urus Desert Ad",
+  "description": "A high-octane desert commercial showcasing the Lamborghini Urus in dramatic landscapes.",
+  "duration_estimate": 10,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "driver_char",
+      "name": "Marcus",
+      "description": "Athletic, confident, mid-30s, with a rugged yet refined demeanor.",
+      "costume": "Dark leather jacket, fitted jeans, and desert boots.",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, determined expression. Bottom row: full body pose, hand on steering wheel, engine details. White background, studio lighting, 4K."
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "desert_highway",
+      "name": "Desert Highway",
+      "type": "location",
+      "description": "A vast, sun-baked desert highway at golden hour with dunes in the distance.",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout. Top row: wide exterior, medium exterior, dune detail. Middle row: wide interior, medium interior, dashboard glow. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K."
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "driver_char",
+      "location": "desert_highway",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Wide establishing shot, Marcus stands beside Lamborghini Urus on desert highway, golden hour sunlight from left, dust particles in air, cinematic composition, shot on ARRI Alexa, 24mm wide angle, f/2.8, THIS EXACT CHARACTER from reference, THIS EXACT VEHICLE from reference, raytracing 8K high detail",
+      "motion_prompt": "Slow dolly in toward subject, dust drifts across frame, golden light flickers, then settles",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S01_B02_C02",
+      "order": 2,
+      "shot_type": "medium",
+      "subject": "driver_char",
+      "location": "desert_highway",
+      "duration": 3,
+      "model": "seedance-1.5",
+      "dialog": "This is what freedom feels like.",
+      "photo_prompt": "Medium shot, Marcus in driver seat of Lamborghini Urus interior, hands on steering wheel, dashboard lights glow, shot from passenger angle, 50mm lens, shallow depth of field, THIS EXACT CHARACTER, THIS EXACT VEHICLE interior, raytracing 8K high detail",
+      "motion_prompt": "Subject speaks confidently: 'This is what freedom feels like.' Slight head movement, eyes intense, then settles",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S01_B03_C03",
+      "order": 3,
+      "shot_type": "close-up",
+      "subject": "Lamborghini Urus",
+      "location": "desert_highway",
+      "duration": 4,
+      "model": "kling-2.6",
+      "photo_prompt": "Low-angle close-up of Lamborghini Urus front grille, desert sand swirling around, harsh sunlight reflecting off chrome, 35mm lens, f/1.8, THIS EXACT VEHICLE from reference, raytracing 8K high detail",
+      "motion_prompt": "Camera tilts up toward engine, sand particles swirl, light flares, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+---

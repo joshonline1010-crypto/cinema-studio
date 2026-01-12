@@ -1,0 +1,144 @@
+# AI Chat Memory - Session: cinema-1768217288598
+# Created: 2026-01-12T11:28:48.727Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: make LAMBO TRUCK AD 20 SECS
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "lambo_truck_commercial",
+  "name": "Lamborghini Truck Commercial",
+  "description": "Showcasing the Lamborghini truck's speed and power on a scenic mountain road",
+  "duration_estimate": 20,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "driver_char": {
+      "id": "driver_char",
+      "name": "Driver",
+      "description": "A fit, confident driver in his 30s, wearing a sleek black jacket and jeans",
+      "costume": "sleek black jacket and jeans",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "mountain_pass": {
+      "id": "mountain_pass",
+      "name": "Mountain Pass",
+      "type": "location",
+      "description": "A winding mountain road with steep cliffs and a clear sky, offering a dramatic backdrop for the truck's performance",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "mountain_pass",
+      "location": "mountain_pass",
+      "duration": 4,
+      "model": "kling-2.6",
+      "photo_prompt": "A dramatic wide shot of the Lamborghini truck parked at the edge of a steep mountain cliff, with a clear sky and dramatic lighting",
+      "motion_prompt": "Camera slowly zooms in on the truck's front grille, then pans to the driver's determined face",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S02_B02_C02",
+      "order": 2,
+      "shot_type": "close-up",
+      "subject": "driver_char",
+      "location": "mountain_pass",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Close-up of the driver's hands gripping the steering wheel, with sweat glistening on his forehead and a focused expression",
+      "motion_prompt": "Camera tracks the driver's hands as the truck accelerates, with a slight tilt to emphasize speed",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S03_B03_C03",
+      "order": 3,
+      "shot_type": "dynamic",
+      "subject": "mountain_pass",
+      "location": "mountain_pass",
+      "duration": 5,
+      "model": "kling-2.6",
+      "photo_prompt": "A high-speed shot of the truck racing down the mountain road, with motion blur and dramatic sky",
+      "motion_prompt": "Camera follows the truck's movement with a dynamic tracking shot, emphasizing speed and terrain",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S04_B04_C04",
+      "order": 4,
+      "shot_type": "extreme_close-up",
+      "subject": "driver_char",
+      "location": "mountain_pass",
+      "duration": 4,
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme close-up of the driver's eyes, reflecting the sun and showing intense focus",
+      "motion_prompt": "Camera slowly pulls back to reveal the driver's full face and the truck's dashboard",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S05_B05_C05",
+      "order": 5,
+      "shot_type": "wide",
+      "subject": "mountain_pass",
+      "location": "mountain_pass",
+      "duration": 4,
+      "model": "kling-2.6",
+      "photo_prompt": "Aerial view of the truck navigating the mountain road with dramatic cliffs in the background",
+      "motion_prompt": "Camera rises with a drone shot, showcasing the truck's path and the scenic landscape",
+      "transition_out": "fade"
+    }
+  ]
+}
+```
+---

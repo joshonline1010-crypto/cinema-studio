@@ -1,0 +1,139 @@
+# AI Chat Memory - Session: cinema-1768222071290
+# Created: 2026-01-12T12:48:36.099Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: hi make me a 20 secound SPORTS CAR AD HIGH SPEED CAR SHOTS OUTSIDE ONLY NO INSDE OF CAR SHOTS NIGHT TIME IN RAIN CAR IS A MCCLRAN 720S 2020 BABY BLUE
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "mclaren_720s_night_rain",
+  "name": "McLaren 720S Night Rain",
+  "description": "High-octane 20-second commercial featuring a baby blue McLaren 720S tearing through rain-soaked city streets at night. Dramatic wet reflections, water spray, and neon reflections create a visceral automotive experience.",
+  "duration_estimate": 20,
+  "location": "Rain-soaked city streets at night",
+  "time_of_day": "night",
+  "mood": "intense, visceral, premium",
+  "color_palette": "neon reflections, wet blacks, baby blue hero",
+  "aspect_ratio": "16:9",
+  "director": "Nicolas Winding Refn",
+  "character_references": {},
+  "scene_references": {
+    "mclaren_720s": {
+      "id": "mclaren_720s",
+      "name": "McLaren 720S",
+      "type": "vehicle",
+      "description": "2020 McLaren 720S in Belize Blue (baby blue) paint, gloss black dihedral doors, black 5-spoke forged alloy wheels, carbon fiber front splitter and rear diffuser, LED headlights with signature daytime running lights, black side intakes, low aggressive stance, mid-engine supercar silhouette",
+      "generate_prompt": "Vehicle reference sheet, 3x3 grid layout, 2020 McLaren 720S supercar in Belize Blue baby blue metallic paint, gloss black wheels, carbon fiber accents, dihedral doors, LED headlights, aggressive low stance. Top row: front 3/4 view, direct front view, side profile. Middle row: rear 3/4 view, direct rear view, wheel and brake detail. Bottom row: headlight detail, front splitter detail, full car low angle hero. Studio lighting, white background, automotive photography, 8K"
+    },
+    "wet_city_street": {
+      "id": "wet_city_street",
+      "name": "Rain-Soaked City Street",
+      "type": "location",
+      "description": "Wide urban street at night, heavy rain, wet asphalt reflecting city lights, neon signs in pink and blue, puddles everywhere, light fog, empty road, dramatic street lamps creating halos in the rain, cinematic noir atmosphere",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, rain-soaked city street at night, wet black asphalt with reflections, neon signs glowing pink and blue, street lamps with rain halos, puddles, light fog, empty road, noir atmosphere. Top row: wide street view, medium intersection, street lamp detail. Middle row: wet asphalt texture with reflections, neon sign reflections in puddle, rain falling through light beam. Bottom row: different rain intensity, fog variation, dramatic lightning flash. Cinematic, no vehicles, no people, 8K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "extreme wide",
+      "subject": "mclaren_720s",
+      "location": "wet_city_street",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme wide shot, 2020 McLaren 720S baby blue Belize Blue speeding down rain-soaked city street at night, headlights cutting through rain and fog, water spray from wheels, neon reflections on wet asphalt pink and blue, street lamps creating light halos, heavy rain falling, cinematic noir atmosphere, shot on ARRI Alexa, 24mm anamorphic lens, f/2.0, motion blur on background, THIS EXACT VEHICLE from reference, Nicolas Winding Refn style, raytracing 8K high detail",
+      "motion_prompt": "Car races toward camera at high speed, massive water spray from wheels, rain streaks through headlight beams, neon reflections streak across wet ground, camera holds static as car blasts past frame, water droplets hit lens, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "hook"
+    },
+    {
+      "shot_id": "S01_B01_C02",
+      "order": 2,
+      "shot_type": "tracking side",
+      "subject": "mclaren_720s",
+      "location": "wet_city_street",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Dynamic tracking shot from side, 2020 McLaren 720S baby blue Belize Blue at high speed, low angle capturing aggressive stance, rooster tail water spray behind rear wheels, rain droplets suspended in motion, neon city lights streaking in background, wet road surface reflecting car, side profile showing dihedral doors and sculpted body, shot on RED Komodo, 35mm lens, f/1.8, motion blur background, THIS EXACT VEHICLE from reference, raytracing 8K high detail",
+      "motion_prompt": "Camera tracks alongside car at matching speed, water continuously sprays from wheels, rain falls at angle showing speed, background city lights streak horizontally, car body shimmers with rain and reflections, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "action"
+    },
+    {
+      "shot_id": "S01_B02_C01",
+      "order": 3,
+      "shot_type": "low angle front",
+      "subject": "mclaren_720s",
+      "location": "wet_city_street",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Low angle front view, camera 6 inches from wet ground, 2020 McLaren 720S baby blue Belize Blue approaching head-on, LED headlights blazing through rain creating dramatic light beams, water splashing toward camera, aggressive front fascia, carbon fiber splitter visible, puddle reflections of the car, heavy rain backlit by street lamps, shot on ARRI Alexa, 18mm wide angle, f/2.0, THIS EXACT VEHICLE from reference, menacing presence, raytracing 8K high detail",
+      "motion_prompt": "Car charges directly toward camera, headlights intensify, water explodes outward from front wheels, rain illuminated in headlight beams, reflection in puddle grows larger, engine roar implied by aggressive approach, camera holds low, then car passes overhead, settles to black",
+      "transition_out": "cut",
+      "narrative_beat": "climax"
+    },
+    {
+      "shot_id": "S01_B02_C02",
+      "order": 4,
+      "shot_type": "hero beauty",
+      "subject": "mclaren_720s",
+      "location": "wet_city_street",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Hero beauty shot, 2020 McLaren 720S baby blue Belize Blue parked at dramatic angle on wet street, rain continuing to fall, car glistening with water droplets on body panels, all neon reflections pooling around car in puddles pink and blue, LED lights glowing, steam rising from hot brakes, street lamp backlighting creating rim light on car silhouette, medium wide framing, 50mm lens, f/2.8, shallow depth of field, THIS EXACT VEHICLE from reference, automotive photography masterpiece, raytracing 8K high detail",
+      "motion_prompt": "Slow orbit around car, rain continues falling on glossy body, water droplets roll down curved panels, neon reflections shimmer in surrounding puddles, steam wisps from wheel arches, gentle camera movement reveals all angles, then settles on 3/4 front hero angle",
+      "transition_out": "fade",
+      "narrative_beat": "resolution"
+    }
+  ]
+}
+```
+---

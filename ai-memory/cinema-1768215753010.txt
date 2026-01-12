@@ -1,0 +1,120 @@
+# AI Chat Memory - Session: cinema-1768215753010
+# Created: 2026-01-12T11:03:17.186Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: make ad FOR LAMBO TRUCK AD SHOWING HOW EPIC AND SEXY IT IS
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "lambo_truck_epic",
+  "name": "Lambo Truck: Epic & Sexy",
+  "description": "A high-octane ad showcasing the Lambo truck's raw power and seductive design, with a confident driver exuding charm in a dramatic desert setting.",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "driver_001": {
+      "id": "driver_001",
+      "name": "Alex Vega",
+      "description": "Athletic build, sharp jawline, confident posture with a hint of arrogance",
+      "costume": "Tailored black suit with a white dress shirt, sunglasses, and leather gloves",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [ATHLETIC, SHARP FEATURES, CONFIDENT POSTURE]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "desert_001": {
+      "id": "desert_001",
+      "name": "Desert Canyon",
+      "type": "location",
+      "description": "Vast red rock formations, golden sand dunes, and a dramatic sunset sky",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [RED ROCKS, SAND DUNES, SUNSET]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "driver_001",
+      "location": "desert_001",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Lambo truck parked atop a sand dune at sunset, chrome details reflecting golden light, rear wheels partially buried in sand, driver in suit leaning against the hood with sunglasses on, 8K",
+      "motion_prompt": "Camera slowly zooms in from wide shot to close-up of the truck's engine, then pans to the driver's smirking face",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S01_B02_C02",
+      "order": 2,
+      "shot_type": "close-up",
+      "subject": "driver_001",
+      "location": "desert_001",
+      "duration": 4,
+      "model": "kling-2.6",
+      "photo_prompt": "Driver's hands gripping the steering wheel, leather gloves reflecting sunset hues, face partially in shadow with a confident smirk, 8K",
+      "motion_prompt": "Slow dolly forward from the dashboard to the driver's face, with a subtle focus shift on the eyes",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S01_B03_C03",
+      "order": 3,
+      "shot_type": "dynamic",
+      "subject": "driver_001",
+      "location": "desert_001",
+      "duration": 5,
+      "model": "kling-2.6",
+      "photo_prompt": "Lambo truck roaring forward through a desert canyon, rear wheels kicking up sand, driver's figure in the rearview mirror with a sultry smile, 8K",
+      "motion_prompt": "Camera tracks the truck's movement with a sweeping 360-degree rotation around the vehicle",
+      "transition_out": "fade"
+    }
+  ]
+}
+```
+---

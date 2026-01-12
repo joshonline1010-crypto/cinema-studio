@@ -1,0 +1,120 @@
+# AI Chat Memory - Session: cinema-1768217636062
+# Created: 2026-01-12T11:34:49.877Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: MAKE ME A SPORTS BRUH AD 10 SECS MAKE IT HOT FUN FAST AD THAT SHOWS HOW HOT YOU CAN BE AND HOW FIT AND FAST YOU CAN BE WITH OUR SPORTS BRUH CALLED SOP
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "sop_hot_fit_fast",
+  "name": "SOP: Hot, Fit, Fast!",
+  "description": "A high-energy 10-second ad showcasing SOP's ability to boost heat, fitness, and speed through intense workout scenes.",
+  "duration_estimate": 10,
+  "mood": "high-energy",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_001": {
+      "id": "char_001",
+      "name": "Alex",
+      "description": "Muscular, tanned, sweat-drenched, with a confident smirk",
+      "costume": "SOP sports gear: red tank top, black shorts, neon wristbands",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view mid-stride, 3/4 view sprinting, side profile mid-jump. Middle row: back view with gear, close-up face with汗水, expression of determination. Bottom row: full body mid-pump, action pose with weights, gear details. Studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "loc_001": {
+      "id": "loc_001",
+      "name": "SOP Training Zone",
+      "type": "location",
+      "description": "Sunny outdoor track with athletes in motion, neon signs, and energy drinks",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior of track, medium exterior with crowd, architectural detail of sign. Middle row: wide interior of gym, medium interior with equipment, interior details of gear. Bottom row: sunrise lighting, midday action, sunset glow. Cinematic, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "char_001",
+      "location": "loc_001",
+      "duration": 2,
+      "model": "kling-2.6",
+      "photo_prompt": "Alex sprinting down the track, red tank top soaked with sweat, neon wristbands glowing, crowd cheering in background, 8K",
+      "motion_prompt": "Camera follows Alex's sprint, zooms in on his determined face, then cuts to the product",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S02_B02_C02",
+      "order": 2,
+      "shot_type": "close-up",
+      "subject": "char_001",
+      "location": "loc_001",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Alex's forearm flexed, SOP wristband glowing, sweat droplets on skin, 8K",
+      "motion_prompt": "Camera spins around Alex's arm, highlights gear details, then transitions to a speed shot",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S03_B03_C03",
+      "order": 3,
+      "shot_type": "action",
+      "subject": "char_001",
+      "location": "loc_001",
+      "duration": 5,
+      "model": "kling-2.6",
+      "photo_prompt": "Alex mid-pump with weights, red tank top stretched, neon gear reflecting sunlight, 8K",
+      "motion_prompt": "Camera circles Alex in a slow-mo power pose, then rapid cuts to product close-ups",
+      "transition_out": "fade"
+    }
+  ]
+}
+```
+---

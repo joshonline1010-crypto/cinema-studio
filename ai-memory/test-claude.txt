@@ -1,0 +1,139 @@
+# AI Chat Memory - Session: test-claude
+# Created: 2026-01-12T11:44:05.913Z
+
+[USER]: Plan a 15 second sports bra ad for female athletes
+---
+[ASSISTANT]: ```analysis
+TYPE: commercial
+HERO SUBJECT: Sports bra (worn by athlete - shown through costume)
+CHARACTERS: Female athlete → character_references
+VEHICLES: none
+BUILDINGS: none
+LOCATIONS: Modern gym/training facility → scene_references
+OBJECTS: none
+```
+
+```json
+{
+  "scene_id": "apex_sports_bra_ad",
+  "name": "APEX Sports Bra - Unstoppable",
+  "description": "A powerful 15-second commercial showcasing the APEX sports bra through dynamic athletic movements. An elite female athlete demonstrates high-impact training while the product provides unwavering support. The ad builds from stillness to explosive action, ending on a confident hero moment.",
+  "duration_estimate": 15,
+  "location": "Modern industrial gym with dramatic lighting",
+  "time_of_day": "indoor",
+  "mood": "powerful, confident, dynamic",
+  "color_palette": "high contrast blacks, warm skin tones, product accent color",
+  "aspect_ratio": "9:16",
+  "director": "Nicolas Winding Refn",
+  "character_references": {
+    "maya": {
+      "id": "maya",
+      "name": "Maya",
+      "description": "Athletic Black woman, 28, powerful muscular build, defined shoulders and abs, box braids pulled back in high ponytail, intense dark brown eyes, strong jawline, flawless dark skin with natural sheen, confident fierce expression",
+      "costume": "APEX Velocity sports bra in deep burgundy with black mesh panels, geometric cutout back design, thick supportive straps, matching high-waisted black compression leggings, black cross-training shoes"
+    }
+  },
+  "scene_references": {
+    "industrial_gym": {
+      "id": "industrial_gym",
+      "name": "Industrial Training Facility",
+      "type": "location",
+      "description": "Modern industrial gym with exposed concrete walls, matte black equipment, dramatic overhead spotlights creating pools of light, haze in air catching light beams, minimalist aesthetic, dark moody atmosphere with warm accent lighting"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "medium",
+      "subject": "Maya",
+      "location": "industrial_gym",
+      "duration": 2,
+      "model": "kling-2.6",
+      "photo_prompt": "Medium shot, Maya standing in industrial gym, dramatic side lighting from left creating rim light on muscles, sports bra prominent in frame, arms at sides fists clenched, intense focused expression, haze in background catching light beams, shot on ARRI Alexa, 50mm lens f/1.8, shallow depth of field, high contrast cinematography, THIS EXACT CHARACTER from reference, raytracing 8K high detail",
+      "motion_prompt": "Subject breathes deeply, chest rises, shoulders roll back with power, eyes lock onto camera with fierce determination, subtle camera push-in, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "introduction"
+    },
+    {
+      "shot_id": "S01_B02_C01",
+      "order": 2,
+      "shot_type": "wide",
+      "subject": "Maya",
+      "location": "industrial_gym",
+      "duration": 2,
+      "model": "kling-2.6",
+      "photo_prompt": "Wide dynamic shot, Maya mid-jump performing box jump, explosive upward motion frozen, arms driving upward, hair in motion, dramatic underlit spotlight from below, industrial gym background, sweat particles visible in light beams, 24mm wide angle, fast shutter freeze motion, high contrast, THIS EXACT CHARACTER from reference, raytracing 8K high detail",
+      "motion_prompt": "Subject explodes upward in powerful box jump, arms drive up, braids whip with momentum, lands with controlled power, camera slightly rises with motion, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "action"
+    },
+    {
+      "shot_id": "S01_B02_C02",
+      "order": 3,
+      "shot_type": "close-up",
+      "subject": "Maya",
+      "location": "industrial_gym",
+      "duration": 2,
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme close-up on sports bra, Maya's torso mid-movement, fabric stretching and supporting, sweat droplets on skin, mesh panel detail visible, burgundy fabric against dark skin, dramatic side lighting emphasizing texture and construction, macro detail shot, 100mm lens, shallow depth of field, THIS EXACT CHARACTER from reference, THIS EXACT COSTUME, raytracing 8K high detail",
+      "motion_prompt": "Torso twists with athletic movement, fabric flexes and supports, light catches sweat on skin, subtle breathing motion, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "product detail"
+    },
+    {
+      "shot_id": "S01_B03_C01",
+      "order": 4,
+      "shot_type": "medium",
+      "subject": "Maya",
+      "location": "industrial_gym",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Medium shot, Maya throwing powerful punches at camera, boxing stance, muscles engaged, sweat flying from impacts, dramatic backlighting creating silhouette edge, frontal fill light on face and torso, high-speed action capture, 35mm lens, industrial gym haze background, intense expression, THIS EXACT CHARACTER from reference, raytracing 8K high detail",
+      "motion_prompt": "Subject throws rapid powerful punches toward camera, one-two-three combination, body rotating with each strike, sweat particles fly, hair moves with momentum, camera holds steady absorbing power, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "climax"
+    },
+    {
+      "shot_id": "S01_B04_C01",
+      "order": 5,
+      "shot_type": "medium close-up",
+      "subject": "Maya",
+      "location": "industrial_gym",
+      "duration": 3,
+      "model": "seedance-1.5",
+      "dialog": "Unstoppable.",
+      "photo_prompt": "Medium close-up hero shot, Maya facing camera with confident power stance, hands on hips, sports bra prominently featured, glistening with light sweat, dramatic rim lighting from behind, warm key light on face, powerful confident expression with slight smile, shallow depth of field, gym bokeh background, THIS EXACT CHARACTER from reference, raytracing 8K high detail",
+      "motion_prompt": "Subject breathes with power, chest rises, forms confident slight smile, speaks with intensity: 'Unstoppable.' Eyes hold camera with fierce confidence, subtle head lift, then settles as logo appears",
+      "transition_out": "fade",
+      "narrative_beat": "tagline/resolution"
+    }
+  ],
+  "audio_notes": "Driving electronic bass beat building through action shots, drops to minimal for final tagline moment, impactful bass hit on 'Unstoppable'"
+}
+```
+
+---
+
+## Shot Breakdown:
+
+| Shot | Duration | Type | Action | Model |
+|------|----------|------|--------|-------|
+| S01 | 2s | Medium | Stillness before storm, breathing, intensity builds | Kling 2.6 |
+| S02 | 2s | Wide | Explosive box jump, power demonstration | Kling 2.6 |
+| S03 | 2s | Close-up | Product detail, support in motion | Kling 2.6 |
+| S04 | 3s | Medium | Boxing combo, peak action | Kling 2.6 |
+| S05 | 3s | MCU | Hero moment + tagline delivery | Seedance |
+
+**Total: 12 seconds** + 3 seconds for logo/end card = **15 seconds**
+
+---
+
+## Creative Rationale:
+
+- **Nicolas Winding Refn style**: High contrast, neon-adjacent color pops, stylized intensity
+- **9:16 aspect ratio**: Optimized for Instagram/TikTok vertical format
+- **Build pattern**: Stillness → Explosion → Detail → Climax → Power stance
+- **Product focus**: Shot 3 specifically highlights bra construction, shots 1 & 5 feature it prominently
+- **Empowerment messaging**: "Unstoppable" delivered by the athlete herself, not voice-over
+---

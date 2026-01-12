@@ -820,6 +820,18 @@ export default function CinemaStudio() {
     const sceneRefs = Object.values(currentScene.scene_references || {}).filter(r => !r.ref_url);
     const totalRefs = charRefs.length + sceneRefs.length;
 
+    // ===== FIX FOR STALE STATE BUG =====
+    // Collect ref URLs as we generate them - DON'T rely on React state updates!
+    const generatedRefUrls: Map<string, string> = new Map();
+
+    // Also collect ALL existing refs that already have URLs
+    Object.values(currentScene.character_references || {}).forEach(char => {
+      if (char.ref_url) generatedRefUrls.set(`char_${char.id}`, char.ref_url);
+    });
+    Object.values(currentScene.scene_references || {}).forEach(ref => {
+      if (ref.ref_url) generatedRefUrls.set(`${ref.type}_${ref.id}`, ref.ref_url);
+    });
+
     if (totalRefs > 0) {
       setStatusMessage(`Step 1: Generating ${totalRefs} reference shots in parallel...`);
 
@@ -842,7 +854,12 @@ export default function CinemaStudio() {
             if (response.ok) {
               const data = await response.json();
               const url = data.image_url || data.images?.[0]?.url;
-              if (url) updateCharacter(char.id, { ref_url: url });
+              if (url) {
+                updateCharacter(char.id, { ref_url: url });
+                // Store locally to avoid stale state!
+                generatedRefUrls.set(`char_${char.id}`, url);
+                console.log(`✓ Char ref stored: ${char.name} -> ${url.substring(0, 50)}...`);
+              }
             }
           } catch (err) {
             console.error(`Ref gen failed for ${char.name}:`, err);
@@ -865,7 +882,12 @@ export default function CinemaStudio() {
             if (response.ok) {
               const data = await response.json();
               const url = data.image_url || data.images?.[0]?.url;
-              if (url) updateSceneRef(ref.id, { ref_url: url });
+              if (url) {
+                updateSceneRef(ref.id, { ref_url: url });
+                // Store locally to avoid stale state!
+                generatedRefUrls.set(`${ref.type}_${ref.id}`, url);
+                console.log(`✓ Scene ref stored: ${ref.name} -> ${url.substring(0, 50)}...`);
+              }
             }
           } catch (err) {
             console.error(`Ref gen failed for ${ref.name}:`, err);
@@ -874,8 +896,36 @@ export default function CinemaStudio() {
       ];
 
       await Promise.all(refPromises);
+      console.log(`[executeFullPlan] All refs generated! Map has ${generatedRefUrls.size} URLs`);
       setStatusMessage(`Refs complete! Now generating images...`);
     }
+
+    // Helper to get ref URLs from our local map (not stale React state!)
+    const getRefUrlsFromMap = (shot: SceneShot): string[] => {
+      const urls: string[] = [];
+      const searchText = `${shot.subject || ''} ${shot.photo_prompt || ''} ${shot.location || ''}`.toLowerCase();
+
+      // Add ALL character refs (for consistency across shots)
+      generatedRefUrls.forEach((url, key) => {
+        if (key.startsWith('char_')) {
+          urls.push(url);
+        }
+      });
+
+      // Add matching location/object refs
+      Object.values(currentScene.scene_references || {}).forEach(ref => {
+        const nameWords = ref.name.toLowerCase().split(/[\s_-]+/).filter(w => w.length > 2);
+        const hasMatch = nameWords.some(word => searchText.includes(word));
+        if (hasMatch) {
+          const mapKey = `${ref.type}_${ref.id}`;
+          const url = generatedRefUrls.get(mapKey);
+          if (url) urls.push(url);
+        }
+      });
+
+      console.log(`[getRefUrlsFromMap] Shot ${shot.shot_id}: found ${urls.length} refs`);
+      return urls;
+    };
 
     // STEP 2: Generate ALL images in PARALLEL (no batching!)
     const pendingShots = currentScene.shots.filter(s => s.status === 'pending');
@@ -891,12 +941,13 @@ export default function CinemaStudio() {
     pendingShots.forEach(shot => markShotGenerating(shot.shot_id));
     let imagesCompleted = 0;
 
-    // Generate ALL images at once!
+    // Generate ALL images at once - using LOCAL ref map, not stale state!
     const imagePromises = pendingShots.map(async (shot) => {
       try {
         const prompt = shot.photo_prompt || `${shot.subject}, ${shot.shot_type} shot, ${shot.location || ''}, cinematic, 8K`;
-        const refUrls = getRefUrlsForShot(shot);
-        console.log(`[executeFullPlan] PARALLEL: Sending image ${shot.shot_id}`);
+        // USE LOCAL MAP instead of getRefUrlsForShot which reads stale state!
+        const refUrls = getRefUrlsFromMap(shot);
+        console.log(`[executeFullPlan] PARALLEL: Sending image ${shot.shot_id} with ${refUrls.length} refs`);
 
         const response = await fetch('/api/cinema/generate', {
           method: 'POST',

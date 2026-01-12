@@ -1,0 +1,144 @@
+# AI Chat Memory - Session: cinema-1768221935099
+# Created: 2026-01-12T12:46:45.932Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: hi make me a 20 secound SPORTS CAR AD HIGH SPEED CAR SHOTS OUTSIDE ONLY NO INSDE OF CAR SHOTS NIGHT TIME IN RAIN CAR IS A MCCLRAN 720S 2020 BABY BLUE
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "mclaren_720s_ad",
+  "name": "McLaren 720S Sports Car Advertisement",
+  "description": "High-speed exterior shots of a 2020 McLaren 720S baby blue sports car racing through rain-soaked streets at night.",
+  "duration_estimate": 20,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "mclaren_720s_2020": {
+      "id": "mclaren_720s_2020",
+      "name": "McLaren 720S 2020",
+      "description": "2020 McLaren 720S, baby blue, high-performance sports car with aggressive styling, LED headlights, and racing details",
+      "costume": "baby blue paint job with racing stripes",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "night_rain_street": {
+      "id": "night_rain_street",
+      "name": "Night Rain Street",
+      "type": "location",
+      "description": "Rain-soaked city street at night, neon lights reflecting in wet pavement, dark skies with faint lightning",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "mclaren_720s_2020",
+      "location": "night_rain_street",
+      "duration": 4,
+      "model": "kling-2.6",
+      "photo_prompt": "2020 McLaren 720S baby blue racing through rain-soaked city streets at night, neon reflections on wet pavement, dark sky with faint lightning, 8K",
+      "motion_prompt": "Camera follows car at high speed, rain streaks across windshield, neon lights trailing in the distance",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S01_B01_C02",
+      "order": 2,
+      "shot_type": "close-up",
+      "subject": "mclaren_720s_2020",
+      "location": "night_rain_street",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Front view of McLaren 720S baby blue, rain streaming across windshield, LED headlights piercing the storm, 8K",
+      "motion_prompt": "Camera tilts slightly as car speeds past, raindrops blur into streaks",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S01_B01_C03",
+      "order": 3,
+      "shot_type": "low_angle",
+      "subject": "mclaren_720s_2020",
+      "location": "night_rain_street",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Low-angle shot of McLaren 720S baby blue speeding toward camera, rain creating glowing reflections on wet road, 8K",
+      "motion_prompt": "Dynamic camera movement matching car's speed, lightning flashes in the distance",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S01_B01_C04",
+      "order": 4,
+      "shot_type": "over_the_shoulder",
+      "subject": "mclaren_720s_2020",
+      "location": "night_rain_street",
+      "duration": 4,
+      "model": "kling-2.6",
+      "photo_prompt": "Over-the-shoulder view of McLaren 720S baby blue in motion, rear lights cutting through rain, 8K",
+      "motion_prompt": "Smooth tracking shot following car's rear, rain streaks trailing in the background",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S01_B01_C05",
+      "order": 5,
+      "shot_type": "wide",
+      "subject": "mclaren_720s_2020",
+      "location": "night_rain_street",
+      "duration": 6,
+      "model": "kling-2.6",
+      "photo_prompt": "Wide shot of McLaren 720S baby blue exiting a rain-soaked tunnel, neon lights reflecting in puddles, dark sky with lightning, 8K",
+      "motion_prompt": "Slow zoom out as car exits tunnel, dramatic lightning strike in the background",
+      "transition_out": "fade"
+    }
+  ]
+}
+```
+---

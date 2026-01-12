@@ -1,0 +1,132 @@
+# AI Chat Memory - Session: cinema-1768216455943
+# Created: 2026-01-12T11:14:45.906Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: Plan a 10 second IMAX ad for a donut shop
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "donut_shop_ad",
+  "name": "Sweet Dreams Donut Shop Ad",
+  "description": "A vibrant IMAX ad showcasing fresh donuts, warm lighting, and a cozy shop atmosphere.",
+  "duration_estimate": 10,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_001": {
+      "id": "char_001",
+      "name": "Maggie",
+      "description": "Friendly, mid-30s, with a warm smile and flour-dusted hands",
+      "costume": "Floral apron, checkered shirt, hair in a messy bun",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [Maggie's description]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "loc_001": {
+      "id": "loc_001",
+      "name": "Donut Shop",
+      "type": "location",
+      "description": "Cozy shop with pastel walls, display cases of donuts, and a counter with steam rising",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [Donut Shop description]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "loc_001",
+      "location": "loc_001",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "IMAX wide shot of the donut shop exterior at sunrise, pastel walls glowing with warm light, display cases filled with glazed and cream-filled donuts, steam rising from the counter, 8K",
+      "motion_prompt": "Drone sweeps from the shop sign to the entrance, revealing the interior through a glass door",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S02_B02_C02",
+      "order": 2,
+      "shot_type": "close-up",
+      "subject": "char_001",
+      "location": "loc_001",
+      "duration": 2,
+      "model": "kling-2.6",
+      "photo_prompt": "Close-up of Maggie's hands glazing a donut, flour dusted fingertips, golden light reflecting off the dough, 8K",
+      "motion_prompt": "Camera tracks Maggie's hand motion as she shapes the donut, slow zoom into the glaze",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S03_B03_C03",
+      "order": 3,
+      "shot_type": "medium",
+      "subject": "char_001",
+      "location": "loc_001",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Maggie smiling at the counter, steam rising from a coffee cup, customers in the background enjoying donuts, 8K",
+      "motion_prompt": "Dolly push toward Maggie's smiling face, slight camera tilt to emphasize warmth",
+      "transition_out": "fade"
+    },
+    {
+      "shot_id": "S04_B04_C04",
+      "order": 4,
+      "shot_type": "wide",
+      "subject": "loc_001",
+      "location": "loc_001",
+      "duration": 2,
+      "model": "kling-2.6",
+      "photo_prompt": "Nighttime shot of the shop sign glowing with 'Open 24/7' light, donuts under colorful neon lights, 8K",
+      "motion_prompt": "Steadicam moves around the glowing display cases with slow motion",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+---

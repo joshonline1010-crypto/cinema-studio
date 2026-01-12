@@ -1,0 +1,122 @@
+# AI Chat Memory - Session: cinema-1768217710075
+# Created: 2026-01-12T11:35:49.150Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: MAKE ME 20 SECOUND AD FOR LAMBO TRUCK AD MAKE IT BEAST MODE SHOW HOW FAST THIS CAR IS
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "lambo_beast_mode",
+  "name": "Lambo Beast Mode: Unleashed",
+  "description": "A high-speed chase through rugged terrain showcases the Lambo truck's raw power and agility in Beast Mode.",
+  "duration_estimate": 20,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "driver_001": {
+      "id": "driver_001",
+      "name": "Driver",
+      "description": "Fit, athletic, mid-30s, wearing sunglasses and a racing jacket",
+      "costume": "Leather racing gear, tactical vest, helmet",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "terrain_001": {
+      "id": "terrain_001",
+      "name": "Rugged Terrain",
+      "type": "location",
+      "description": "Dirt track with rocky outcrops and muddy patches under intense sunlight",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "driver_001",
+      "location": "terrain_001",
+      "duration": 4,
+      "model": "kling-2.6",
+      "photo_prompt": "Lambo truck in Beast Mode roaring down a dirt track, rear wheels smoking, dust clouds rising, sun glinting off chrome details, 8K",
+      "motion_prompt": "Camera tracks the truck's progress, zooms in on spinning wheels, then cuts to the driver's determined face",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S02_B01_C02",
+      "order": 2,
+      "shot_type": "close-up",
+      "subject": "driver_001",
+      "location": "terrain_001",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Driver's intense expression through tinted sunglasses, sweat glistening, racing jacket torn at the shoulder, 8K",
+      "motion_prompt": "Camera slowly pans from the driver's hands gripping the wheel to the dashboard speedometer hitting 120mph",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S03_B01_C03",
+      "order": 3,
+      "shot_type": "low_angle",
+      "subject": "driver_001",
+      "location": "terrain_001",
+      "duration": 5,
+      "model": "kling-2.6",
+      "photo_prompt": "Lambo truck's undercarriage with mud splatter, exhaust flames, tire treads gripping the track, 8K",
+      "motion_prompt": "Camera rises from ground level to capture the truck's full speed, with motion blur emphasizing velocity",
+      "transition_out": "cut"
+    },
+    {
+      "shot_id": "S04_B01_C04",
+      "order": 4,
+      "shot
+```
+---

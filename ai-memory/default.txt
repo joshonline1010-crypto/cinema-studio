@@ -1,0 +1,114 @@
+# AI Chat Memory - Session: default
+# Created: 2026-01-12T13:53:50.151Z
+
+[USER]: Create a simple 3-shot story: CHIP the fluffy character discovers a treasure chest. Include dialog for each shot.
+---
+[ASSISTANT]: ```analysis
+TYPE: narrative (short story)
+HERO SUBJECT: CHIP the fluffy character (main character - MUST HAVE REF!)
+CHARACTERS: CHIP → character_references
+VEHICLES: none
+BUILDINGS: none
+LOCATIONS: enchanted forest clearing → scene_references type: "location"
+OBJECTS: treasure chest (key prop in all shots) → scene_references type: "object"
+```
+
+```json
+{
+  "scene_id": "chip_treasure_discovery",
+  "name": "CHIP Discovers Treasure",
+  "description": "CHIP the adorable fluffy character stumbles upon a mysterious treasure chest in the forest and discovers what's inside",
+  "duration_estimate": 30,
+  "location": "Enchanted forest clearing",
+  "time_of_day": "golden_hour",
+  "mood": "whimsical, adventurous, joyful",
+  "color_palette": "warm greens, golden light, magical sparkles",
+  "aspect_ratio": "16:9",
+  "director": "Pixar Animation Style",
+  "character_references": {
+    "chip": {
+      "id": "chip",
+      "name": "CHIP",
+      "description": "Adorable fluffy creature, round body covered in soft cream-colored fur, big sparkly brown eyes, tiny pink nose, small rounded ears, chubby cheeks, short stubby arms and legs, 2 feet tall, Pixar-style 3D animation, incredibly cute and expressive"
+    }
+  },
+  "scene_references": {
+    "forest_clearing": {
+      "id": "forest_clearing",
+      "name": "Enchanted Forest Clearing",
+      "type": "location",
+      "description": "Magical forest clearing surrounded by tall mossy trees, dappled golden sunlight streaming through leaves, soft grass with tiny flowers, floating dust motes catching light, mystical atmosphere, Pixar-style environment"
+    },
+    "treasure_chest": {
+      "id": "treasure_chest",
+      "name": "Treasure Chest",
+      "type": "object",
+      "description": "Ornate wooden treasure chest with brass fittings, decorative swirling patterns carved into wood, golden lock and hinges, slightly weathered with moss on corners, mysterious golden glow emanating from within when opened, medium size"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "medium wide",
+      "subject": "chip",
+      "location": "forest_clearing",
+      "duration": "10",
+      "model": "seedance-1.5",
+      "dialog": "Ooooh! What's THIS?!",
+      "photo_prompt": "Medium wide shot, CHIP the fluffy cream-colored creature standing in enchanted forest clearing, noticing treasure chest partially hidden under ferns, golden sunlight streaming through trees, magical atmosphere, CHIP's eyes wide with curiosity, arms raised in surprise, Pixar 3D animation style, THIS EXACT CHARACTER from reference, THIS EXACT LOCATION from reference, raytracing 8K high detail",
+      "motion_prompt": "CHIP bounces excitedly toward treasure chest, ears perk up, speaks with wonder: 'Ooooh! What's THIS?!' Points at chest, golden light particles drift through air, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "discovery"
+    },
+    {
+      "shot_id": "S01_B02_C01",
+      "order": 2,
+      "shot_type": "close-up",
+      "subject": "chip",
+      "location": "forest_clearing",
+      "duration": "10",
+      "model": "seedance-1.5",
+      "dialog": "Let's see what's inside!",
+      "photo_prompt": "Close-up shot, CHIP's face and small paws on edge of ornate treasure chest, about to lift the lid, expression of intense anticipation, big brown eyes sparkling, golden glow from chest illuminating fluffy face from below, shallow depth of field, Pixar 3D animation style, THIS EXACT CHARACTER, THIS EXACT OBJECT from reference, raytracing 8K high detail",
+      "motion_prompt": "CHIP's paws grip chest lid, speaks excitedly: 'Let's see what's inside!' Lifts lid slowly, golden light bursts upward illuminating face, eyes widen dramatically, fur ruffles from magical breeze, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "anticipation"
+    },
+    {
+      "shot_id": "S01_B03_C01",
+      "order": 3,
+      "shot_type": "medium",
+      "subject": "chip",
+      "location": "forest_clearing",
+      "duration": "10",
+      "model": "seedance-1.5",
+      "dialog": "COOKIES! It's full of COOKIES!",
+      "photo_prompt": "Medium shot, CHIP standing triumphantly beside open treasure chest overflowing with golden cookies, arms raised in celebration, pure joy on face, magical golden sparkles floating around, warm sunset light, open treasure chest glowing, Pixar 3D animation style, THIS EXACT CHARACTER, THIS EXACT OBJECT, raytracing 8K high detail",
+      "motion_prompt": "CHIP jumps up and down with joy, speaks ecstatically: 'COOKIES! It's full of COOKIES!' Arms wave excitedly, grabs a cookie and hugs it, sparkles swirl around, then settles with biggest smile",
+      "transition_out": "fade",
+      "narrative_beat": "joyful resolution"
+    }
+  ]
+}
+```
+
+---
+
+## 📋 Shot Breakdown
+
+| Shot | Type | Duration | What Happens |
+|------|------|----------|--------------|
+| 1 | Medium Wide | 10s | CHIP discovers the chest in the forest |
+| 2 | Close-up | 10s | CHIP opens the lid, golden light reveals |
+| 3 | Medium | 10s | CHIP celebrates finding cookies inside! |
+
+**Total Runtime:** ~30 seconds
+
+**Story Arc:**
+- **Setup:** Discovery in magical forest
+- **Build:** Anticipation of opening
+- **Payoff:** Joyful surprise (cookies!)
+
+All three shots use **Seedance 1.5** for lip-synced dialogue with CHIP's adorable voice! 🍪✨
+---

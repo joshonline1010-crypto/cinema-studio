@@ -1,0 +1,448 @@
+# AI Chat Memory - Session: cinema-1768225703669
+# Created: 2026-01-12T13:51:01.644Z
+
+[USER]: YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in ```json code block):
+```json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "FULL physical description - age, hair color/style, eye color, skin tone, body type, distinguishing features",
+      "costume": "FULL outfit - colors, materials, accessories, shoes"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "FULL description - terrain, vegetation, architecture, atmosphere, lighting mood, weather"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+```
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: MAKE 2MIN MOVIE TRAIELR BASED OFF OUR ALEX PRED SINCE ALL REF ARE MADE MAKE MORE IF YOU NEED MORE STUFF
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "alex_pred_trailer",
+  "name": "ALEX PRED - Official Trailer",
+  "description": "A 2-minute action horror movie trailer following Alex Pred, an elite alien hunter who arrives on Earth to hunt the most dangerous prey. Military forces scramble to respond as bodies pile up in the jungle. One soldier discovers the truth - they're not hunting it, it's hunting them.",
+  "duration_estimate": 120,
+  "location": "Multiple - Jungle, Military Base, City Ruins",
+  "time_of_day": "mixed",
+  "mood": "intense, horror, action",
+  "color_palette": "high contrast, thermal vision greens, blood red accents, jungle green, night blue",
+  "aspect_ratio": "21:9",
+  "director": "John McTiernan meets Ridley Scott",
+  "character_references": {
+    "alex_pred": {
+      "id": "alex_pred",
+      "name": "Alex Pred",
+      "description": "Massive 7-foot tall alien predator warrior, muscular humanoid physique, mottled reptilian skin in grey-green and brown camouflage pattern, iconic bio-helmet with targeting laser, dreadlock-like appendages hanging from head, mandibles visible when unmasked, yellow reptilian eyes, scarred battle-worn skin, tribal markings etched into flesh",
+      "costume": "Advanced alien armor - metallic mesh bodysuit, shoulder-mounted plasma cannon, wrist blades extended from gauntlet, ceremonial bone trophies on belt, clan symbols etched in armor, fishnet-style body netting, metallic greaves and arm guards"
+    },
+    "colonel_hayes": {
+      "id": "colonel_hayes",
+      "name": "Colonel Hayes",
+      "description": "Hardened military veteran, 45 years old, African American male, shaved head, intense dark brown eyes, prominent scar across left cheek, strong jaw, muscular build, weathered face showing years of combat experience, determined expression",
+      "costume": "Jungle camouflage fatigues, tactical vest loaded with ammunition, dog tags, combat boots caked in mud, sweat-stained undershirt, holstered sidearm, machete strapped to back"
+    },
+    "dr_chen": {
+      "id": "dr_chen",
+      "name": "Dr. Sarah Chen",
+      "description": "Brilliant xenobiologist, 35 years old, Asian American woman, long black hair pulled back in practical ponytail, intelligent dark eyes behind rectangular glasses, high cheekbones, slender build, pale skin from lab work, expression of terrified fascination",
+      "costume": "Dirty white lab coat over olive field clothes, ID badge hanging crooked, cargo pants with specimen containers, hiking boots, blood splatter on coat sleeve"
+    },
+    "soldier_victim": {
+      "id": "soldier_victim",
+      "name": "Doomed Soldier",
+      "description": "Young soldier, 22 years old, Caucasian male, short blonde hair, blue eyes wide with terror, boyish face covered in dirt and sweat, lean athletic build, trembling",
+      "costume": "Torn jungle camouflage uniform, tactical gear half-ripped off, blood on face, helmet missing, rifle clutched desperately"
+    }
+  },
+  "scene_references": {
+    "dense_jungle": {
+      "id": "dense_jungle",
+      "name": "Central American Jungle",
+      "type": "location",
+      "description": "Oppressive dense tropical rainforest, massive ancient trees with hanging vines, thick undergrowth blocking visibility, shafts of hazy sunlight piercing canopy, mist rising from jungle floor, humidity visible in air, exotic plants with broad leaves, everything dripping wet, claustrophobic and dangerous"
+    },
+    "military_camp": {
+      "id": "military_camp",
+      "name": "Forward Operating Base",
+      "type": "location",
+      "description": "Hastily constructed military camp in jungle clearing, olive drab tents, sandbag fortifications, radio equipment and maps on folding tables, generator humming, harsh floodlights cutting through darkness, soldiers on edge, nervous energy, ammunition crates stacked"
+    },
+    "pred_ship_interior": {
+      "id": "pred_ship_interior",
+      "name": "Predator Ship Interior",
+      "type": "location",
+      "description": "Alien spacecraft interior, organic biomechanical architecture, walls that seem alive with tubes and conduits, trophy room with skulls of various species mounted on walls, alien symbols glowing on surfaces, atmospheric haze, red and amber lighting, advanced alien technology displays"
+    },
+    "ruined_temple": {
+      "id": "ruined_temple",
+      "name": "Ancient Temple Ruins",
+      "type": "location",
+      "description": "Crumbling Mayan-style pyramid temple reclaimed by jungle, ancient stone steps covered in moss and roots, mysterious carvings on walls depicting alien visitors, moonlight illuminating the clearing, fallen columns, sacrificial altar at center, sense of ancient evil"
+    },
+    "thermal_vision": {
+      "id": "thermal_vision",
+      "name": "Predator Thermal Vision POV",
+      "type": "location",
+      "description": "Alien thermal imaging perspective, human heat signatures glowing bright orange-red and yellow against cool blue-purple environment, targeting data and alien text overlays, scanning crosshairs, heartbeat indicators, otherworldly hunting interface"
+    },
+    "military_helicopter": {
+      "id": "military_helicopter",
+      "name": "Black Hawk Helicopter",
+      "type": "vehicle",
+      "description": "UH-60 Black Hawk military helicopter, matte black paint with minimal markings, door-mounted minigun, searchlight underneath, rotor blades spinning, battle-worn with scratches and dents, red interior lighting, soldiers visible inside"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "extreme_wide",
+      "subject": "dense_jungle",
+      "location": "dense_jungle",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme wide aerial shot, endless dense jungle canopy stretching to horizon at dawn, mist rising from trees, ominous atmosphere, single black helicopter tiny in frame flying over, god rays piercing through clouds, shot on ARRI Alexa 65mm IMAX, cinematic color grade, THIS EXACT LOCATION from reference, raytracing 8K high detail",
+      "motion_prompt": "Slow aerial drift forward over jungle canopy, mist swirls below, helicopter moves through frame, clouds shift slowly, ominous atmosphere builds, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "opening_establish"
+    },
+    {
+      "shot_id": "S01_B01_C02",
+      "order": 2,
+      "shot_type": "wide",
+      "subject": "colonel_hayes",
+      "location": "military_helicopter",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Wide shot interior Black Hawk helicopter, Colonel Hayes and soldiers seated in red-lit cabin, door gunner silhouetted against jungle below, tension visible on faces, wind whipping through cabin, shot on Panavision anamorphic, shallow depth of field, THIS EXACT CHARACTER Colonel Hayes, THIS EXACT VEHICLE interior, raytracing 8K high detail",
+      "motion_prompt": "Helicopter vibrates, soldiers sway with movement, Colonel Hayes checks weapon, wind blasts through cabin, jungle rushes past open door, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "team_intro"
+    },
+    {
+      "shot_id": "S01_B02_C01",
+      "order": 3,
+      "shot_type": "close-up",
+      "subject": "colonel_hayes",
+      "location": "military_helicopter",
+      "duration": "5",
+      "model": "seedance-1.5",
+      "dialog": "Whatever killed those men... it wasn't human.",
+      "photo_prompt": "Close-up on Colonel Hayes face in helicopter red interior lighting, sweat on brow, scar prominent, eyes deadly serious, helicopter vibration blur, 85mm anamorphic lens, shallow focus, THIS EXACT CHARACTER, raytracing 8K high detail",
+      "motion_prompt": "Colonel Hayes speaks grimly: 'Whatever killed those men... it wasn't human.' Face tense, eyes shift to window, helicopter shakes, red light flickers across face, then settles",
+      "transition_out": "smash_cut",
+      "narrative_beat": "inciting_incident"
+    },
+    {
+      "shot_id": "S01_B02_C02",
+      "order": 4,
+      "shot_type": "extreme_wide",
+      "subject": "dense_jungle",
+      "location": "dense_jungle",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme wide shot of jungle floor massacre scene, bodies of soldiers scattered among vegetation, weapons abandoned, blood on leaves, shafts of light illuminating carnage, mist swirling, deeply unsettling composition, Ridley Scott style, shot on ARRI Alexa, 21mm ultra wide, THIS EXACT LOCATION, raytracing 8K high detail",
+      "motion_prompt": "Slow dolly in through jungle toward massacre scene, mist drifts, leaves drip, flies buzz around bodies, eerie silence, camera creeps forward, then settles on horror",
+      "transition_out": "cut",
+      "narrative_beat": "discovery"
+    },
+    {
+      "shot_id": "S01_B03_C01",
+      "order": 5,
+      "shot_type": "medium",
+      "subject": "dr_chen",
+      "location": "military_camp",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Medium shot Dr. Chen examining alien blood sample in makeshift field lab, green luminescent liquid in vial, her face lit by specimen glow, tent interior background, scientific equipment scattered, horrified fascination in expression, 50mm lens, practical lighting, THIS EXACT CHARACTER, THIS EXACT LOCATION, raytracing 8K high detail",
+      "motion_prompt": "Dr. Chen holds vial up to light, liquid glows and shifts, her eyes widen, hands tremble slightly, she looks up from sample toward camera, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "evidence"
+    },
+    {
+      "shot_id": "S01_B03_C02",
+      "order": 6,
+      "shot_type": "close-up",
+      "subject": "dr_chen",
+      "location": "military_camp",
+      "duration": "5",
+      "model": "seedance-1.5",
+      "dialog": "This DNA... it's not from Earth.",
+      "photo_prompt": "Close-up Dr. Chen's face, glasses reflecting green glow of alien sample, eyes wide with scientific terror, tent canvas soft background, rim lighting from work lamp, 85mm portrait lens, THIS EXACT CHARACTER, raytracing 8K high detail",
+      "motion_prompt": "Dr. Chen speaks in disbelief: 'This DNA... it's not from Earth.' Eyes dart between sample and Colonel, breath visible in cold air, hand shakes, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "revelation"
+    },
+    {
+      "shot_id": "S02_B01_C01",
+      "order": 7,
+      "shot_type": "pov",
+      "subject": "alex_pred",
+      "location": "thermal_vision",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Predator thermal vision POV shot, looking down at military camp from tree height, soldiers appear as bright orange-red heat signatures against cool blue jungle, alien targeting data and symbols overlay image, heartbeat monitors pulsing, THIS EXACT LOCATION thermal vision, hunting interface aesthetic, raytracing 8K high detail",
+      "motion_prompt": "Thermal vision scans across camp, targeting reticle locks onto individual soldiers one by one, alien text scrolls, heartbeat indicators pulse faster, zoom enhances on Colonel Hayes, then settles",
+      "transition_out": "glitch_cut",
+      "narrative_beat": "hunter_reveal"
+    },
+    {
+      "shot_id": "S02_B01_C02",
+      "order": 8,
+      "shot_type": "medium",
+      "subject": "alex_pred",
+      "location": "dense_jungle",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Medium shot Alex Pred crouched on massive tree branch high above jungle floor, cloaking device shimmering and deactivating revealing terrifying form, bio-helmet targeting laser glowing red, shoulder cannon tracking, moonlight through canopy, muscular alien frame, 35mm anamorphic, low-key dramatic lighting, THIS EXACT CHARACTER, THIS EXACT LOCATION, raytracing 8K high detail",
+      "motion_prompt": "Cloaking effect ripples and dissolves revealing Alex Pred, creature tilts head predatorily, shoulder cannon whirs and tracks target below, dreadlocks sway, then settles into hunting stance",
+      "transition_out": "cut",
+      "narrative_beat": "antagonist_reveal"
+    },
+    {
+      "shot_id": "S02_B02_C01",
+      "order": 9,
+      "shot_type": "extreme_close-up",
+      "subject": "alex_pred",
+      "location": "dense_jungle",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme close-up Alex Pred bio-helmet, three red targeting dots triangulating, alien symbols etched in metal, scratches and battle damage visible, jungle reflection in visor, ominous red glow from within helmet, macro detail, 100mm lens, THIS EXACT CHARACTER, raytracing 8K high detail",
+      "motion_prompt": "Targeting laser activates with building whine, three red dots converge to single point, helmet tilts down toward prey, mechanical click of weapon arming, then settles",
+      "transition_out": "smash_cut",
+      "narrative_beat": "targeting"
+    },
+    {
+      "shot_id": "S02_B02_C02",
+      "order": 10,
+      "shot_type": "close-up",
+      "subject": "soldier_victim",
+      "location": "dense_jungle",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Close-up terrified soldier's face, three red laser dots visible on his forehead, eyes wide with primal terror, sweat dripping, jungle darkness behind him, shallow depth of field, horror movie lighting, 85mm lens, THIS EXACT CHARACTER soldier_victim, raytracing 8K high detail",
+      "motion_prompt": "Soldier's eyes widen in horror, red dots visible on skin, he opens mouth to scream, camera pushes in slightly, jungle sounds die to silence, then plasma blast flash",
+      "transition_out": "flash_cut",
+      "narrative_beat": "first_kill"
+    },
+    {
+      "shot_id": "S02_B03_C01",
+      "order": 11,
+      "shot_type": "wide",
+      "subject": "colonel_hayes",
+      "location": "dense_jungle",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Wide shot soldiers in jungle firefight chaos, muzzle flashes illuminating darkness, tracer rounds cutting through vegetation, Colonel Hayes commanding troops, explosions in background, rain beginning to fall, fog of war, handheld documentary style, 24mm wide angle, THIS EXACT CHARACTER Colonel Hayes, THIS EXACT LOCATION, raytracing 8K high detail",
+      "motion_prompt": "Firefight erupts in chaos, soldiers scatter and fire into jungle, muzzle flashes strobe, tracers streak past, Colonel Hayes dives for cover, explosion rocks frame, debris flies, rain intensifies, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "battle_chaos"
+    },
+    {
+      "shot_id": "S02_B03_C02",
+      "order": 12,
+      "shot_type": "medium",
+      "subject": "alex_pred",
+      "location": "dense_jungle",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Medium shot Alex Pred emerging through gunfire unharmed, bullets sparking off armor, shoulder cannon firing blue plasma bolts, wrist blades extended gleaming, rain streaming down alien body, backlit by explosions, terrifying unstoppable force, slow motion aesthetic, 50mm anamorphic, THIS EXACT CHARACTER, THIS EXACT LOCATION, raytracing 8K high detail",
+      "motion_prompt": "Alex Pred strides through bullet impacts, plasma cannon fires in bursts, creature slashes with wrist blades, rain streams off body, movements predatory and deliberate, soldiers fall in background, then settles into stance",
+      "transition_out": "cut",
+      "narrative_beat": "unstoppable"
+    },
+    {
+      "shot_id": "S03_B01_C01",
+      "order": 13,
+      "shot_type": "wide",
+      "subject": "pred_ship_interior",
+      "location": "pred_ship_interior",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Wide shot predator ship trophy room interior, walls lined with skulls of various alien species and humans, atmospheric haze, bioluminescent tubes pulsing, alien technology displays glowing, center of room has ceremonial altar, Giger-inspired biomechanical aesthetic, 21mm ultra wide, THIS EXACT LOCATION, raytracing 8K high detail",
+      "motion_prompt": "Slow push-in through trophy room, camera drifts past skull displays, alien lights pulse rhythmically, steam vents, technology hums, atmosphere thick and ominous, then settles on altar",
+      "transition_out": "cut",
+      "narrative_beat": "hunter_lair"
+    },
+    {
+      "shot_id": "S03_B01_C02",
+      "order": 14,
+      "shot_type": "medium",
+      "subject": "alex_pred",
+      "location": "pred_ship_interior",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Medium shot Alex Pred removing bio-helmet revealing alien face, mandibles spreading in triumphant roar, yellow reptilian eyes, scarred flesh, dreadlock appendages framing face, trophy skulls visible background, dramatic rim lighting, 50mm lens, THIS EXACT CHARACTER unmasked, THIS EXACT LOCATION, raytracing 8K high detail",
+      "motion_prompt": "Alex Pred removes helmet with hiss of decompression, mandibles spread wide revealing fangs, creature roars in triumph, dreadlocks sway, eyes gleam with predatory intelligence, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "face_reveal"
+    },
+    {
+      "shot_id": "S03_B02_C01",
+      "order": 15,
+      "shot_type": "close-up",
+      "subject": "colonel_hayes",
+      "location": "dense_jungle",
+      "duration": "5",
+      "model": "seedance-1.5",
+      "dialog": "It's hunting us. One by one.",
+      "photo_prompt": "Close-up Colonel Hayes face covered in mud and blood, exhausted but determined, jungle rain falling, low-key lighting from distant fire, scar prominent, warrior's resolve in eyes, 85mm anamorphic lens, THIS EXACT CHARACTER, raytracing 8K high detail",
+      "motion_prompt": "Colonel Hayes speaks through gritted teeth: 'It's hunting us. One by one.' Rain streams down face, jaw clenches, eyes burn with determination, thunder rumbles, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "realization"
+    },
+    {
+      "shot_id": "S03_B02_C02",
+      "order": 16,
+      "shot_type": "wide",
+      "subject": "ruined_temple",
+      "location": "ruined_temple",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Wide shot ancient temple ruins at night, full moon illuminating crumbling pyramid, alien carvings glowing faintly on stones, jungle reclaiming structure, mist flowing between fallen columns, Colonel Hayes and Dr. Chen tiny figures approaching, ominous sacred ground, 24mm wide angle, THIS EXACT LOCATION, raytracing 8K high detail",
+      "motion_prompt": "Slow crane up revealing full temple scale, moon emerges from clouds casting shadows, ancient carvings pulse with faint light, mist swirls at base, figures climb steps, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "final_location"
+    },
+    {
+      "shot_id": "S03_B03_C01",
+      "order": 17,
+      "shot_type": "medium",
+      "subject": "dr_chen",
+      "location": "ruined_temple",
+      "duration": "5",
+      "model": "seedance-1.5",
+      "dialog": "They've been coming here for thousands of years. We're their game.",
+      "photo_prompt": "Medium shot Dr. Chen examining glowing alien carvings on temple wall, ancient depictions of predator hunts visible, her face illuminated by otherworldly glow, crumbling stone texture, 50mm lens, THIS EXACT CHARACTER, THIS EXACT LOCATION, raytracing 8K high detail",
+      "motion_prompt": "Dr. Chen traces carvings with finger, speaks with horrified understanding: 'They've been coming here for thousands of years. We're their game.' Carvings pulse brighter, she steps back in fear, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "mythology"
+    },
+    {
+      "shot_id": "S04_B01_C01",
+      "order": 18,
+      "shot_type": "wide",
+      "subject": "colonel_hayes",
+      "location": "ruined_temple",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Wide shot Colonel Hayes standing alone on temple altar platform, discarding weapons deliberately, rain pouring down, lightning illuminating scene, challenging the darkness, primal confrontation setup, epic scale composition, 24mm anamorphic, THIS EXACT CHARACTER, THIS EXACT LOCATION, raytracing 8K high detail",
+      "motion_prompt": "Colonel Hayes throws down rifle, rips off tactical vest, spreads arms in challenge to the jungle, lightning strikes behind temple, rain intensifies, warrior's last stand, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "challenge"
+    },
+    {
+      "shot_id": "S04_B01_C02",
+      "order": 19,
+      "shot_type": "medium",
+      "subject": "alex_pred",
+      "location": "ruined_temple",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Medium shot Alex Pred uncloaking on temple steps, also discarding plasma cannon and removing helmet, accepting honorable combat, rain streaming off alien skin, mandibles spread in anticipation, wrist blades extending, mutual respect between hunters, 50mm anamorphic, THIS EXACT CHARACTER unmasked, THIS EXACT LOCATION, raytracing 8K high detail",
+      "motion_prompt": "Cloaking field dissolves revealing Alex Pred, creature removes weapons and helmet deliberately, wrist blades extend with metallic ring, alien assumes combat stance, rain pours, warriors face each other, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "honor"
+    },
+    {
+      "shot_id": "S04_B02_C01",
+      "order": 20,
+      "shot_type": "close-up",
+      "subject": "colonel_hayes",
+      "location": "ruined_temple",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme close-up Colonel Hayes eyes, rain dripping from brow, fire of determination burning within, enemy reflected in iris, warrior's focus, shallow depth of field, 100mm macro, dramatic lighting from lightning, THIS EXACT CHARACTER, raytracing 8K high detail",
+      "motion_prompt": "Eyes narrow with focus, rain drop falls past in slow motion, pupil dilates, lightning flash illuminates face, muscles tense for combat, then settles",
+      "transition_out": "match_cut",
+      "narrative_beat": "determination"
+    },
+    {
+      "shot_id": "S04_B02_C02",
+      "order": 21,
+      "shot_type": "close-up",
+      "subject": "alex_pred",
+      "location": "ruined_temple",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Extreme close-up Alex Pred alien eyes, yellow reptilian iris with vertical pupil, rain on scarred skin, mandibles twitching in anticipation, otherworldly hunter's gaze, 100mm macro lens, matching composition to previous shot, THIS EXACT CHARACTER unmasked eyes, raytracing 8K high detail",
+      "motion_prompt": "Alien eyes lock onto opponent, mandibles twitch, inner eyelid blinks, yellow iris adjusts focus, predatory intelligence visible, rain streams past, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "mirror"
+    },
+    {
+      "shot_id": "S04_B03_C01",
+      "order": 22,
+      "shot_type": "wide",
+      "subject": "alex_pred",
+      "location": "ruined_temple",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Wide shot both warriors charging at each other on temple platform, Colonel Hayes with raised machete, Alex Pred with extended wrist blades, rain frozen in mid-air, lightning illuminating clash, epic confrontation moment, 24mm ultra wide, slow motion aesthetic, THIS EXACT CHARACTER Alex Pred, THIS EXACT CHARACTER Colonel Hayes, THIS EXACT LOCATION, raytracing 8K high detail",
+      "motion_prompt": "Warriors charge in slow motion, feet splash through water, weapons raised, rain suspended in air, lightning flashes, bodies collide at center in clash of blades, sparks fly, then freeze frame",
+      "transition_out": "smash_to_black",
+      "narrative_beat": "climax_clash"
+    },
+    {
+      "shot_id": "S05_B01_C01",
+      "order": 23,
+      "shot_type": "close-up",
+      "subject": "alex_pred",
+      "location": "pred_ship_interior",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Close-up Alex Pred hand placing new human skull on trophy wall, skull still steaming, other trophies visible in background, alien fingers with claws, bioluminescent ship interior, victory or defeat ambiguous, 50mm lens, THIS EXACT CHARACTER hands, THIS EXACT LOCATION, raytracing 8K high detail",
+      "motion_prompt": "Alien hand slowly places skull on wall mount, fingers retract, steam rises from trophy, camera pulls back revealing extensive collection, ship hums ominously, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "ambiguous_ending"
+    },
+    {
+      "shot_id": "S05_B01_C02",
+      "order": 24,
+      "shot_type": "title_card",
+      "subject": "title",
+      "location": "black",
+      "duration": "5",
+      "model": "kling-2.6",
+      "photo_prompt": "Movie title card ALEX PRED in metallic alien-style typography, three red targeting dots forming on letters, black background with subtle smoke, jungle silhouette at bottom edge, release date text below, cinematic movie poster composition, raytracing 8K high detail",
+      "motion_prompt": "Title materializes through cloaking effect shimmer, three red laser dots converge on letters, smoke drifts across frame, targeting sound effect implied, then settles on final title",
+      "transition_out": "fade_to_black",
+      "narrative_beat": "title_reveal"
+    }
+  ]
+}
+```
+---
