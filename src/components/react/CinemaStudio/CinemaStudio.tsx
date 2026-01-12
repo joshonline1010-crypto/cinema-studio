@@ -3674,73 +3674,171 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                       </div>
                     </div>
 
-                    {/* Shot Cards */}
-                    <div className="space-y-2">
-                      {currentScene.shots.map((shot, idx) => (
-                        <div
-                          key={shot.shot_id}
-                          onClick={() => {
-                            selectSceneShot(shot.shot_id);
-                            handleSceneShotSelect(shot);
-                          }}
-                          className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                            selectedShotId === shot.shot_id
-                              ? 'bg-purple-500/10 border-purple-500/40'
-                              : 'bg-[#1f1f1f] border-gray-800 hover:border-gray-600'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            {/* Status + Thumbnail */}
-                            <div className="relative w-16 h-10 bg-[#2a2a2a] rounded overflow-hidden flex-shrink-0">
-                              {shot.image_url ? (
-                                <img src={shot.image_url} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-600 text-lg">
-                                  {idx + 1}
-                                </div>
-                              )}
-                              {/* Status badge */}
-                              <div className={`absolute top-0.5 right-0.5 w-2 h-2 rounded-full ${
+                    {/* Shot Cards - Detailed View */}
+                    <div className="space-y-3">
+                      {currentScene.shots.map((shot, idx) => {
+                        const prevShot = idx > 0 ? currentScene.shots[idx - 1] : null;
+                        const isChained = prevShot?.image_url || prevShot?.video_url;
+                        const hasEndFrame = shot.end_frame || shot.model === 'kling-o1';
+                        const hasDialog = !!shot.dialog;
+
+                        return (
+                          <div
+                            key={shot.shot_id}
+                            onClick={() => {
+                              selectSceneShot(shot.shot_id);
+                              handleSceneShotSelect(shot);
+                            }}
+                            className={`rounded-xl border cursor-pointer transition-all overflow-hidden ${
+                              selectedShotId === shot.shot_id
+                                ? 'bg-purple-500/10 border-purple-500/40'
+                                : 'bg-[#1f1f1f] border-gray-800 hover:border-gray-600'
+                            }`}
+                          >
+                            {/* Header Row */}
+                            <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-800/50">
+                              {/* Status indicator */}
+                              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                                 shot.status === 'done' ? 'bg-green-500' :
                                 shot.status === 'generating' ? 'bg-yellow-500 animate-pulse' :
                                 'bg-gray-600'
                               }`} />
-                            </div>
+                              <span className="text-xs font-medium text-white">{shot.shot_id}</span>
 
-                            {/* Shot Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs font-medium text-white">{shot.shot_id}</span>
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                              {/* Type Badges */}
+                              <div className="flex items-center gap-1.5 ml-auto">
+                                {/* Model badge */}
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
                                   shot.model === 'seedance-1.5' ? 'bg-purple-500/20 text-purple-300' :
                                   shot.model === 'kling-o1' ? 'bg-blue-500/20 text-blue-300' :
                                   'bg-gray-500/20 text-gray-300'
                                 }`}>
-                                  {shot.model?.split('-')[0] || 'kling'}
+                                  {shot.model === 'seedance-1.5' ? 'Seedance' :
+                                   shot.model === 'kling-o1' ? 'Kling O1' : 'Kling 2.6'}
                                 </span>
-                                {shot.dialog && (
-                                  <span className="text-yellow-500 text-xs" title="Has dialog">🗣</span>
+
+                                {/* Shot type indicators */}
+                                {hasDialog && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-yellow-500/20 text-yellow-300" title="Has lip-sync dialog">
+                                    🗣 Dialog
+                                  </span>
+                                )}
+                                {hasEndFrame && !hasDialog && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300" title="Start→End transition">
+                                    ↔ Transition
+                                  </span>
+                                )}
+                                {isChained && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-cyan-500/20 text-cyan-300" title="Uses previous shot as reference">
+                                    🔗 Chained
+                                  </span>
+                                )}
+                                {!isChained && idx === 0 && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-orange-500/20 text-orange-300" title="First shot - needs reference">
+                                    1️⃣ First
+                                  </span>
                                 )}
                               </div>
-                              <div className="text-xs text-gray-400 truncate">{shot.subject}</div>
-                              <div className="text-[10px] text-gray-600 mt-0.5">{shot.shot_type} • {shot.duration}s</div>
                             </div>
 
-                            {/* Generate button */}
-                            {shot.status === 'pending' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleGenerateSceneShot(shot);
-                                }}
-                                className="px-2 py-1 rounded bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs transition-colors"
-                              >
-                                Gen
-                              </button>
-                            )}
+                            {/* Content Row */}
+                            <div className="p-3">
+                              <div className="flex gap-3">
+                                {/* Thumbnail/Preview */}
+                                <div className="flex-shrink-0">
+                                  <div className="relative w-24 h-14 bg-[#2a2a2a] rounded-lg overflow-hidden">
+                                    {shot.image_url ? (
+                                      <img src={shot.image_url} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-gray-600">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-6 h-6">
+                                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                                          <circle cx="8.5" cy="8.5" r="1.5" />
+                                          <path d="M21 15l-5-5L5 21" />
+                                        </svg>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {/* End frame preview for transitions */}
+                                  {shot.end_frame && (
+                                    <div className="relative w-24 h-14 bg-[#2a2a2a] rounded-lg overflow-hidden mt-1 border border-blue-500/30">
+                                      <img src={shot.end_frame} alt="End" className="w-full h-full object-cover" />
+                                      <span className="absolute bottom-0.5 right-0.5 text-[8px] bg-blue-500/80 px-1 rounded text-white">END</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Info */}
+                                <div className="flex-1 min-w-0">
+                                  {/* Subject & Meta */}
+                                  <div className="text-sm text-white font-medium mb-1">{shot.subject}</div>
+                                  <div className="text-[10px] text-gray-500 mb-2">
+                                    {shot.shot_type} • {shot.duration}s • {shot.location || 'No location'}
+                                  </div>
+
+                                  {/* Dialog if present */}
+                                  {shot.dialog && (
+                                    <div className="mb-2 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                                      <div className="text-[10px] text-yellow-400 mb-0.5">DIALOG:</div>
+                                      <div className="text-xs text-yellow-200 italic">"{shot.dialog}"</div>
+                                    </div>
+                                  )}
+
+                                  {/* Photo Prompt */}
+                                  {shot.photo_prompt && (
+                                    <div className="mb-2">
+                                      <div className="text-[10px] text-gray-500 mb-0.5">IMAGE PROMPT:</div>
+                                      <div className="text-[11px] text-gray-400 line-clamp-2">{shot.photo_prompt}</div>
+                                    </div>
+                                  )}
+
+                                  {/* Motion Prompt */}
+                                  {shot.motion_prompt && (
+                                    <div>
+                                      <div className="text-[10px] text-gray-500 mb-0.5">MOTION:</div>
+                                      <div className="text-[11px] text-green-400/80 line-clamp-2">{shot.motion_prompt}</div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Action Row */}
+                              <div className="flex items-center gap-2 mt-3 pt-2 border-t border-gray-800/50">
+                                {shot.status === 'pending' && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleGenerateSceneShot(shot);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs font-medium transition-colors"
+                                  >
+                                    Generate Image
+                                  </button>
+                                )}
+                                {shot.status === 'done' && shot.image_url && !shot.video_url && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // TODO: Generate video from image
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs font-medium transition-colors"
+                                  >
+                                    Generate Video
+                                  </button>
+                                )}
+                                {shot.video_url && (
+                                  <span className="px-2 py-1 rounded text-[10px] bg-green-500/20 text-green-400">
+                                    ✓ Video Ready
+                                  </span>
+                                )}
+                                <div className="ml-auto text-[10px] text-gray-600">
+                                  {shot.transition_out && `→ ${shot.transition_out}`}
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ) : chatView === 'messages' || !currentScene ? (
