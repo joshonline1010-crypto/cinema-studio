@@ -281,6 +281,7 @@ export default function CinemaStudio() {
     isGenerating,
     generationProgress,
     error,
+    setGenerating,
     setStartFrame,
     setEndFrame,
     setMotionPrompt,
@@ -315,6 +316,7 @@ export default function CinemaStudio() {
   const {
     currentScene,
     selectedShotId,
+    loadScene,
     selectShot: selectSceneShot,
     updateShot: updateSceneShot,
     markShotGenerating,
@@ -959,7 +961,7 @@ export default function CinemaStudio() {
     setShowMovieShots(false);
 
     // Show uploading status
-    setIsGenerating(true);
+    setGenerating(true);
     setProgress(0);
     setStatusMessage('Uploading movie shot references...');
 
@@ -1061,7 +1063,7 @@ export default function CinemaStudio() {
     } finally {
       // Clear status after a short delay
       setTimeout(() => {
-        setIsGenerating(false);
+        setGenerating(false);
         setStatusMessage(null);
         setProgress(0);
       }, 1500);

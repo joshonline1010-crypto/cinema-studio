@@ -69,6 +69,7 @@ interface CinemaState {
   setDuration: (duration: number) => void;
 
   // Generation
+  setGenerating: (generating: boolean) => void;
   startGeneration: () => void;
   setProgress: (progress: number) => void;
   completeGeneration: (videoUrl: string) => void;
@@ -193,6 +194,8 @@ export const useCinemaStore = create<CinemaState>((set, get) => ({
   setDuration: (duration) => set((state) => ({
     currentShot: { ...state.currentShot, duration }
   })),
+
+  setGenerating: (generating) => set({ isGenerating: generating }),
 
   startGeneration: () => set({
     isGenerating: true,
