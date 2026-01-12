@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useCinemaStore, detectBestModel, explainModelSelection, type VideoModel } from './cinemaStore';
 import { useSceneStore, type SceneShot, type CharacterRef } from './sceneStore';
-import { SceneSidebar } from './SceneSidebar';
 import { PlanningGrid } from './PlanningGrid';
 import {
   CAMERA_PRESETS,
@@ -347,7 +346,6 @@ export default function CinemaStudio() {
   const [showBatchGenerator, setShowBatchGenerator] = useState(false); // Batch angle generator
   const [showMovieShots, setShowMovieShots] = useState(false); // Movie Shots browser
   const [showContinueFromVideo, setShowContinueFromVideo] = useState(false); // Continue from Video workflow
-  const [showSceneSidebar, setShowSceneSidebar] = useState(true); // Scene Planner sidebar
   const [showShotGrid, setShowShotGrid] = useState(false); // Shot Grid overlay
   const [userAssets, setUserAssets] = useState<UserAsset[]>([]); // User's custom character/item assets
   const [selectedAssetForSwap, setSelectedAssetForSwap] = useState<UserAsset | null>(null); // Asset to swap into prompts
@@ -2081,32 +2079,13 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
 
   return (
     <div className="min-h-screen bg-[#0d0d0d] text-white flex">
-      {/* Scene Planner Sidebar */}
-      {showSceneSidebar && (
-        <SceneSidebar
-          onShotSelect={handleSceneShotSelect}
-          onCharacterSelect={handleCharacterSelect}
-        />
-      )}
-
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Toggle Sidebar Button */}
-        <button
-          onClick={() => setShowSceneSidebar(!showSceneSidebar)}
-          className="absolute top-4 left-4 z-50 w-8 h-8 bg-[#1a1a2e] border border-gray-700 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:border-gray-500 transition-all"
-          style={{ left: showSceneSidebar ? '296px' : '16px' }}
-          title={showSceneSidebar ? 'Hide Scene Planner' : 'Show Scene Planner'}
-        >
-          {showSceneSidebar ? '◀' : '▶'}
-        </button>
-
         {/* Planning Grid Toggle Button */}
         {currentScene && (
           <button
             onClick={() => setShowShotGrid(!showShotGrid)}
-            className="absolute top-4 z-50 px-3 h-8 bg-[#e8ff00] border border-[#d4eb00] rounded-lg flex items-center justify-center text-black text-xs font-semibold hover:bg-[#f0ff4d] transition-all"
-            style={{ left: showSceneSidebar ? '340px' : '60px' }}
+            className="absolute top-4 left-4 z-50 px-3 h-8 bg-[#e8ff00] border border-[#d4eb00] rounded-lg flex items-center justify-center text-black text-xs font-semibold hover:bg-[#f0ff4d] transition-all"
             title="Toggle Planning Grid View"
           >
             📋 {showShotGrid ? 'Hide Plan' : 'View Full Plan'}
@@ -5435,9 +5414,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
 
       {/* Planning Grid Overlay */}
       {showShotGrid && currentScene && (
-        <div className="absolute inset-0 z-40 flex">
-          {/* Keep sidebar visible */}
-          {showSceneSidebar && <div style={{ width: '320px', flexShrink: 0 }} />}
+        <div className="absolute inset-0 z-40">
           <PlanningGrid
             onShotSelect={handleSceneShotSelect}
             onGenerateShot={handleGenerateSceneShot}
