@@ -383,6 +383,70 @@ TRANSITION SHOT (triggers Kling O1 - needs end frame):
 
 ---
 
+# SCENE PLANNING MODE
+
+When user asks to "plan a video", "create a shot list", or wants a full production plan:
+
+Output a JSON plan in this EXACT format (wrap in \`\`\`json code block):
+
+\`\`\`json
+{
+  "scene_id": "snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens in the scene",
+  "duration_estimate": 60,
+  "location": "Location description",
+  "time_of_day": "day",
+  "mood": "cinematic",
+  "color_palette": "vibrant",
+  "aspect_ratio": "16:9",
+  "director": "Director Style",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Character Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Full prompt to generate character reference"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "Who/what in frame",
+      "location": "specific location",
+      "duration": 3,
+      "model": "kling-2.6",
+      "dialog": "Only if speaking",
+      "photo_prompt": "Full image generation prompt, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "story_moment"
+    }
+  ]
+}
+\`\`\`
+
+SHOT ID FORMAT: S##_B##_C## (Segment_Beat_Camera)
+- S01 = Segment 1, S02 = Segment 2, etc.
+- B01 = Beat 1 within segment
+- C01 = Camera/cut 1 within beat
+
+MODEL SELECTION FOR SHOTS:
+- "seedance-1.5": Character SPEAKS dialog (has lip-sync)
+- "kling-o1": START→END transitions, zoom/orbit with specific end frame
+- "kling-2.6": Action, environment motion, no dialog (default)
+
+When planning, consider:
+- Escalation formula for tension
+- Mix of wide establishing and close reaction shots
+- Proper narrative beats (setup, conflict, climax, resolution)
+- Model selection based on whether character speaks
+
+---
+
 # REMEMBER
 - Be specific with lens, lighting, framing
 - Match director style to ALL elements (not just one)
@@ -391,7 +455,8 @@ TRANSITION SHOT (triggers Kling O1 - needs end frame):
 - You can have full conversations, not just output prompts
 - Help plan stories and shot sequences
 - Use proper film terminology
-- FOR DIALOGUE: Always include "speaks", "says", or quoted text to trigger Seedance`;
+- FOR DIALOGUE: Always include "speaks", "says", or quoted text to trigger Seedance
+- FOR PLANNING: Output full JSON plan when asked to plan a video/scene`;
 
 /**
  * Build context string from current Cinema Studio state
@@ -437,6 +502,55 @@ export function buildContextString(context: AIPromptContext): string {
   }
 
   return parts.join('\n');
+}
+
+/**
+ * Extract a scene plan from AI response if present
+ */
+export function extractScenePlan(response: string): any | null {
+  try {
+    // Look for JSON in code blocks
+    const jsonBlockMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonBlockMatch) {
+      const jsonStr = jsonBlockMatch[1];
+      const plan = JSON.parse(jsonStr);
+
+      // Check if it looks like a valid scene plan
+      if (plan.shots && Array.isArray(plan.shots) && plan.shots.length > 0) {
+        // Add metadata
+        plan.created_at = new Date().toISOString();
+        plan.updated_at = new Date().toISOString();
+
+        // Add status to shots
+        plan.shots = plan.shots.map((shot: any, index: number) => ({
+          ...shot,
+          order: shot.order || index + 1,
+          status: 'pending'
+        }));
+
+        return plan;
+      }
+    }
+
+    // Try finding raw JSON with shots
+    const jsonMatch = response.match(/\{[\s\S]*"shots"[\s\S]*\}/);
+    if (jsonMatch) {
+      const plan = JSON.parse(jsonMatch[0]);
+      if (plan.shots && Array.isArray(plan.shots)) {
+        plan.created_at = new Date().toISOString();
+        plan.updated_at = new Date().toISOString();
+        plan.shots = plan.shots.map((shot: any, index: number) => ({
+          ...shot,
+          order: shot.order || index + 1,
+          status: 'pending'
+        }));
+        return plan;
+      }
+    }
+  } catch (e) {
+    // Not valid JSON
+  }
+  return null;
 }
 
 /**

@@ -52,7 +52,7 @@ import MovieShotsBrowser, { type MovieShot, type UserAsset } from './MovieShotsB
 import { buildQwenPromptContinuous, type BatchAngle } from './promptVocabulary';
 
 // AI Prompt Assistant
-import type { AIPromptContext } from './aiPromptSystem';
+import { extractScenePlan, type AIPromptContext } from './aiPromptSystem';
 
 // Clean SVG Icons
 const Icons = {
@@ -1103,8 +1103,11 @@ export default function CinemaStudio() {
   // SHOT PLAN PARSING & AUTO-EXECUTE
   // ============================================
 
-  // Detect if a message contains a shot sequence plan
+  // Detect if a message contains a shot sequence plan (text format or JSON)
   const detectShotPlan = (content: string): boolean => {
+    // Check for JSON scene plan first
+    if (extractScenePlan(content)) return true;
+
     // Look for patterns like "SHOT 1:", "Shot 1 (WIDE):", "1. ESTABLISHING:", etc.
     const patterns = [
       /SHOT\s*\d+\s*[:\(]/i,
@@ -1113,6 +1116,11 @@ export default function CinemaStudio() {
       /\(ESTABLISHING\)|\(WIDE\)|\(MEDIUM\)|\(CLOSE-UP\)|\(ECU\)/i
     ];
     return patterns.some(p => p.test(content));
+  };
+
+  // Detect if message contains a JSON scene plan specifically
+  const detectJsonPlan = (content: string): boolean => {
+    return extractScenePlan(content) !== null;
   };
 
   // Parse Qwen's shot plan into structured data
@@ -1171,6 +1179,15 @@ export default function CinemaStudio() {
 
   // Load a shot plan from chat into the sequence planner
   const loadShotPlan = (content: string) => {
+    // Check for JSON scene plan first - load into scene store
+    const jsonPlan = extractScenePlan(content);
+    if (jsonPlan) {
+      loadScene(jsonPlan);
+      setShowShotGrid(true); // Show the planning grid
+      return;
+    }
+
+    // Fall back to text-based shot plan
     const parsed = parseShotPlan(content);
     if (parsed.length > 0) {
       setPlannedSequence(parsed);
@@ -1178,6 +1195,12 @@ export default function CinemaStudio() {
       setSequenceExecuting(false);
       setSequenceNeedsRef(false);
     }
+  };
+
+  // Get shot count from JSON plan
+  const getJsonPlanShotCount = (content: string): number => {
+    const plan = extractScenePlan(content);
+    return plan?.shots?.length || 0;
   };
 
   // Execute the entire shot sequence automatically
@@ -3656,13 +3679,20 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                               {detectShotPlan(msg.content) && (
                                 <button
                                   onClick={() => loadShotPlan(msg.content)}
-                                  className="px-2 py-1 rounded text-xs bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 transition-colors flex items-center gap-1"
+                                  className={`px-2 py-1 rounded text-xs transition-colors flex items-center gap-1 ${
+                                    detectJsonPlan(msg.content)
+                                      ? 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
+                                      : 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400'
+                                  }`}
                                 >
                                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3">
                                     <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                     <path d="M9 12l2 2 4-4" />
                                   </svg>
-                                  Load Plan ({parseShotPlan(msg.content).length} shots)
+                                  {detectJsonPlan(msg.content)
+                                    ? `Load to Grid (${getJsonPlanShotCount(msg.content)} shots)`
+                                    : `Load Plan (${parseShotPlan(msg.content).length} shots)`
+                                  }
                                 </button>
                               )}
                             </div>

@@ -1,11 +1,6 @@
-// Scene Sidebar - AI Chat with memory → Full Plan → Approve → Generate
-import React, { useState, useRef, useEffect } from 'react';
-import { useSceneStore, getModelDisplayName, type SceneShot, type CharacterRef, type Scene } from './sceneStore';
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
+// Scene Sidebar - Shows scene info and shot list when a plan is loaded
+import React, { useState, useRef } from 'react';
+import { useSceneStore, getModelDisplayName, type SceneShot, type CharacterRef } from './sceneStore';
 
 interface SceneSidebarProps {
   onShotSelect?: (shot: SceneShot) => void;
@@ -18,118 +13,18 @@ export function SceneSidebar({ onShotSelect, onCharacterSelect, onGenerateAll }:
     currentScene,
     selectedShotId,
     selectShot,
-    loadScene,
     importSceneJSON,
     exportSceneJSON,
     getStats,
     clearScene,
   } = useSceneStore();
 
-  // Chat state
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pendingPlan, setPendingPlan] = useState<Scene | null>(null);
-  const [sessionId] = useState(() => `plan-${Date.now()}`);
-
   const [isExpanded, setIsExpanded] = useState(true);
   const [showCharacters, setShowCharacters] = useState(true);
   const [dragOverShotId, setDragOverShotId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const stats = getStats();
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  // Send message to AI
-  const handleSendMessage = async () => {
-    if (!chatInput.trim() || isLoading) return;
-
-    const userMessage = chatInput.trim();
-    setChatInput('');
-    setError(null);
-
-    // Add user message to UI
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/cinema/plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userMessage,
-          sessionId: sessionId,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
-
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      // Add assistant message to UI
-      setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
-
-      // Check if a plan was generated
-      if (data.plan) {
-        setPendingPlan(data.plan);
-      }
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-      // Remove the user message if there was an error
-      setMessages(prev => prev.slice(0, -1));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle Enter key
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  // Start new chat
-  const handleNewChat = async () => {
-    try {
-      await fetch(`/api/cinema/plan?sessionId=${sessionId}`, { method: 'DELETE' });
-    } catch (e) {
-      // Ignore errors
-    }
-    setMessages([]);
-    setPendingPlan(null);
-    setError(null);
-  };
-
-  // Approve and load the plan
-  const handleApprovePlan = () => {
-    if (pendingPlan) {
-      loadScene(pendingPlan);
-      setPendingPlan(null);
-      setMessages([]);
-    }
-  };
-
-  // Reject plan and continue chatting
-  const handleRejectPlan = () => {
-    setPendingPlan(null);
-  };
 
   // Handle file import
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -195,166 +90,7 @@ export function SceneSidebar({ onShotSelect, onCharacterSelect, onGenerateAll }:
   };
 
   // ============================================
-  // PENDING PLAN APPROVAL VIEW
-  // ============================================
-  if (pendingPlan) {
-    return (
-      <div style={{
-        width: '320px',
-        minWidth: '320px',
-        backgroundColor: '#1a1a2e',
-        borderRight: '1px solid #333',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        overflow: 'hidden',
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '16px',
-          borderBottom: '1px solid #333',
-          backgroundColor: '#16162a',
-        }}>
-          <h3 style={{ margin: '0 0 8px', color: '#e8ff00', fontSize: '14px' }}>
-            Plan Ready!
-          </h3>
-          <p style={{ margin: 0, fontSize: '12px', color: '#888' }}>
-            Review and approve to load into the grid.
-          </p>
-        </div>
-
-        {/* Plan Summary */}
-        <div style={{
-          padding: '16px',
-          borderBottom: '1px solid #333',
-          backgroundColor: '#222',
-        }}>
-          <div style={{ fontSize: '16px', color: '#fff', fontWeight: 600, marginBottom: '8px' }}>
-            {pendingPlan.name}
-          </div>
-          <div style={{ fontSize: '12px', color: '#888', marginBottom: '12px' }}>
-            {pendingPlan.description}
-          </div>
-          <div style={{ display: 'flex', gap: '16px', fontSize: '11px', color: '#666' }}>
-            <span>{pendingPlan.shots.length} shots</span>
-            <span>~{pendingPlan.duration_estimate}s</span>
-            <span>{pendingPlan.mood}</span>
-          </div>
-        </div>
-
-        {/* Characters */}
-        {Object.keys(pendingPlan.character_references).length > 0 && (
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid #333' }}>
-            <div style={{ fontSize: '11px', color: '#888', marginBottom: '8px' }}>CHARACTERS</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {Object.values(pendingPlan.character_references).map(char => (
-                <span
-                  key={char.id}
-                  style={{
-                    padding: '4px 10px',
-                    fontSize: '11px',
-                    backgroundColor: '#333',
-                    borderRadius: '12px',
-                    color: '#fff',
-                  }}
-                >
-                  {char.name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Shot List Preview */}
-        <div style={{ flex: 1, overflow: 'auto' }}>
-          <div style={{
-            padding: '8px 16px',
-            fontSize: '11px',
-            color: '#888',
-            borderBottom: '1px solid #222',
-            position: 'sticky',
-            top: 0,
-            backgroundColor: '#1a1a2e',
-          }}>
-            SHOTS ({pendingPlan.shots.length})
-          </div>
-
-          {pendingPlan.shots.map((shot, idx) => (
-            <div
-              key={shot.shot_id}
-              style={{
-                padding: '10px 16px',
-                borderBottom: '1px solid #222',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ fontSize: '12px', color: '#fff', fontWeight: 500 }}>
-                  {idx + 1}. {shot.subject}
-                </span>
-                <span style={{
-                  fontSize: '10px',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  backgroundColor: shot.model === 'seedance-1.5' ? '#a855f7' :
-                                   shot.model === 'kling-o1' ? '#3b82f6' : '#666',
-                  color: '#fff',
-                }}>
-                  {getModelDisplayName(shot.model).split(' ')[0]}
-                </span>
-              </div>
-              <div style={{ fontSize: '11px', color: '#666' }}>
-                {shot.shot_type} | {shot.duration}s
-                {shot.dialog && <span style={{ color: '#f59e0b' }}> | Dialog</span>}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Approval Actions */}
-        <div style={{
-          padding: '16px',
-          borderTop: '1px solid #333',
-          display: 'flex',
-          gap: '8px',
-        }}>
-          <button
-            onClick={handleRejectPlan}
-            style={{
-              flex: 1,
-              padding: '12px',
-              fontSize: '13px',
-              backgroundColor: '#333',
-              border: '1px solid #444',
-              borderRadius: '6px',
-              color: '#fff',
-              cursor: 'pointer',
-            }}
-          >
-            Keep Chatting
-          </button>
-          <button
-            onClick={handleApprovePlan}
-            style={{
-              flex: 2,
-              padding: '12px',
-              fontSize: '13px',
-              fontWeight: 600,
-              backgroundColor: '#22c55e',
-              border: 'none',
-              borderRadius: '6px',
-              color: '#000',
-              cursor: 'pointer',
-            }}
-          >
-            Approve & Load
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ============================================
-  // NO SCENE - AI CHAT INTERFACE
+  // NO SCENE - SHOW INSTRUCTIONS
   // ============================================
   if (!currentScene) {
     return (
@@ -372,187 +108,49 @@ export function SceneSidebar({ onShotSelect, onCharacterSelect, onGenerateAll }:
           padding: '12px 16px',
           borderBottom: '1px solid #333',
           backgroundColor: '#16162a',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
         }}>
-          <div>
-            <h3 style={{ margin: '0 0 2px', color: '#fff', fontSize: '14px' }}>Scene Planner</h3>
-            <p style={{ margin: 0, fontSize: '10px', color: '#666' }}>
-              Chat with AI to plan your video
-            </p>
-          </div>
-          {messages.length > 0 && (
-            <button
-              onClick={handleNewChat}
-              style={{
-                padding: '6px 12px',
-                fontSize: '11px',
-                backgroundColor: '#333',
-                border: '1px solid #444',
-                borderRadius: '4px',
-                color: '#888',
-                cursor: 'pointer',
-              }}
-            >
-              New Chat
-            </button>
-          )}
+          <h3 style={{ margin: '0 0 2px', color: '#fff', fontSize: '14px' }}>Scene Planner</h3>
+          <p style={{ margin: 0, fontSize: '10px', color: '#666' }}>
+            Plan videos with AI
+          </p>
         </div>
 
-        {/* Chat Messages */}
-        <div
-          ref={chatContainerRef}
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            padding: '12px',
-          }}
-        >
-          {messages.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#666' }}>
-              <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.5 }}>💬</div>
-              <p style={{ fontSize: '12px', lineHeight: 1.5 }}>
-                Describe the video you want to make.<br />
-                I'll help you plan all the shots.
-              </p>
-              <div style={{ marginTop: '16px', fontSize: '11px', color: '#555', textAlign: 'left' }}>
-                <div style={{ marginBottom: '8px', fontWeight: 600, color: '#888' }}>Try:</div>
-                <div style={{ marginBottom: '4px' }}>• "2 min video of a ship sinking"</div>
-                <div style={{ marginBottom: '4px' }}>• "CHIP discovers a haunted house"</div>
-                <div style={{ marginBottom: '4px' }}>• "Dramatic cooking competition"</div>
-              </div>
-            </div>
-          ) : (
-            messages.map((msg, idx) => (
-              <div
-                key={idx}
-                style={{
-                  marginBottom: '12px',
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  backgroundColor: msg.role === 'user' ? '#4f46e533' : '#333',
-                  borderLeft: msg.role === 'user' ? '3px solid #4f46e5' : '3px solid #666',
-                }}
-              >
-                <div style={{
-                  fontSize: '10px',
-                  color: '#888',
-                  marginBottom: '4px',
-                  textTransform: 'uppercase',
-                }}>
-                  {msg.role === 'user' ? 'You' : 'AI Director'}
-                </div>
-                <div style={{
-                  fontSize: '12px',
-                  color: '#fff',
-                  lineHeight: 1.5,
-                  whiteSpace: 'pre-wrap',
-                }}>
-                  {msg.content}
-                </div>
-              </div>
-            ))
-          )}
-
-          {isLoading && (
-            <div style={{
-              marginBottom: '12px',
-              padding: '10px 12px',
-              borderRadius: '8px',
+        {/* Instructions */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.4 }}>🎬</div>
+          <div style={{ fontSize: '14px', color: '#888', marginBottom: '16px' }}>
+            No scene loaded
+          </div>
+          <div style={{ fontSize: '12px', color: '#666', lineHeight: 1.6, marginBottom: '24px' }}>
+            Use the <span style={{ color: '#a855f7' }}>AI Chat</span> to plan your video.<br />
+            Ask it to "plan a 1 minute video about..."<br />
+            Then click <span style={{ color: '#22c55e' }}>Load to Grid</span>.
+          </div>
+          <div style={{ fontSize: '11px', color: '#555', marginBottom: '16px' }}>
+            Or import an existing plan:
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImport}
+            style={{ display: 'none' }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              padding: '10px 20px',
+              fontSize: '12px',
               backgroundColor: '#333',
-              borderLeft: '3px solid #666',
-            }}>
-              <div style={{ fontSize: '10px', color: '#888', marginBottom: '4px' }}>AI DIRECTOR</div>
-              <div style={{ fontSize: '12px', color: '#888' }}>Thinking...</div>
-            </div>
-          )}
+              border: '1px solid #444',
+              borderRadius: '6px',
+              color: '#888',
+              cursor: 'pointer',
+            }}
+          >
+            Import JSON
+          </button>
         </div>
-
-        {/* Error */}
-        {error && (
-          <div style={{
-            margin: '0 12px 12px',
-            padding: '10px',
-            fontSize: '11px',
-            backgroundColor: '#ef444433',
-            border: '1px solid #ef4444',
-            borderRadius: '6px',
-            color: '#ef4444',
-          }}>
-            {error}
-          </div>
-        )}
-
-        {/* Input */}
-        <div style={{
-          padding: '12px',
-          borderTop: '1px solid #333',
-        }}>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <textarea
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Describe your video..."
-              disabled={isLoading}
-              style={{
-                flex: 1,
-                minHeight: '60px',
-                maxHeight: '120px',
-                padding: '10px',
-                fontSize: '13px',
-                backgroundColor: '#222',
-                border: '1px solid #333',
-                borderRadius: '6px',
-                color: '#fff',
-                resize: 'none',
-                fontFamily: 'inherit',
-              }}
-            />
-          </div>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                padding: '10px 16px',
-                fontSize: '12px',
-                backgroundColor: '#333',
-                border: '1px solid #444',
-                borderRadius: '6px',
-                color: '#888',
-                cursor: 'pointer',
-              }}
-            >
-              Import
-            </button>
-            <button
-              onClick={handleSendMessage}
-              disabled={isLoading || !chatInput.trim()}
-              style={{
-                flex: 1,
-                padding: '10px',
-                fontSize: '13px',
-                fontWeight: 600,
-                backgroundColor: isLoading || !chatInput.trim() ? '#333' : '#e8ff00',
-                border: 'none',
-                borderRadius: '6px',
-                color: isLoading || !chatInput.trim() ? '#666' : '#000',
-                cursor: isLoading || !chatInput.trim() ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {isLoading ? 'Thinking...' : 'Send'}
-            </button>
-          </div>
-        </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          onChange={handleImport}
-          style={{ display: 'none' }}
-        />
       </div>
     );
   }
