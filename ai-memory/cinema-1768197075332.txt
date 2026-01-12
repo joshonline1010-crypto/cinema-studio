@@ -1,0 +1,119 @@
+# AI Chat Memory - Session: cinema-1768197075332
+# Created: 2026-01-12T05:51:21.791Z
+
+[USER]: hi
+---
+[ASSISTANT]: Hello! 😊 How can I assist you today? If you have any questions or need help with something, feel free to ask!
+---
+[USER]: Plan me a IMAX ad made by stanley kubrick for a tractor ad
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "tractor_kubrick_imax",
+  "name": "Kubrick's Tractor Ad",
+  "description": "An epic IMAX ad directed by Stanley Kubrick, showcasing a tractor as a symbol of human ingenuity and resilience against nature's forces.",
+  "duration_estimate": 120,
+  "location": "A desolate, windswept prairie with dramatic rock formations and a storm-laden sky",
+  "time_of_day": "dusk",
+  "mood": "cinematic, existential, awe-inspiring",
+  "color_palette": "earthy tones with high-contrast chiaroscuro",
+  "aspect_ratio": "1.43:1",
+  "director": "Stanley Kubrick",
+  "character_references": {
+    "tractor_01": {
+      "id": "tractor_01",
+      "name": "The Titan",
+      "description": "A massive, rust-colored tractor with reinforced steel plows and a glowing engine",
+      "costume": "Industrial machinery with weathered metal textures",
+      "generate_prompt": "A colossal tractor with rust-red paint, glowing engine, and reinforced plows, backlit by a stormy sky, Kubrick-style, 8K, cinematic lighting"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "The Titan tractor",
+      "location": "Distant prairie under a stormy sky",
+      "duration": 10,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "A colossal tractor with rust-red paint, glowing engine, and reinforced plows, backlit by a stormy sky, Kubrick-style, 8K, cinematic lighting",
+      "motion_prompt": "Camera slowly dolly in from the prairie, the tractor's silhouette emerges against lightning strikes, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "establishing_shot"
+    },
+    {
+      "shot_id": "S01_B01_C02",
+      "order": 2,
+      "shot_type": "medium",
+      "subject": "The Titan tractor",
+      "location": "Midground prairie with rock formations",
+      "duration": 15,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "The Titan tractor in a wide prairie with jagged rock formations, desaturated tones, dramatic shadows, Kubrick-style",
+      "motion_prompt": "Steady tracking shot following the tractor's movement across the prairie, slow zoom into its engine, then settles",
+      "transition_out": "match_cut",
+      "narrative_beat": "action_beat"
+    },
+    {
+      "shot_id": "S01_B01_C03",
+      "order": 3,
+      "shot_type": "close-up",
+      "subject": "Tractor's engine",
+      "location": "Engine compartment",
+      "duration": 10,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Close-up of the Titan's glowing engine with metallic textures, dramatic chiaroscuro lighting, Kubrick-style",
+      "motion_prompt": "Slow push-in on the engine's glowing core, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "technical_focus"
+    },
+    {
+      "shot_id": "S01_B01_C04",
+      "order": 4,
+      "shot_type": "wide",
+      "subject": "The Titan tractor",
+      "location": "Stormy prairie",
+      "duration": 15,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "The Titan tractor in a stormy prairie, lightning illuminating its silhouette, desaturated tones, Kubrick-style",
+      "motion_prompt": "Slow dolly shot from the storm to the tractor, lightning strikes in slow motion, then settles",
+      "transition_out": "dissolve",
+      "narrative_beat": "climax"
+    },
+    {
+      "shot_id": "S01_B01_C05",
+      "order": 5,
+      "shot_type": "wide",
+      "subject": "The Titan tractor",
+      "location": "Sunset prairie",
+      "duration": 10,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "The Titan tractor under a golden sunset, vast prairie, desaturated tones, Kubrick-style",
+      "motion_prompt": "Camera slowly pulls back to reveal the tractor's scale against the sunset, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "resolution"
+    },
+    {
+      "shot_id": "S01_B01_C06",
+      "order": 6,
+      "shot_type": "close-up",
+      "subject": "Tractor's plows",
+      "location": "Field with crop residue",
+      "duration": 10,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Close-up of the Titan's reinforced plows cutting through dry crop residue, dramatic shadows, Kubrick-style",
+      "motion_prompt": "Slow-motion shot of the plows slicing through the field, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "technical_focus"
+    }
+  ]
+}
+```
+---

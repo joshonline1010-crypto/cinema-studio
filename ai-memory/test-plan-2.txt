@@ -1,0 +1,54 @@
+# AI Chat Memory - Session: test-plan-2
+# Created: 2026-01-12T05:43:25.385Z
+
+[USER]: Create a shot list / scene plan JSON for a 30 second video of a tiny robot discovering a flower
+---
+[ASSISTANT]: {
+  "video_title": "Tiny Robot's Discovery",
+  "duration": "30 seconds",
+  "scenes": [
+    {
+      "scene_number": 1,
+      "description": "A tiny robot (about 2 inches tall) glides across a dewy grassy path in a sunlit garden.",
+      "camera_angle": "Wide shot (low angle to emphasize robot's size)",
+      "duration": "5 seconds",
+      "notes": "Focus on the robot's movement and the surrounding environment. Add subtle camera movement to follow the robot."
+    },
+    {
+      "scene_number": 2,
+      "description": "The robot pauses near a vibrant flower (e.g., a glowing purple orchid) with dew droplets on its petals.",
+      "camera_angle": "Close-up (medium shot with shallow depth of field)",
+      "duration": "5 seconds",
+      "notes": "Highlight the flower's details and the robot's sensors glowing faintly. Use soft focus for the background."
+    },
+    {
+      "scene_number": 3,
+      "description": "The robot extends a tiny arm toward the flower, its claw-like appendage hovering just above the petals.",
+      "camera_angle": "Extreme close-up (macro lens)",
+      "duration": "5 seconds",
+      "notes": "Slow-motion effect for dramatic tension. Show the robot's mechanical joints moving smoothly."
+    },
+    {
+      "scene_number": 4,
+      "description": "The flower shimmers as the robot touches it—petals glow briefly, and a faint light pulse radiates outward.",
+      "camera_angle": "Overhead shot (looking down at the interaction)",
+      "duration": "5 seconds",
+      "notes": "Add glowing particle effects around the flower. Use a warm color palette to emphasize the magical reaction."
+    },
+    {
+      "scene_number": 5,
+      "description": "The robot's body lights up in a sequence of colors, indicating it's processing the flower's energy.",
+      "camera_angle": "Low-angle close-up (highlighting the robot's glowing features)",
+      "duration": "5 seconds",
+      "notes": "Include subtle sound effects (e.g., a soft chime) as the robot "charges" after the interaction."
+    },
+    {
+      "scene_number": 6,
+      "description": "The robot stands beside the flower, now surrounded by faint light particles, as the camera pulls back to show the peaceful scene.",
+      "camera_angle": "Wide shot (dolly out from the robot and flower)",
+      "duration": "5 seconds",
+      "notes": "End with a serene, almost ethereal atmosphere. Add a soft ambient soundtrack to wrap the video."
+    }
+  ]
+}
+---

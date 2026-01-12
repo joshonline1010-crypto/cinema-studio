@@ -1,0 +1,36 @@
+# AI Chat Memory - Session: explicit-format-test
+# Created: 2026-01-12T05:44:31.252Z
+
+[USER]: Make a scene plan with shots array for a robot finding a flower. Use the exact JSON format from your instructions with scene_id, shots array, photo_prompt and motion_prompt for each shot.
+---
+[ASSISTANT]: {
+  "scene_id": "scene_001",
+  "shots": [
+    {
+      "shot_id": "shot_001",
+      "photo_prompt": "A futuristic robot with glowing blue sensors stands in a barren desert landscape, scanning the horizon. The sky is a deep orange sunset, casting long shadows. A single red flower is visible in the distance.",
+      "motion_prompt": "The robot's head tilts slightly as it detects the flower, its camera lens zooms in, and its mechanical arm extends forward."
+    },
+    {
+      "shot_id": "shot_002",
+      "photo_prompt": "The robot walks toward the flower, its metallic legs crunching sand. The flower is now visible in the foreground, with vibrant purple petals and a yellow center. The robot's sensor light flickers as it analyzes the plant.",
+      "motion_prompt": "The robot's legs move in a rhythmic pattern, and its sensor light pulses rapidly as it approaches the flower."
+    },
+    {
+      "shot_id": "shot_003",
+      "photo_prompt": "Close-up of the robot's hand reaching toward the flower. The flower's petals are in focus, with dewdrops glistening under the sunset light. The robot's fingers are slightly curled as if about to grasp the flower.",
+      "motion_prompt": "The robot's hand extends slowly, fingers curling, while the camera tracks the movement of the flower's petals in the wind."
+    },
+    {
+      "shot_id": "shot_004",
+      "photo_prompt": "The robot successfully picks the flower, its gripper closing around the stem. The flower is now in the robot's hand, with the sunset reflecting off its metallic surface. The background is blurred to emphasize the action.",
+      "motion_prompt": "The robot's gripper snaps shut, and the camera focuses on the flower's stem as it is pulled into the robot's hand."
+    },
+    {
+      "shot_id": "shot_005",
+      "photo_prompt": "Wide shot of the robot holding the flower, standing amidst the desert. The flower's colors contrast with the robot's metallic body. The sunset light creates a warm glow around the scene.",
+      "motion_prompt": "The robot raises the flower slightly, its sensors light up in a soft green hue, and the camera pans to show the flower's reflection in the robot's lens."
+    }
+  ]
+}
+---

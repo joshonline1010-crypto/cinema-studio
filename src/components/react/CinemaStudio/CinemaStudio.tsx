@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useCinemaStore, detectBestModel, explainModelSelection, type VideoModel } from './cinemaStore';
-import { useSceneStore, type SceneShot, type CharacterRef } from './sceneStore';
+import { useSceneStore, type SceneShot, type CharacterRef, type SceneRef } from './sceneStore';
 import {
   CAMERA_PRESETS,
   LENS_PRESETS,
@@ -321,6 +321,9 @@ export default function CinemaStudio() {
     updateShot: updateSceneShot,
     markShotGenerating,
     markShotComplete,
+    updateCharacter,
+    addSceneRef,
+    updateSceneRef,
   } = useSceneStore();
 
   const [promptText, setPromptText] = useState('');
@@ -815,15 +818,21 @@ export default function CinemaStudio() {
         const prevShot = i > 0 ? pendingShots[i - 1] : null;
         const chainedRef = prevShot?.image_url || currentShot.startFrame;
 
+        // Get all ref URLs for this shot (characters, locations, objects)
+        const refUrls = getRefUrlsForShot(shot);
+        if (chainedRef) {
+          refUrls.unshift(chainedRef);  // Add chained ref at front (highest priority)
+        }
+
         const response = await fetch('/api/cinema/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            type: chainedRef ? 'edit' : 'image',  // Use edit if we have a reference
+            type: refUrls.length > 0 ? 'edit' : 'image',  // Use edit if we have references
             prompt: prompt,
             aspect_ratio: currentScene.aspect_ratio || '16:9',
             resolution: '4K',
-            reference_image: chainedRef || undefined,
+            image_urls: refUrls.length > 0 ? refUrls : undefined,  // Use image_urls array for multiple refs
           })
         });
 
@@ -970,6 +979,134 @@ export default function CinemaStudio() {
     setExecutingPlan(false);
     setPlanProgress(0);
     setStatusMessage(`All ${shotsNeedingVideo.length} videos generated!`);
+  };
+
+  // Generate all reference images (characters + scene refs like locations/objects)
+  const generateAllRefs = async () => {
+    if (!currentScene || executingPlan) return;
+
+    // Collect all refs that need generation
+    const charRefs = Object.values(currentScene.character_references || {}).filter(c => !c.ref_url && c.generate_prompt);
+    const sceneRefs = Object.values(currentScene.scene_references || {}).filter(r => !r.ref_url && r.generate_prompt);
+    const totalRefs = charRefs.length + sceneRefs.length;
+
+    if (totalRefs === 0) {
+      setStatusMessage('All references already generated!');
+      return;
+    }
+
+    setExecutingPlan(true);
+    setPlanProgress(0);
+    setStatusMessage(`Generating ${totalRefs} reference images...`);
+
+    let completed = 0;
+
+    // Generate character refs (3x3 character sheets)
+    for (const char of charRefs) {
+      completed++;
+      setPlanProgress(completed);
+      setStatusMessage(`Ref ${completed}/${totalRefs}: ${char.name} (character sheet)`);
+
+      try {
+        const response = await fetch('/api/cinema/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'image',
+            prompt: char.generate_prompt,
+            aspect_ratio: '1:1',  // Square for 3x3 grid sheets
+            resolution: '4K',
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const imageUrl = data.image_url || data.images?.[0]?.url;
+          if (imageUrl) {
+            updateCharacter(char.id, { ref_url: imageUrl });
+            setStatusMessage(`✓ ${char.name} ref done`);
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to generate ref for ${char.name}:`, err);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+
+    // Generate scene refs (location sheets, object sheets - all 3x3 grids)
+    for (const ref of sceneRefs) {
+      completed++;
+      setPlanProgress(completed);
+      setStatusMessage(`Ref ${completed}/${totalRefs}: ${ref.name} (${ref.type} sheet)`);
+
+      try {
+        const response = await fetch('/api/cinema/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'image',
+            prompt: ref.generate_prompt,
+            aspect_ratio: '1:1',  // Square for all 3x3 grid sheets
+            resolution: '4K',
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const imageUrl = data.image_url || data.images?.[0]?.url;
+          if (imageUrl) {
+            updateSceneRef(ref.id, { ref_url: imageUrl });
+            setStatusMessage(`✓ ${ref.name} ref done`);
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to generate ref for ${ref.name}:`, err);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+
+    setExecutingPlan(false);
+    setPlanProgress(0);
+    setStatusMessage(`All ${totalRefs} reference images generated!`);
+  };
+
+  // Get all ref URLs for shot generation (to maintain consistency)
+  const getRefUrlsForShot = (shot: SceneShot): string[] => {
+    if (!currentScene) return [];
+
+    const refs: string[] = [];
+
+    // Add character refs if mentioned in subject/prompt
+    Object.values(currentScene.character_references || {}).forEach(char => {
+      if (char.ref_url && (
+        shot.subject?.toLowerCase().includes(char.name.toLowerCase()) ||
+        shot.photo_prompt?.toLowerCase().includes(char.name.toLowerCase())
+      )) {
+        refs.push(char.ref_url);
+      }
+    });
+
+    // Add location refs if location matches
+    Object.values(currentScene.scene_references || {}).forEach(ref => {
+      if (ref.ref_url && ref.type === 'location' &&
+          shot.location?.toLowerCase().includes(ref.name.toLowerCase())) {
+        refs.push(ref.ref_url);
+      }
+    });
+
+    // Add object refs if mentioned in prompt
+    Object.values(currentScene.scene_references || {}).forEach(ref => {
+      if (ref.ref_url && ref.type !== 'location' && (
+        shot.subject?.toLowerCase().includes(ref.name.toLowerCase()) ||
+        shot.photo_prompt?.toLowerCase().includes(ref.name.toLowerCase())
+      )) {
+        refs.push(ref.ref_url);
+      }
+    });
+
+    return refs;
   };
 
   // Handler for character click - loads into character DNA
@@ -3739,14 +3876,14 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
         </div>
       )}
 
-      {/* AI Prompt Assistant Panel */}
+      {/* AI Prompt Assistant Panel - FULLSCREEN */}
       {showAIPrompt && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowAIPrompt(false)}>
-          <div className={`bg-[#1a1a1a] rounded-2xl border border-gray-800/50 p-6 shadow-2xl w-full mx-4 ${aiMode === 'chat' ? 'max-w-2xl h-[80vh] flex flex-col' : 'max-w-xl'}`} onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 bg-black/95 z-50 flex flex-col" onClick={() => setShowAIPrompt(false)}>
+          <div className="flex-1 bg-[#0f0f0f] flex flex-col h-full w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header - Fullscreen */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-800/50 flex-shrink-0">
               <div className="flex items-center gap-3">
-                <span className="px-4 py-1.5 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-lg text-xs font-medium text-yellow-300 flex items-center gap-1.5">
+                <span className="px-4 py-1.5 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-lg text-sm font-medium text-yellow-300 flex items-center gap-2">
                   {Icons.sparkle}
                   AI Assistant
                 </span>
@@ -3799,8 +3936,8 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
               </div>
             </div>
 
-            {/* Ollama Status */}
-            <div className="flex items-center gap-2 mb-4">
+            {/* Ollama Status Bar */}
+            <div className="flex items-center gap-2 px-6 py-2 bg-[#1a1a1a] border-b border-gray-800/30 flex-shrink-0">
               <div className={`w-2 h-2 rounded-full ${
                 ollamaStatus === 'ok' ? 'bg-green-500' :
                 ollamaStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
@@ -3818,6 +3955,9 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                 {mode === 'image' ? 'Image' : 'Video'}
               </span>
             </div>
+
+            {/* Main Content Area */}
+            <div className="flex-1 overflow-hidden flex flex-col p-6">
 
             {/* QUICK MODE */}
             {aiMode === 'quick' && (
@@ -3944,6 +4084,117 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                           </div>
                         </div>
 
+                        {/* References Section */}
+                        {(() => {
+                          const charRefs = Object.values(currentScene.character_references || {});
+                          const sceneRefs = Object.values(currentScene.scene_references || {});
+                          const totalRefs = charRefs.length + sceneRefs.length;
+                          const pendingRefs = [...charRefs, ...sceneRefs].filter(r => !r.ref_url && r.generate_prompt).length;
+                          const doneRefs = totalRefs - pendingRefs;
+
+                          if (totalRefs === 0) return null;
+
+                          return (
+                            <div className="mb-3 p-2 bg-[#252525] rounded-lg border border-gray-700/50">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-medium text-orange-300">References</span>
+                                  <span className="text-[10px] text-gray-500">({doneRefs}/{totalRefs} done)</span>
+                                </div>
+                                <button
+                                  onClick={generateAllRefs}
+                                  disabled={pendingRefs === 0 || executingPlan}
+                                  className={`px-2 py-1 rounded text-[10px] font-medium transition-all ${
+                                    pendingRefs === 0 || executingPlan
+                                      ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                      : 'bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 border border-orange-500/30'
+                                  }`}
+                                >
+                                  Generate Refs ({pendingRefs})
+                                </button>
+                              </div>
+
+                              {/* Refs Grid - 3x3 Reference Sheets */}
+                              <div className="flex flex-wrap gap-2 pb-2">
+                                {/* Character sheets */}
+                                {charRefs.map(char => (
+                                  <div
+                                    key={char.id}
+                                    className={`relative group cursor-pointer ${char.ref_url ? '' : 'opacity-50'}`}
+                                    title={`${char.name} - Character Sheet\n${char.description}`}
+                                  >
+                                    {char.ref_url ? (
+                                      <img
+                                        src={char.ref_url}
+                                        alt={char.name}
+                                        className="w-14 h-14 rounded object-cover border-2 border-purple-500/50 hover:border-purple-400 transition-colors"
+                                      />
+                                    ) : (
+                                      <div className="w-14 h-14 rounded bg-purple-500/20 border-2 border-dashed border-purple-500/30 flex flex-col items-center justify-center gap-0.5">
+                                        <span className="text-lg">👤</span>
+                                        <span className="text-[8px] text-purple-300">sheet</span>
+                                      </div>
+                                    )}
+                                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] text-purple-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 px-1 rounded">
+                                      {char.name}
+                                    </span>
+                                  </div>
+                                ))}
+
+                                {/* Location sheets */}
+                                {sceneRefs.filter(r => r.type === 'location').map(ref => (
+                                  <div
+                                    key={ref.id}
+                                    className={`relative group cursor-pointer ${ref.ref_url ? '' : 'opacity-50'}`}
+                                    title={`${ref.name} - Location Sheet (INT/EXT)\n${ref.description}`}
+                                  >
+                                    {ref.ref_url ? (
+                                      <img
+                                        src={ref.ref_url}
+                                        alt={ref.name}
+                                        className="w-14 h-14 rounded object-cover border-2 border-cyan-500/50 hover:border-cyan-400 transition-colors"
+                                      />
+                                    ) : (
+                                      <div className="w-14 h-14 rounded bg-cyan-500/20 border-2 border-dashed border-cyan-500/30 flex flex-col items-center justify-center gap-0.5">
+                                        <span className="text-lg">📍</span>
+                                        <span className="text-[8px] text-cyan-300">INT/EXT</span>
+                                      </div>
+                                    )}
+                                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] text-cyan-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 px-1 rounded">
+                                      {ref.name}
+                                    </span>
+                                  </div>
+                                ))}
+
+                                {/* Object/Vehicle sheets */}
+                                {sceneRefs.filter(r => r.type !== 'location').map(ref => (
+                                  <div
+                                    key={ref.id}
+                                    className={`relative group cursor-pointer ${ref.ref_url ? '' : 'opacity-50'}`}
+                                    title={`${ref.name} - ${ref.type === 'vehicle' ? 'Vehicle' : 'Object'} Sheet\n${ref.description}`}
+                                  >
+                                    {ref.ref_url ? (
+                                      <img
+                                        src={ref.ref_url}
+                                        alt={ref.name}
+                                        className="w-14 h-14 rounded object-cover border-2 border-green-500/50 hover:border-green-400 transition-colors"
+                                      />
+                                    ) : (
+                                      <div className="w-14 h-14 rounded bg-green-500/20 border-2 border-dashed border-green-500/30 flex flex-col items-center justify-center gap-0.5">
+                                        <span className="text-lg">{ref.type === 'vehicle' ? '🚗' : '📦'}</span>
+                                        <span className="text-[8px] text-green-300">sheet</span>
+                                      </div>
+                                    )}
+                                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] text-green-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 px-1 rounded">
+                                      {ref.name}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                         {/* Generate All Buttons */}
                         <div className="mt-4 flex flex-col gap-2">
                           {!executingPlan ? (
@@ -4000,13 +4251,11 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                           )}
                         </div>
 
-                        {/* Shot Cards - Detailed View */}
-                        <div className="space-y-3">
+                        {/* Shot Cards - Compact Grid */}
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mt-3">
                           {currentScene.shots.map((shot, idx) => {
-                            const prevShot = idx > 0 ? currentScene.shots[idx - 1] : null;
-                            const isChained = prevShot?.image_url || prevShot?.video_url;
-                            const hasEndFrame = shot.end_frame || shot.model === 'kling-o1';
                             const hasDialog = !!shot.dialog;
+                            const hasVideo = !!shot.video_url;
 
                             return (
                               <div
@@ -4015,157 +4264,83 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                                   selectSceneShot(shot.shot_id);
                                   handleSceneShotSelect(shot);
                                 }}
-                                className={`rounded-xl border cursor-pointer transition-all overflow-hidden ${
+                                className={`relative rounded-lg cursor-pointer transition-all overflow-hidden group ${
                                   selectedShotId === shot.shot_id
-                                    ? 'bg-purple-500/10 border-purple-500/40'
-                                    : 'bg-[#1f1f1f] border-gray-800 hover:border-gray-600'
+                                    ? 'ring-2 ring-purple-500'
+                                    : 'hover:ring-1 hover:ring-gray-500'
                                 }`}
+                                title={`${shot.shot_id}: ${shot.subject}\n${shot.shot_type} • ${shot.duration}s`}
                               >
-                            {/* Header Row */}
-                            <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-800/50">
-                              {/* Status indicator */}
-                              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                                shot.status === 'done' ? 'bg-green-500' :
-                                shot.status === 'generating' ? 'bg-yellow-500 animate-pulse' :
-                                'bg-gray-600'
-                              }`} />
-                              <span className="text-xs font-medium text-white">{shot.shot_id}</span>
-
-                              {/* Type Badges */}
-                              <div className="flex items-center gap-1.5 ml-auto">
-                                {/* Model badge */}
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                                  shot.model === 'seedance-1.5' ? 'bg-purple-500/20 text-purple-300' :
-                                  shot.model === 'kling-o1' ? 'bg-blue-500/20 text-blue-300' :
-                                  'bg-gray-500/20 text-gray-300'
-                                }`}>
-                                  {shot.model === 'seedance-1.5' ? 'Seedance' :
-                                   shot.model === 'kling-o1' ? 'Kling O1' : 'Kling 2.6'}
-                                </span>
-
-                                {/* Shot type indicators */}
-                                {hasDialog && (
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-yellow-500/20 text-yellow-300" title="Has lip-sync dialog">
-                                    🗣 Dialog
-                                  </span>
-                                )}
-                                {hasEndFrame && !hasDialog && (
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300" title="Start→End transition">
-                                    ↔ Transition
-                                  </span>
-                                )}
-                                {isChained && (
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-cyan-500/20 text-cyan-300" title="Uses previous shot as reference">
-                                    🔗 Chained
-                                  </span>
-                                )}
-                                {!isChained && idx === 0 && (
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-orange-500/20 text-orange-300" title="First shot - needs reference">
-                                    1️⃣ First
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Content Row */}
-                            <div className="p-3">
-                              <div className="flex gap-3">
-                                {/* Thumbnail/Preview */}
-                                <div className="flex-shrink-0">
-                                  <div className="relative w-24 h-14 bg-[#2a2a2a] rounded-lg overflow-hidden">
-                                    {shot.image_url ? (
-                                      <img src={shot.image_url} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-gray-600">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-6 h-6">
-                                          <rect x="3" y="3" width="18" height="18" rx="2" />
-                                          <circle cx="8.5" cy="8.5" r="1.5" />
-                                          <path d="M21 15l-5-5L5 21" />
-                                        </svg>
-                                      </div>
-                                    )}
-                                  </div>
-                                  {/* End frame preview for transitions */}
-                                  {shot.end_frame && (
-                                    <div className="relative w-24 h-14 bg-[#2a2a2a] rounded-lg overflow-hidden mt-1 border border-blue-500/30">
-                                      <img src={shot.end_frame} alt="End" className="w-full h-full object-cover" />
-                                      <span className="absolute bottom-0.5 right-0.5 text-[8px] bg-blue-500/80 px-1 rounded text-white">END</span>
+                                {/* Thumbnail */}
+                                <div className="aspect-video bg-[#2a2a2a] relative">
+                                  {shot.image_url ? (
+                                    <img src={shot.image_url} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-600">
+                                      <span className="text-[10px]">{idx + 1}</span>
                                     </div>
                                   )}
-                                </div>
 
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                  {/* Subject & Meta */}
-                                  <div className="text-sm text-white font-medium mb-1">{shot.subject}</div>
-                                  <div className="text-[10px] text-gray-500 mb-2">
-                                    {shot.shot_type} • {shot.duration}s • {shot.location || 'No location'}
+                                  {/* Status overlay */}
+                                  <div className={`absolute top-0.5 left-0.5 w-2 h-2 rounded-full ${
+                                    shot.status === 'done' ? 'bg-green-500' :
+                                    shot.status === 'generating' ? 'bg-yellow-500 animate-pulse' :
+                                    'bg-gray-600'
+                                  }`} />
+
+                                  {/* Video indicator */}
+                                  {hasVideo && (
+                                    <div className="absolute top-0.5 right-0.5 bg-green-500 rounded px-1">
+                                      <span className="text-[8px] text-white">▶</span>
+                                    </div>
+                                  )}
+
+                                  {/* Model badge */}
+                                  <div className={`absolute bottom-0.5 left-0.5 px-1 rounded text-[7px] font-medium ${
+                                    shot.model === 'seedance-1.5' ? 'bg-purple-500/80 text-white' :
+                                    shot.model === 'kling-o1' ? 'bg-blue-500/80 text-white' :
+                                    'bg-gray-600/80 text-white'
+                                  }`}>
+                                    {shot.model === 'seedance-1.5' ? 'S' : shot.model === 'kling-o1' ? 'O1' : '2.6'}
                                   </div>
 
-                                  {/* Dialog if present */}
-                                  {shot.dialog && (
-                                    <div className="mb-2 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                                      <div className="text-[10px] text-yellow-400 mb-0.5">DIALOG:</div>
-                                      <div className="text-xs text-yellow-200 italic">"{shot.dialog}"</div>
-                                    </div>
-                                  )}
-
-                                  {/* Photo Prompt */}
-                                  {shot.photo_prompt && (
-                                    <div className="mb-2">
-                                      <div className="text-[10px] text-gray-500 mb-0.5">IMAGE PROMPT:</div>
-                                      <div className="text-[11px] text-gray-400 line-clamp-2">{shot.photo_prompt}</div>
-                                    </div>
-                                  )}
-
-                                  {/* Motion Prompt */}
-                                  {shot.motion_prompt && (
-                                    <div>
-                                      <div className="text-[10px] text-gray-500 mb-0.5">MOTION:</div>
-                                      <div className="text-[11px] text-green-400/80 line-clamp-2">{shot.motion_prompt}</div>
+                                  {/* Dialog indicator */}
+                                  {hasDialog && (
+                                    <div className="absolute bottom-0.5 right-0.5 bg-yellow-500/80 rounded px-1">
+                                      <span className="text-[8px]">🗣</span>
                                     </div>
                                   )}
                                 </div>
-                              </div>
 
-                              {/* Action Row */}
-                              <div className="flex items-center gap-2 mt-3 pt-2 border-t border-gray-800/50">
-                                {shot.status === 'pending' && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleGenerateSceneShot(shot);
-                                    }}
-                                    className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs font-medium transition-colors"
-                                  >
-                                    Generate Image
-                                  </button>
-                                )}
-                                {shot.status === 'done' && shot.image_url && !shot.video_url && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleGenerateSceneVideo(shot);
-                                    }}
-                                    className="px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs font-medium transition-colors"
-                                  >
-                                    Generate Video
-                                  </button>
-                                )}
-                                {shot.video_url && (
-                                  <span className="px-2 py-1 rounded text-[10px] bg-green-500/20 text-green-400">
-                                    ✓ Video Ready
-                                  </span>
-                                )}
-                                <div className="ml-auto text-[10px] text-gray-600">
-                                  {shot.transition_out && `→ ${shot.transition_out}`}
+                                {/* Shot ID label */}
+                                <div className="bg-[#1a1a1a] px-1 py-0.5 text-center">
+                                  <span className="text-[9px] text-gray-400 truncate block">{shot.shot_id.replace('S0', '').replace('_B0', '.').replace('_C0', '.')}</span>
+                                </div>
+
+                                {/* Hover overlay with actions */}
+                                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-1">
+                                  <span className="text-[8px] text-white text-center line-clamp-2">{shot.subject}</span>
+                                  {shot.status === 'pending' && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleGenerateSceneShot(shot); }}
+                                      className="px-2 py-0.5 rounded bg-green-500 text-[8px] text-white hover:bg-green-400"
+                                    >
+                                      Gen
+                                    </button>
+                                  )}
+                                  {shot.status === 'done' && !shot.video_url && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleGenerateSceneVideo(shot); }}
+                                      className="px-2 py-0.5 rounded bg-purple-500 text-[8px] text-white hover:bg-purple-400"
+                                    >
+                                      Video
+                                    </button>
+                                  )}
                                 </div>
                               </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -4616,6 +4791,8 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                 </div>
               </div>
             )}
+
+            </div>{/* Close Main Content Area */}
           </div>
         </div>
       )}

@@ -1,0 +1,52 @@
+# AI Chat Memory - Session: test-json-plan
+# Created: 2026-01-12T05:43:48.018Z
+
+[USER]: Create a scene plan JSON for a 30 second video of a tiny robot discovering a flower
+---
+[ASSISTANT]: {
+  "scene_plan": [
+    {
+      "timing": "0-5 seconds",
+      "visuals": "A tiny robot (spherical with glowing sensors) rolls across a vibrant garden path, sunlight filtering through trees.",
+      "audio": "Soft ambient sounds of wind and distant birdsong.",
+      "transitions": "Smooth camera movement following the robot's path.",
+      "camera_angles": "Wide shot of the garden"
+    },
+    {
+      "timing": "5-10 seconds",
+      "visuals": "The robot approaches a delicate flower (petals glowing faintly) near a mossy stone.",
+      "audio": "Subtle mechanical whirring from the robot, fading into silence.",
+      "transitions": "Zoom-in on the flower as the robot stops.",
+      "camera_angles": "Low-angle shot to emphasize the robot's size"
+    },
+    {
+      "timing": "10-15 seconds",
+      "visuals": "The robot's sensors light up as it touches the flower's petals, causing a soft sparkle effect.",
+      "audio": "High-pitched chime (discovery sound) followed by a gentle breeze.",
+      "transitions": "Quick cut to close-up of the flower's center.",
+      "camera_angles": "Macro shot of the flower"
+    },
+    {
+      "timing": "15-20 seconds",
+      "visuals": "The flower's petals slightly tremble, revealing a tiny pollinator (bee) landing on it.",
+      "audio": "Buzzing of the bee and a faint hum from the robot.",
+      "transitions": "Fade to slow-motion of the bee's movement.",
+      "camera_angles": "Close-up of the flower and bee"
+    },
+    {
+      "timing": "20-25 seconds",
+      "visuals": "The robot retreats slowly, carrying a pollen-covered sensor, while the flower sways gently.",
+      "audio": "Soft melody (e.g., piano) with a rising tone.",
+      "transitions": "Pull-back to show the robot leaving the garden.",
+      "camera_angles": "Wide shot of the garden with the robot in motion"
+    },
+    {
+      "timing": "25-30 seconds",
+      "visuals": "The robot disappears around a bend, leaving the flower untouched but glowing softly in the sunlight.",
+      "audio": "Ambient sounds fade out with a final chime.",
+      "transitions": "Fade to black with a glowing flower motif.",
+      "camera_angles": "Over-the-shoulder shot of the flower"
+    }
+  ]
+}
+---

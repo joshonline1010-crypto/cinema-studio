@@ -407,7 +407,23 @@ Output a JSON plan in this EXACT format (wrap in \`\`\`json code block):
       "name": "Character Name",
       "description": "Physical description",
       "costume": "What they wear",
-      "generate_prompt": "Full prompt to generate character reference"
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [FULL CHARACTER DESCRIPTION WITH COSTUME]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations showing happy and serious and surprised. Bottom row: full body standing pose, action pose, costume and prop details. White background, consistent soft studio lighting, character turnaround style, 4K high detail"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location Name",
+      "type": "location",
+      "description": "What the location looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [FULL LOCATION DESCRIPTION]. Top row: wide establishing exterior shot, medium exterior angle, exterior architectural detail. Middle row: wide empty interior view, medium interior shot, interior props and details. Bottom row: dawn golden hour lighting, bright daylight, dusk blue hour atmosphere. Architectural visualization style, cinematic composition, no people, empty spaces, 4K"
+    },
+    "object_id": {
+      "id": "object_id",
+      "name": "Key Object/Prop",
+      "type": "object",
+      "description": "Important prop or vehicle",
+      "generate_prompt": "Object reference sheet, 3x3 grid layout, [FULL OBJECT DESCRIPTION]. Top row: front view, side profile view, rear view. Middle row: 3/4 angle hero shot, top-down view, detail closeup of key features. Bottom row: object in environment context (no people), empty interior view, wide shot showing scale. Product photography style, clean studio lighting, no humans, 4K"
     }
   },
   "shots": [
@@ -428,6 +444,17 @@ Output a JSON plan in this EXACT format (wrap in \`\`\`json code block):
   ]
 }
 \`\`\`
+
+SCENE_REFERENCES TYPES:
+- "location": Key locations/environments (farm, city street, spaceship interior)
+- "object": Important props (tractor, weapon, vehicle)
+- "prop": Smaller items (phone, book, food)
+- "vehicle": Cars, ships, bikes, etc.
+
+IMPORTANT: Always include references for:
+1. Main characters (in character_references)
+2. Key locations where action happens (in scene_references, type: "location")
+3. Important objects/props that appear multiple times (in scene_references, type: "object" or "vehicle")
 
 SHOT ID FORMAT: S##_B##_C## (Segment_Beat_Camera)
 - S01 = Segment 1, S02 = Segment 2, etc.
@@ -521,6 +548,12 @@ export function extractScenePlan(response: string): any | null {
         plan.created_at = new Date().toISOString();
         plan.updated_at = new Date().toISOString();
 
+        // Ensure character_references exists
+        plan.character_references = plan.character_references || {};
+
+        // Ensure scene_references exists (for locations, objects, props)
+        plan.scene_references = plan.scene_references || {};
+
         // Add status to shots
         plan.shots = plan.shots.map((shot: any, index: number) => ({
           ...shot,
@@ -539,6 +572,8 @@ export function extractScenePlan(response: string): any | null {
       if (plan.shots && Array.isArray(plan.shots)) {
         plan.created_at = new Date().toISOString();
         plan.updated_at = new Date().toISOString();
+        plan.character_references = plan.character_references || {};
+        plan.scene_references = plan.scene_references || {};
         plan.shots = plan.shots.map((shot: any, index: number) => ({
           ...shot,
           order: shot.order || index + 1,

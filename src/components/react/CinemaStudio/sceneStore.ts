@@ -16,6 +16,16 @@ export interface CharacterRef {
   ref_url?: string;  // Generated reference image URL
 }
 
+// Generic scene reference (for locations, objects, props)
+export interface SceneRef {
+  id: string;
+  name: string;
+  type: 'location' | 'object' | 'prop' | 'vehicle';
+  description: string;
+  generate_prompt: string;
+  ref_url?: string;  // Generated reference image URL
+}
+
 // Shot - the detailed format that works
 export interface SceneShot {
   shot_id: string;           // e.g., "shot_001"
@@ -76,6 +86,7 @@ export interface Scene {
   year?: number;
 
   character_references: Record<string, CharacterRef>;
+  scene_references?: Record<string, SceneRef>;  // Locations, objects, props
   shots: SceneShot[];
   audio_layers?: AudioLayer[];
   execution_notes?: ExecutionNotes;
@@ -106,6 +117,11 @@ interface SceneState {
   addCharacter: (char: Omit<CharacterRef, 'id'>) => void;
   updateCharacter: (charId: string, updates: Partial<CharacterRef>) => void;
   removeCharacter: (charId: string) => void;
+
+  // Scene reference management (locations, objects, props)
+  addSceneRef: (ref: Omit<SceneRef, 'id'>) => void;
+  updateSceneRef: (refId: string, updates: Partial<SceneRef>) => void;
+  removeSceneRef: (refId: string) => void;
 
   // Selection
   selectShot: (shotId: string | null) => void;
@@ -141,6 +157,7 @@ const createEmptyScene = (metadata: Partial<Scene> = {}): Scene => ({
   director: metadata.director,
   year: metadata.year,
   character_references: metadata.character_references || {},
+  scene_references: metadata.scene_references || {},
   shots: metadata.shots || [],
   audio_layers: metadata.audio_layers || [],
   execution_notes: metadata.execution_notes,
@@ -190,6 +207,7 @@ const parseSceneJSON = (json: string): Scene | null => {
       director: data.director,
       year: data.year,
       character_references: data.character_references || {},
+      scene_references: data.scene_references || {},
       shots,
       audio_layers: data.audio_layers || [],
       execution_notes: data.execution_notes,
@@ -355,6 +373,57 @@ export const useSceneStore = create<SceneState>()(
           currentScene: {
             ...state.currentScene,
             character_references: remaining,
+            updated_at: new Date().toISOString(),
+          }
+        };
+      }),
+
+      // Scene reference management (locations, objects, props)
+      addSceneRef: (refData) => set((state) => {
+        if (!state.currentScene) return state;
+
+        const id = refData.name.toLowerCase().replace(/\s+/g, '_');
+        const ref: SceneRef = { ...refData, id };
+
+        return {
+          currentScene: {
+            ...state.currentScene,
+            scene_references: {
+              ...state.currentScene.scene_references,
+              [id]: ref,
+            },
+            updated_at: new Date().toISOString(),
+          }
+        };
+      }),
+
+      updateSceneRef: (refId, updates) => set((state) => {
+        if (!state.currentScene) return state;
+
+        const existing = state.currentScene.scene_references?.[refId];
+        if (!existing) return state;
+
+        return {
+          currentScene: {
+            ...state.currentScene,
+            scene_references: {
+              ...state.currentScene.scene_references,
+              [refId]: { ...existing, ...updates },
+            },
+            updated_at: new Date().toISOString(),
+          }
+        };
+      }),
+
+      removeSceneRef: (refId) => set((state) => {
+        if (!state.currentScene || !state.currentScene.scene_references) return state;
+
+        const { [refId]: _, ...remaining } = state.currentScene.scene_references;
+
+        return {
+          currentScene: {
+            ...state.currentScene,
+            scene_references: remaining,
             updated_at: new Date().toISOString(),
           }
         };

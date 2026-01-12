@@ -1,0 +1,119 @@
+# AI Chat Memory - Session: cinema-1768199983186
+# Created: 2026-01-12T06:39:53.962Z
+
+[USER]: hi
+---
+[ASSISTANT]: Hello! 😊 How can I assist you today? I'm here to help with any questions or tasks you might have!
+---
+[USER]: plan me out idea 6 shots imax ad for tractor
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "tractor_ad_001",
+  "name": "Tractor Power & Durability IMAX Ad",
+  "description": "A cinematic IMAX ad showcasing a heavy-duty tractor's strength, precision, and reliability in a vast agricultural landscape.",
+  "duration_estimate": 60,
+  "location": "Open farmland with rolling hills and golden fields",
+  "time_of_day": "golden_hour",
+  "mood": "gritty yet inspiring",
+  "color_palette": "earthy tones with warm highlights",
+  "aspect_ratio": "16:9",
+  "director": "Christopher Nolan (practical effects, grounded realism)",
+  "character_references": {
+    "tractor_001": {
+      "id": "tractor_001",
+      "name": "Titan Tractor",
+      "description": "Massive, rust-colored, 4-wheel drive tractor with reinforced steel frame",
+      "costume": "Industrial machinery with LED control panel",
+      "generate_prompt": "Titan Tractor, 4-wheel drive, reinforced steel frame, LED control panel, dirt and mud stains, golden hour lighting, 65mm IMAX lens"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "Tractor moving across field",
+      "location": "Farmland at sunrise",
+      "duration": 5,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Titan Tractor plowing through golden wheat field at sunrise, 65mm IMAX lens, shallow depth of field, golden hour lighting, 8K",
+      "motion_prompt": "Tractor moves forward with dirt flying, camera follows from low angle, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "setup"
+    },
+    {
+      "shot_id": "S01_B02_C02",
+      "order": 2,
+      "shot_type": "close-up",
+      "subject": "Tractor engine",
+      "location": "Engine compartment",
+      "duration": 3,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Close-up of tractor engine with glowing exhaust, oil stains, 65mm lens, shallow depth of field, industrial lighting, 8K",
+      "motion_prompt": "Camera slowly zooms into engine compartment, smoke rising, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "conflict"
+    },
+    {
+      "shot_id": "S01_B03_C03",
+      "order": 3,
+      "shot_type": "dynamic",
+      "subject": "Tractor plowing field",
+      "location": "Mid-field",
+      "duration": 5,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Tractor plowing through dirt field with clouds overhead, 65mm IMAX lens, dramatic shadows, 8K",
+      "motion_prompt": "Camera orbits tractor as it plows, dirt flying, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "climax"
+    },
+    {
+      "shot_id": "S01_B04_C04",
+      "order": 4,
+      "shot_type": "subjective",
+      "subject": "Farmer's perspective",
+      "location": "Tractor cab",
+      "duration": 3,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Farmer's view from tractor cab, dashboard glowing, 65mm lens, shallow depth of field, 8K",
+      "motion_prompt": "Camera tilts up from dashboard to sky, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "resolution"
+    },
+    {
+      "shot_id": "S01_B05_C05",
+      "order": 5,
+      "shot_type": "close-up",
+      "subject": "Tractor tires",
+      "location": "Dirt path",
+      "duration": 2,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Close-up of tractor tires gripping dirt, mud stains, 65mm lens, shallow depth of field, 8K",
+      "motion_prompt": "Camera tracks tire rotation, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "reinforcement"
+    },
+    {
+      "shot_id": "S01_B06_C06",
+      "order": 6,
+      "shot_type": "wide",
+      "subject": "Tractor and farm at sunset",
+      "location": "Farmland",
+      "duration": 5,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Tractor parked at sunset with golden fields, 65mm IMAX lens, dramatic lighting, 8K",
+      "motion_prompt": "Camera pulls back to show full landscape, then settles",
+      "transition_out": "fade_out",
+      "narrative_beat": "conclusion"
+    }
+  ]
+}
+```
+---

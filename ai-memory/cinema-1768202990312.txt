@@ -1,0 +1,131 @@
+# AI Chat Memory - Session: cinema-1768202990312
+# Created: 2026-01-12T07:31:06.073Z
+
+[USER]: plan me out a AD 6 shots for A LAMBO TRUCK AD SHOWING HOW FAST AND BADASS IT IS FILMED IN IMAX
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "lambo_truck_ad_001",
+  "name": "Lambo Truck Ad - Speed & Power",
+  "description": "A high-energy ad showcasing the Lambo truck's speed, power, and design in a dramatic mountain setting.",
+  "duration_estimate": 60,
+  "location": "Mountain road with dramatic cliffs and sunset backdrop",
+  "time_of_day": "sunset",
+  "mood": "aggressive, cinematic",
+  "color_palette": "vibrant",
+  "aspect_ratio": "16:9",
+  "director": "Cinematic Sports Car Ad",
+  "character_references": {
+    "char_001": {
+      "id": "char_001",
+      "name": "Lambo Truck Driver",
+      "description": "A confident, athletic driver in a racing suit",
+      "costume": "Black racing suit with red accents",
+      "generate_prompt": "4K, cinematic, dynamic pose, racing suit, red highlights, dramatic lighting"
+    }
+  },
+  "scene_references": {
+    "location_001": {
+      "id": "location_001",
+      "name": "Mountain Road",
+      "type": "location",
+      "description": "Serpentine mountain road with cliffs and sunset",
+      "generate_prompt": "Wide establishing shot, 4K, dramatic mountain road, sunset lighting, IMAX scale"
+    },
+    "object_001": {
+      "id": "object_001",
+      "name": "Lambo Truck",
+      "type": "object",
+      "description": "Matte black Lambo truck with red racing stripes",
+      "generate_prompt": "Product shot style, 4K, matte black Lambo truck, red racing stripes, high gloss"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "Lambo Truck on mountain road",
+      "location": "Mountain road",
+      "duration": 5,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "IMAX 8K, wide-angle shot, Lambo truck on winding mountain road, sunset lighting, dramatic cliffs in background",
+      "motion_prompt": "Camera follows truck from distance, slow zoom in, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "setup"
+    },
+    {
+      "shot_id": "S01_B02_C02",
+      "order": 2,
+      "shot_type": "medium",
+      "subject": "Driver in racing suit",
+      "location": "Mountain road",
+      "duration": 4,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "IMAX 8K, medium shot, driver in racing suit, focused on face, dramatic sunset lighting",
+      "motion_prompt": "Low-angle tracking shot following truck, slow push-in to driver's face, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "introduction"
+    },
+    {
+      "shot_id": "S01_B03_C03",
+      "order": 3,
+      "shot_type": "close-up",
+      "subject": "Lambo Truck engine",
+      "location": "Mountain road",
+      "duration": 3,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "IMAX 8K, close-up on engine, red racing stripes, reflections in chrome, dynamic lighting",
+      "motion_prompt": "Camera orbits engine, slow zoom out to full truck, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "performance"
+    },
+    {
+      "shot_id": "S01_B04_C04",
+      "order": 4,
+      "shot_type": "wide",
+      "subject": "Truck overtaking vehicles",
+      "location": "Mountain road",
+      "duration": 5,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "IMAX 8K, wide-angle shot, Lambo truck overtaking cars, dramatic speed lines",
+      "motion_prompt": "High-speed tracking shot, slow motion effect, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "action"
+    },
+    {
+      "shot_id": "S01_B05_C05",
+      "order": 5,
+      "shot_type": "close-up",
+      "subject": "Truck's rear wheels",
+      "location": "Mountain road",
+      "duration": 3,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "IMAX 8K, extreme close-up on spinning wheels, tire smoke, dynamic motion blur",
+      "motion_prompt": "Camera spins around wheels, slow zoom out to full truck, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "technical showcase"
+    },
+    {
+      "shot_id": "S01_B06_C06",
+      "order": 6,
+      "shot_type": "wide",
+      "subject": "Truck at cliff edge",
+      "location": "Mountain road",
+      "duration": 5,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "IMAX 8K, wide shot, Lambo truck at cliff edge, sunset reflection in chrome",
+      "motion_prompt": "Camera pulls back from cliff edge, slow zoom to full frame, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "climax"
+    }
+  ]
+}
+```
+---

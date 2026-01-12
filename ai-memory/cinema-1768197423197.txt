@@ -1,0 +1,119 @@
+# AI Chat Memory - Session: cinema-1768197423197
+# Created: 2026-01-12T05:57:17.628Z
+
+[USER]: hi
+---
+[ASSISTANT]: Hello! 😊 How can I assist you today?
+---
+[USER]: do the plan 6 shots you have
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "scene_001",
+  "name": "Urban Reflections",
+  "description": "A lonely figure navigates a rain-soaked city street, reflecting on past memories through neon-lit windows.",
+  "duration_estimate": 90,
+  "location": "Downtown urban alleyway with mirrored storefronts",
+  "time_of_day": "night",
+  "mood": "melancholic",
+  "color_palette": "cool tones with neon accents",
+  "aspect_ratio": "2.39:1",
+  "director": "Wong Kar-wai",
+  "character_references": {
+    "char_001": {
+      "id": "char_001",
+      "name": "The Wanderer",
+      "description": "Late 20s, disheveled coat, rain-drenched hair",
+      "costume": "Black trench coat, leather boots, faded scarf",
+      "generate_prompt": "Wong Kar-wai style, rain-soaked street, neon reflections, melancholic atmosphere"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "City alleyway with mirrored storefronts",
+      "location": "Main street",
+      "duration": 4,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Wong Kar-wai style, rain-soaked urban alleyway, neon reflections in mirrored windows, cool color palette, 2.39:1 aspect ratio",
+      "motion_prompt": "Camera slowly tracks from left to right along wet pavement, rain streaks on glass, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "setup"
+    },
+    {
+      "shot_id": "S01_B01_C02",
+      "order": 2,
+      "shot_type": "medium",
+      "subject": "The Wanderer entering frame",
+      "location": "Alley entrance",
+      "duration": 3,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Wong Kar-wai style, rain-drenched figure in black trench coat, neon reflections in wet glass, cool color grading",
+      "motion_prompt": "Character walks into frame from left, rain dripping from coat, camera follows from side, then settles",
+      "transition_out": "match cut",
+      "narrative_beat": "introduction"
+    },
+    {
+      "shot_id": "S01_B02_C01",
+      "order": 3,
+      "shot_type": "close-up",
+      "subject": "Wanderer's hand gripping coffee cup",
+      "location": "Storefront window",
+      "duration": 2,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Wong Kar-wai style, close-up of rain-dampened coffee cup with steam, neon reflections, shallow depth of field",
+      "motion_prompt": "Dolly in on coffee cup, raindrops falling on glass, then settles",
+      "transition_out": "dissolve",
+      "narrative_beat": "conflict"
+    },
+    {
+      "shot_id": "S01_B02_C02",
+      "order": 4,
+      "shot_type": "medium",
+      "subject": "Wanderer interacting with bookshelf",
+      "location": "Bookstore window",
+      "duration": 3,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Wong Kar-wai style, character reaching for book, neon reflections in glass, shallow depth of field",
+      "motion_prompt": "Character reaches for book, camera orbits slowly around arm, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "climax"
+    },
+    {
+      "shot_id": "S01_B03_C01",
+      "order": 5,
+      "shot_type": "close-up",
+      "subject": "Wanderer's face reflecting neon lights",
+      "location": "Storefront window",
+      "duration": 3,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Wong Kar-wai style, close-up of rain-drenched face with neon reflections, shallow depth of field",
+      "motion_prompt": "Camera slowly zooms in on face, raindrops on glass, then settles",
+      "transition_out": "cut",
+      "narrative_beat": "resolution"
+    },
+    {
+      "shot_id": "S01_B03_C02",
+      "order": 6,
+      "shot_type": "wide",
+      "subject": "Wanderer walking away from frame",
+      "location": "Alley exit",
+      "duration": 4,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Wong Kar-wai style, figure walking away through rain, neon reflections in wet glass, 2.39:1 aspect ratio",
+      "motion_prompt": "Camera tracks character walking away, rain streaks on glass, then settles",
+      "transition_out": "fade out",
+      "narrative_beat": "conclusion"
+    }
+  ]
+}
+```
+---

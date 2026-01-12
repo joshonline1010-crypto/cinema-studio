@@ -1,0 +1,164 @@
+# Scene Planning Chat - Session: plan-1768196136061
+# Created: 2026-01-12T05:36:23.468Z
+
+[USER]: HI make video of ship sinking
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "ship_sinking_001",
+  "name": "The Last Voyage",
+  "description": "A dramatic reenactment of a ship sinking during a violent storm, focusing on the chaos and human struggle for survival.",
+  "duration_estimate": 120,
+  "location": "Open ocean during a storm",
+  "time_of_day": "night",
+  "mood": "dramatic, tense, cinematic",
+  "color_palette": "dark blues, stormy grays, flashes of lightning yellow",
+  "aspect_ratio": "16:9",
+  "director": "Claire Denis (realistic, atmospheric lighting)",
+  "character_references": {
+    "captain_001": {
+      "id": "captain_001",
+      "name": "Captain Elara Voss",
+      "description": "Early 50s, weathered face, salt-and-pepper hair tied back",
+      "costume": "Worn navy coat, oil-stained trousers, waterproof boots",
+      "generate_prompt": "Astoirm-tossed captain in a 1920s-era life jacket, eyes narrowed against the storm, hands gripping the ship's wheel"
+    },
+    "survivor_002": {
+      "id": "survivor_002",
+      "name": "Lila Torres",
+      "description": "Late 20s, athletic build, wet hair clinging to her face",
+      "costume": "Torn sweater, waterproof pants, life jacket",
+      "generate_prompt": "A young woman struggling in the ocean, clutching a life raft, eyes wide with fear"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "Stormy ocean",
+      "location": "Open sea",
+      "duration": 5,
+      "model": "kling-o1",
+      "dialog": "",
+      "photo_prompt": "A vast ocean churning with dark waves, lightning illuminating the sky in stark flashes, rain slashing across the frame",
+      "motion_prompt": "Camera orbits slowly around a distant ship, then zooms out to reveal the storm's scale",
+      "transition_out": "cut",
+      "narrative_beat": "establishing_shot"
+    },
+    {
+      "shot_id": "S01_B01_C02",
+      "order": 2,
+      "shot_type": "medium",
+      "subject": "Captain Voss",
+      "location": "Bridge of the ship",
+      "duration": 4,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "A determined captain gripping the ship's wheel, face lit by lightning, rain streaming down her face",
+      "motion_prompt": "Camera tracks alongside the ship's movement as it rocks violently",
+      "transition_out": "cut",
+      "narrative_beat": "character_introduction"
+    },
+    {
+      "shot_id": "S01_B01_C03",
+      "order": 3,
+      "shot_type": "close-up",
+      "subject": "Captain Voss' hands",
+      "location": "Bridge",
+      "duration": 3,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Close-up of weathered hands gripping the wheel, raindrops hitting the face, lightning in the background",
+      "motion_prompt": "Camera slowly zooms in while the hands tremble slightly",
+      "transition_out": "cut",
+      "narrative_beat": "tension_build"
+    },
+    {
+      "shot_id": "S01_B01_C04",
+      "order": 4,
+      "shot_type": "wide",
+      "subject": "Ship's deck",
+      "location": "Main deck",
+      "duration": 5,
+      "model": "kling-o1",
+      "dialog": "",
+      "photo_prompt": "A ship's deck swaying violently, crew members scrambling, waves crashing against the hull",
+      "motion_prompt": "Dolly push towards the ship as it tilts dangerously",
+      "transition_out": "cut",
+      "narrative_beat": "chaos_beginning"
+    },
+    {
+      "shot_id": "S01_B01_C05",
+      "order": 5,
+      "shot_type": "medium",
+      "subject": "Lila Torres",
+      "location": "Ocean",
+      "duration": 4,
+      "model": "seedance-1.5",
+      "dialog": "We have to keep moving! The current's pulling us under!",
+      "photo_prompt": "A woman in a life jacket struggling in the water, arms flailing, eyes locked on the distant ship",
+      "motion_prompt": "Camera follows her movement as she swims towards the ship",
+      "transition_out": "cut",
+      "narrative_beat": "survivor_introduction"
+    },
+    {
+      "shot_id": "S01_B01_C06",
+      "order": 6,
+      "shot_type": "wide",
+      "subject": "Ship breaking apart",
+      "location": "Ocean",
+      "duration": 6,
+      "model": "kling-o1",
+      "dialog": "",
+      "photo_prompt": "A ship splitting in half, water flooding the lower decks, debris floating in the storm",
+      "motion_prompt": "Camera tilts up to show the ship's mast snapping, then cuts to the ocean below",
+      "transition_out": "cut",
+      "narrative_beat": "climax"
+    },
+    {
+      "shot_id": "S01_B01_C07",
+      "order": 7,
+      "shot_type": "close-up",
+      "subject": "Lila's face",
+      "location": "Ocean",
+      "duration": 3,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Close-up of Lila's face, rain and seawater streaming down, eyes filled with determination",
+      "motion_prompt": "Camera slowly pulls back to reveal her holding onto a floating barrel",
+      "transition_out": "cut",
+      "narrative_beat": "personal_struggle"
+    },
+    {
+      "shot_id": "S01_B01_C08",
+      "order": 8,
+      "shot_type": "wide",
+      "subject": "Survivors in lifeboats",
+      "location": "Ocean",
+      "duration": 5,
+      "model": "kling-o1",
+      "dialog": "",
+      "photo_prompt": "Multiple lifeboats drifting in the storm, survivors huddled together, lightning illuminating the scene",
+      "motion_prompt": "Camera sweeps across the ocean, lingering on a single lifeboat",
+      "transition_out": "cut",
+      "narrative_beat": "resolution"
+    },
+    {
+      "shot_id": "S01_B01_C09",
+      "order": 9,
+      "shot_type": "medium",
+      "subject": "Captain Voss",
+      "location": "Ocean",
+      "duration": 4,
+      "model": "seedance-1.5",
+      "dialog": "We made it... but the sea never forgets.",
+      "photo_prompt": "Captain Voss standing in a lifeboat, backlit by a lightning flash, rain streaming down",
+      "motion_prompt": "Camera slowly zooms in on her face as she gazes at the horizon",
+      "transition_out": "fade_to_black",
+      "narrative_beat": "conclusion"
+    }
+  ]
+}
+```
+---

@@ -1,0 +1,115 @@
+# Scene Planning Chat - Session: test-123
+# Created: 2026-01-12T05:36:49.594Z
+
+[USER]: I want to make a 1 minute video of CHIP discovering a haunted house
+---
+[ASSISTANT]: ```json
+{
+  "scene_id": "chip_discovery_haunted_house",
+  "name": "The Whispering Walls",
+  "description": "CHIP, an adventurous explorer, stumbles upon a dilapidated mansion hidden in an overgrown forest. As they explore, eerie phenomena escalate, culminating in a chilling encounter.",
+  "duration_estimate": 60,
+  "location": "Misty forest clearing with a crumbling Victorian mansion",
+  "time_of_day": "dusk",
+  "mood": "suspenseful",
+  "color_palette": "dark_earthy_with_eerie_green_red_accents",
+  "aspect_ratio": "16:9",
+  "director": "Claustrophobic slow zooms with sudden wide-angle reveals",
+  "character_references": {
+    "chip_001": {
+      "id": "chip_001",
+      "name": "CHIP",
+      "description": "Early 20s, athletic build, weathered backpack, determined expression",
+      "costume": "Fade-blue flannel shirt, black cargo pants, hiking boots",
+      "generate_prompt": "A young adventurer with windblown hair and determined eyes, wearing practical outdoor gear, standing in a foggy forest"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "CHIP approaching mansion",
+      "location": "Forest clearing",
+      "duration": 4,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Misty forest clearing with a decaying Victorian mansion, golden hour light filtering through trees",
+      "motion_prompt": "Camera tracks CHIP walking through fog, slowly zooming in on the mansion's peeling paint",
+      "transition_out": "push into",
+      "narrative_beat": "setup"
+    },
+    {
+      "shot_id": "S01_B02_C02",
+      "order": 2,
+      "shot_type": "medium",
+      "subject": "CHIP examining door",
+      "location": "Mansion front porch",
+      "duration": 3,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "CHIP's hand hovering over a rusted doorknob, shadows stretching across peeling wallpaper",
+      "motion_prompt": "Orbit around CHIP's hand as they touch the door, then pull back to reveal the door's decay",
+      "transition_out": "cut",
+      "narrative_beat": "conflict"
+    },
+    {
+      "shot_id": "S01_B03_C03",
+      "order": 3,
+      "shot_type": "close-up",
+      "subject": "Door creaking open",
+      "location": "Mansion entrance",
+      "duration": 2,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Rusted door creaking open to reveal a dimly lit hallway with flickering lights",
+      "motion_prompt": "Slow dolly forward through the doorway with a subtle tilt-up",
+      "transition_out": "fade",
+      "narrative_beat": "revelation"
+    },
+    {
+      "shot_id": "S01_B04_C04",
+      "order": 4,
+      "shot_type": "wide",
+      "subject": "Interior hallway",
+      "location": "Mansion hallway",
+      "duration": 5,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Decaying hallway with portraits staring, cobwebs, and a flickering chandelier",
+      "motion_prompt": "Sweeping 360-degree pan revealing environmental details",
+      "transition_out": "zoom out",
+      "narrative_beat": "atmosphere"
+    },
+    {
+      "shot_id": "S01_B05_C05",
+      "order": 5,
+      "shot_type": "medium",
+      "subject": "CHIP finding a journal",
+      "location": "Mansion study",
+      "duration": 4,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "CHIP holding a yellowed journal with a ghostly hand reaching from the page",
+      "motion_prompt": "Smooth dolly into the journal as the hand becomes visible",
+      "transition_out": "cut",
+      "narrative_beat": "climax"
+    },
+    {
+      "shot_id": "S01_B06_C06",
+      "order": 6,
+      "shot_type": "close-up",
+      "subject": "Ghostly figure",
+      "location": "Mansion hallway",
+      "duration": 5,
+      "model": "kling-2.6",
+      "dialog": "",
+      "photo_prompt": "Transparent figure in 19th-century attire materializing in the hallway",
+      "motion_prompt": "Slow zoom from the journal to the figure with a flicker effect",
+      "transition_out": "blackout",
+      "narrative_beat": "resolution"
+    }
+  ]
+}
+```
+---
