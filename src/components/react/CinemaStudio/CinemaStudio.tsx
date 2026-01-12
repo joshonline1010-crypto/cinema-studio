@@ -972,18 +972,23 @@ export default function CinemaStudio() {
     });
 
     console.log(`[executeFullPlan] 🚀 Launching ALL ${imagePromises.length} images in PARALLEL!`);
-    await Promise.all(imagePromises);
+    const imageResults = await Promise.all(imagePromises);
 
     setStatusMessage(`✅ All ${pendingShots.length} images done! Now videos...`);
 
     // STEP 3: Generate ALL videos in PARALLEL (no batching!)
-    const shotsWithImages = currentScene.shots.filter(s => s.image_url && !s.video_url);
+    // IMPORTANT: Use fresh results from imagePromises, NOT stale currentScene state!
+    const shotsWithImages = imageResults.filter(r => r.success && r.image_url);
 
     if (shotsWithImages.length > 0) {
       setStatusMessage(`🚀 Step 3: Generating ALL ${shotsWithImages.length} videos IN PARALLEL...`);
       let videosCompleted = 0;
 
-      const videoPromises = shotsWithImages.map(async (shot) => {
+      const videoPromises = shotsWithImages.map(async (result) => {
+        // Get original shot data for model/prompt info
+        const shot = pendingShots.find(s => s.shot_id === result.shot_id);
+        if (!shot) return { shot_id: result.shot_id, success: false };
+
         try {
           let videoType = 'video-kling';
           if (shot.model === 'seedance-1.5') {
@@ -991,7 +996,18 @@ export default function CinemaStudio() {
           } else if (shot.model === 'kling-o1' || shot.end_frame) {
             videoType = 'video-kling-o1';
           }
-          console.log(`[executeFullPlan] PARALLEL: Sending video ${shot.shot_id}`);
+
+          // ===== COMPRESS IMAGE BEFORE SENDING TO KLING =====
+          // Kling has <10MB limit - 4K PNGs are ~15-20MB, need to compress first!
+          console.log(`[executeFullPlan] Compressing image for ${shot.shot_id}...`);
+          const compressedUrl = await compressForKling(result.image_url!);
+          console.log(`[executeFullPlan] PARALLEL: Sending video ${shot.shot_id} with compressed image: ${compressedUrl.substring(0, 50)}...`);
+
+          // Compress end frame too if present
+          let compressedEndFrame: string | undefined;
+          if (shot.end_frame) {
+            compressedEndFrame = await compressForKling(shot.end_frame);
+          }
 
           const videoResponse = await fetch('/api/cinema/generate', {
             method: 'POST',
@@ -999,8 +1015,8 @@ export default function CinemaStudio() {
             body: JSON.stringify({
               type: videoType,
               prompt: shot.motion_prompt || 'subtle motion, cinematic',
-              start_image_url: shot.image_url,
-              end_image_url: shot.end_frame || undefined,
+              start_image_url: compressedUrl,  // Use COMPRESSED image!
+              end_image_url: compressedEndFrame || undefined,
               duration: String(shot.duration || 5),
             })
           });
@@ -1009,7 +1025,7 @@ export default function CinemaStudio() {
             const videoData = await videoResponse.json();
             const videoUrl = videoData.video_url;
             if (videoUrl) {
-              markShotComplete(shot.shot_id, shot.image_url!, videoUrl);
+              markShotComplete(shot.shot_id, result.image_url!, videoUrl);  // Use fresh result.image_url!
               videosCompleted++;
               setStatusMessage(`✓ Videos: ${videosCompleted}/${shotsWithImages.length} done`);
               return { shot_id: shot.shot_id, success: true };
@@ -1023,7 +1039,48 @@ export default function CinemaStudio() {
       });
 
       console.log(`[executeFullPlan] 🚀 Launching ALL ${videoPromises.length} videos in PARALLEL!`);
-      await Promise.all(videoPromises);
+      const videoResults = await Promise.all(videoPromises);
+
+      // STEP 4: AUTO-STITCH all completed videos!
+      const successfulVideos = videoResults.filter(r => r.success).length;
+      if (successfulVideos >= 2) {
+        setStatusMessage(`🎬 Step 4: Auto-stitching ${successfulVideos} videos...`);
+
+        // Get fresh state to get video URLs
+        const freshState = useSceneStore.getState();
+        const freshScene = freshState.scenes[freshState.currentSceneId || ''];
+        if (freshScene) {
+          const videoUrls = freshScene.shots
+            .filter(s => s.video_url)
+            .sort((a, b) => a.order - b.order)
+            .map(s => s.video_url!);
+
+          if (videoUrls.length >= 2) {
+            try {
+              console.log(`[executeFullPlan] Auto-stitching ${videoUrls.length} videos...`);
+              const stitchResponse = await fetch('/api/cinema/stitch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ videos: videoUrls })
+              });
+
+              if (stitchResponse.ok) {
+                const stitchData = await stitchResponse.json();
+                if (stitchData.video_url) {
+                  console.log(`[executeFullPlan] ✅ Stitched video: ${stitchData.video_url}`);
+                  setStatusMessage(`✅ COMPLETE! Final video: ${stitchData.video_url}`);
+                  // Open the stitched video in new tab
+                  window.open(stitchData.video_url, '_blank');
+                }
+              } else {
+                console.error('[executeFullPlan] Stitch failed:', await stitchResponse.text());
+              }
+            } catch (err) {
+              console.error('[executeFullPlan] Stitch error:', err);
+            }
+          }
+        }
+      }
     }
 
     setExecutingPlan(false);
@@ -1038,7 +1095,7 @@ export default function CinemaStudio() {
     setStatusMessage('Plan execution stopped.');
   };
 
-  // Generate all videos for shots that have images but no videos
+  // Generate all videos for shots that have images but no videos - ALL IN PARALLEL!
   const executeAllVideos = async () => {
     if (!currentScene || executingPlan) return;
 
@@ -1050,13 +1107,12 @@ export default function CinemaStudio() {
 
     setExecutingPlan(true);
     setPlanProgress(0);
-    setStatusMessage(`Generating ${shotsNeedingVideo.length} videos...`);
+    setStatusMessage(`🚀 Generating ALL ${shotsNeedingVideo.length} videos IN PARALLEL...`);
 
-    for (let i = 0; i < shotsNeedingVideo.length; i++) {
-      const shot = shotsNeedingVideo[i];
-      setPlanProgress(i + 1);
-      setStatusMessage(`Video ${i + 1}/${shotsNeedingVideo.length}: ${shot.shot_id}`);
+    let videosCompleted = 0;
 
+    // Create ALL video promises at once for parallel execution
+    const videoPromises = shotsNeedingVideo.map(async (shot) => {
       try {
         let videoType = 'video-kling';
         if (shot.model === 'seedance-1.5') {
@@ -1065,14 +1121,24 @@ export default function CinemaStudio() {
           videoType = 'video-kling-o1';
         }
 
+        // ===== COMPRESS IMAGE BEFORE SENDING TO KLING =====
+        console.log(`[executeAllVideos] Compressing ${shot.shot_id}...`);
+        const compressedUrl = await compressForKling(shot.image_url!);
+        let compressedEndFrame: string | undefined;
+        if (shot.end_frame) {
+          compressedEndFrame = await compressForKling(shot.end_frame);
+        }
+
+        console.log(`[executeAllVideos] PARALLEL: Sending video ${shot.shot_id}...`);
+
         const response = await fetch('/api/cinema/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             type: videoType,
             prompt: shot.motion_prompt || 'subtle motion, cinematic',
-            start_image_url: shot.image_url,
-            end_image_url: shot.end_frame || undefined,
+            start_image_url: compressedUrl,
+            end_image_url: compressedEndFrame || undefined,
             duration: String(shot.duration || 5),
           })
         });
@@ -1081,28 +1147,65 @@ export default function CinemaStudio() {
           const data = await response.json();
           if (data.video_url) {
             markShotComplete(shot.shot_id, shot.image_url!, data.video_url);
-            setStatusMessage(`Video ${i + 1}/${shotsNeedingVideo.length} done!`);
-          } else {
-            console.error(`No video URL for ${shot.shot_id}`);
-            setStatusMessage(`Video ${i + 1} failed - no URL`);
+            videosCompleted++;
+            setStatusMessage(`✓ Videos: ${videosCompleted}/${shotsNeedingVideo.length} done`);
+            return { shot_id: shot.shot_id, success: true };
           }
-        } else {
-          const errorData = await response.json().catch(() => ({}));
-          console.error(`Video failed ${shot.shot_id}:`, errorData);
-          setStatusMessage(`Video ${i + 1} failed: ${errorData.error || 'Unknown'}`);
         }
+        return { shot_id: shot.shot_id, success: false };
       } catch (err) {
         console.error(`Video error ${shot.shot_id}:`, err);
-        setStatusMessage(`Video ${i + 1} error`);
+        return { shot_id: shot.shot_id, success: false };
       }
+    });
 
-      // Delay between videos
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    // Launch ALL videos in parallel!
+    console.log(`[executeAllVideos] 🚀 Launching ALL ${videoPromises.length} videos in PARALLEL!`);
+    const videoResults = await Promise.all(videoPromises);
+
+    // AUTO-STITCH after all videos complete!
+    const successfulVideos = videoResults.filter(r => r.success).length;
+    if (successfulVideos >= 2) {
+      setStatusMessage(`🎬 Auto-stitching ${successfulVideos} videos...`);
+
+      // Get fresh state to get video URLs
+      const freshState = useSceneStore.getState();
+      const freshScene = freshState.scenes[freshState.currentSceneId || ''];
+      if (freshScene) {
+        const videoUrls = freshScene.shots
+          .filter(s => s.video_url)
+          .sort((a, b) => a.order - b.order)
+          .map(s => s.video_url!);
+
+        if (videoUrls.length >= 2) {
+          try {
+            console.log(`[executeAllVideos] Auto-stitching ${videoUrls.length} videos...`);
+            const stitchResponse = await fetch('/api/cinema/stitch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ videos: videoUrls })
+            });
+
+            if (stitchResponse.ok) {
+              const stitchData = await stitchResponse.json();
+              if (stitchData.video_url) {
+                console.log(`[executeAllVideos] ✅ Stitched video: ${stitchData.video_url}`);
+                setStatusMessage(`✅ COMPLETE! Final video ready!`);
+                window.open(stitchData.video_url, '_blank');
+              }
+            } else {
+              console.error('[executeAllVideos] Stitch failed:', await stitchResponse.text());
+            }
+          } catch (err) {
+            console.error('[executeAllVideos] Stitch error:', err);
+          }
+        }
+      }
     }
 
     setExecutingPlan(false);
     setPlanProgress(0);
-    setStatusMessage(`All ${shotsNeedingVideo.length} videos generated!`);
+    setStatusMessage(`✅ All ${shotsNeedingVideo.length} videos generated in parallel!`);
   };
 
   // Generate all reference images (characters + scene refs like locations/objects) - ALL IN PARALLEL!
@@ -1250,6 +1353,7 @@ export default function CinemaStudio() {
   };
 
   // Get all ref URLs for shot generation (to maintain consistency)
+  // IMPORTANT: ALWAYS include ALL character refs for consistency across shots!
   const getRefUrlsForShot = (shot: SceneShot): string[] => {
     if (!currentScene) return [];
 
@@ -1258,13 +1362,11 @@ export default function CinemaStudio() {
 
     console.log(`[getRefUrlsForShot] Shot ${shot.shot_id}: searching in "${searchText.substring(0, 100)}..."`);
 
-    // Add character refs if mentioned in subject/prompt
+    // ALWAYS add ALL character refs - we want consistent characters in EVERY shot!
     Object.values(currentScene.character_references || {}).forEach(char => {
-      const nameMatch = searchText.includes(char.name.toLowerCase());
-      console.log(`  - Character "${char.name}": has_ref=${!!char.ref_url}, name_match=${nameMatch}`);
-      if (char.ref_url && nameMatch) {
+      if (char.ref_url) {
         refs.push(char.ref_url);
-        console.log(`    ✓ ADDED character ref: ${char.ref_url.substring(0, 50)}...`);
+        console.log(`    ✓ ADDED character ref (ALL chars for consistency): ${char.name} - ${char.ref_url.substring(0, 50)}...`);
       }
     });
 
@@ -1296,7 +1398,7 @@ export default function CinemaStudio() {
       }
     });
 
-    console.log(`[getRefUrlsForShot] Shot ${shot.shot_id}: found ${refs.length} refs`);
+    console.log(`[getRefUrlsForShot] Shot ${shot.shot_id}: found ${refs.length} refs total`);
     return refs;
   };
 
@@ -4552,6 +4654,70 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                                   <path d="M8 5v14l11-7z" />
                                 </svg>
                                 Videos ({currentScene.shots.filter(s => s.image_url && !s.video_url).length})
+                              </button>
+
+                              {/* RENDER FINAL VIDEO - Stitch all completed videos */}
+                              <button
+                                onClick={async () => {
+                                  const videoUrls = currentScene.shots
+                                    .filter(s => s.video_url)
+                                    .sort((a, b) => a.order - b.order)
+                                    .map(s => s.video_url!);
+
+                                  if (videoUrls.length < 2) {
+                                    alert('Need at least 2 videos to render!');
+                                    return;
+                                  }
+
+                                  setExecutingPlan(true);
+                                  setStatusMessage(`🎬 RENDERING ${videoUrls.length} videos... (downloading, stitching, uploading - may take 1-2 min)`);
+
+                                  try {
+                                    const response = await fetch('/api/cinema/stitch', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ videos: videoUrls })
+                                    });
+
+                                    const data = await response.json();
+
+                                    if (response.ok && data.video_url) {
+                                      setStatusMessage(`✅ RENDER COMPLETE!`);
+                                      // Show video in UI
+                                      setStartFrame(data.video_url);
+                                      setMode('video');
+                                      // Also open in new tab
+                                      window.open(data.video_url, '_blank');
+                                      alert(`🎬 Final video ready!\n\n${data.video_url}\n\nOpened in new tab!`);
+                                    } else {
+                                      setStatusMessage(`❌ Render failed: ${data.error || 'Unknown error'}`);
+                                      alert(`Render failed: ${data.error || data.details || 'Unknown error'}`);
+                                    }
+                                  } catch (err) {
+                                    setStatusMessage('❌ Render error!');
+                                    alert(`Render error: ${err instanceof Error ? err.message : 'Unknown'}`);
+                                  } finally {
+                                    setExecutingPlan(false);
+                                  }
+                                }}
+                                disabled={currentScene.shots.filter(s => s.video_url).length < 2 || executingPlan}
+                                className={`px-3 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-1 transition-all ${
+                                  currentScene.shots.filter(s => s.video_url).length < 2 || executingPlan
+                                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                  : 'bg-gradient-to-r from-red-500 to-orange-500 text-white hover:from-red-400 hover:to-orange-400 animate-pulse'
+                                }`}
+                                title="Stitch all videos into final render"
+                              >
+                                {executingPlan ? (
+                                  <>
+                                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                    </svg>
+                                    Rendering...
+                                  </>
+                                ) : (
+                                  <>🎬 Render ({currentScene.shots.filter(s => s.video_url).length})</>
+                                )}
                               </button>
 
                               {/* Reset All Generated */}

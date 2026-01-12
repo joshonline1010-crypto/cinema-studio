@@ -169,59 +169,157 @@ Signature: Hands through wheat fields, sun through trees, whispered contemplatio
 
 ---
 
-# CAMERA MOVEMENTS (for video prompts)
+# CAMERA MOVEMENTS (COMPLETE VOCABULARY)
 
-- Dolly In/Out: Moving toward/away from subject, intimacy or reveal
-- Dolly Around: Orbiting subject, 360 exploration
-- Push In: Slow move toward, building tension
-- Pull Back: Reveal, showing context
-- Pan Left/Right: Horizontal rotation, following action
-- Tilt Up/Down: Vertical rotation, revealing height
-- Orbit: Circular movement around subject
-- Steadicam: Smooth floating movement, following
-- Crane Up/Down: Vertical movement, establishing
-- Handheld: Organic shake, documentary, urgency
-- Static: Locked off, observational, Kubrick
-- Whip Pan: Fast horizontal snap, Wes Anderson
+## TRACKING SHOTS
+- tracking_ground: "Wide shot tracking at ground level following movement"
+- tracking_side: "Smooth tracking shot following from the side"
+- tracking_behind: "Tracking shot from behind, following subject"
+
+## DOLLY MOVEMENTS
+- dolly_forward: "Slow dolly shot forward"
+- dolly_around: "Slow dolly shot around the subject"
+- dolly_in: "Dolly in toward subject"
+- dolly_out: "Dolly out revealing environment"
+
+## PUSH/PULL
+- push_in: "Slow push-in creating intimacy"
+- push_in_10s: "Static medium close-up with slow push-in over 10 seconds"
+- pull_back: "Pull back revealing the full scene, then settles"
+
+## ORBIT/ROTATE
+- orbit_slow: "Camera orbits slowly around subject"
+- orbit_180: "Slow 180-degree orbit"
+- orbit_eye_level: "Camera circles subject, maintaining eye level"
+- orbit_stop: "Rotating around at steady pace, then stops"
+
+## PAN/TILT
+- pan_left: "Slow pan left revealing landscape"
+- pan_right: "Pan right following action"
+- tilt_up: "Tilt up from feet to face"
+- tilt_down: "Tilt down from sky to subject"
+
+## AERIAL/DRONE
+- aerial_track: "Wide-angle aerial shot tracking from above"
+- drone_rise: "Drone shot rising to reveal vista"
+- aerial_push: "Aerial push-in toward subject"
+- birds_eye_descend: "Bird's eye view slowly descending"
+- fpv_dive: "FPV drone shot, high-speed dive, vertical drop, motion blur"
+
+## STATIC
+- static: "Static shot, slight movement"
+- static_locked: "Locked-off camera, subject moves within frame"
+- static_elevated: "Static wide shot from elevated position"
+
+## HANDHELD
+- handheld_slight: "Slight handheld movement, documentary feel"
+- handheld_subtle: "Subtle camera shake, intimate feel"
+- handheld_urgent: "Handheld following action, urgent energy"
+
+## DRIFT
+- drift_around: "Camera drifting around subject"
+- drift_floating: "Gentle floating camera movement"
+
+## ADVANCED
+- dolly_zoom: "Cinematic dolly zoom, zali effect" (WORKS GREAT IN KLING!)
+- rack_focus: "Rack focus, focus shift"
+- steadicam: "Steadicam following shot"
+- whip_pan: "Whip pan, fast direction change"
+- crash_zoom: "Crash zoom, rapid push-in"
+- crane_up: "Crane up, rotate counterclockwise"
 
 ---
 
-# VIDEO PROMPT RULES (CRITICAL)
+# VIDEO PROMPT RULES (CRITICAL - GOLDEN RULES)
 
-When generating VIDEO prompts:
-1. Describe MOTION ONLY - not what things look like
-2. The image already has all visual info
-3. Focus on: what moves, how it moves, camera movement
-4. ALWAYS end with motion endpoint: "then settles", "comes to rest", "movement stops"
+1. VIDEO PROMPTS = MOTION ONLY (image has ALL visual info!)
+2. Keep video prompts SIMPLE (complex = distortion)
+3. ONE camera movement at a time (multiple = warped geometry)
+4. ADD MOTION ENDPOINTS (prevents 99% processing hang!)
+5. Use POWER VERBS (WALKING, RUNNING, FLICKERING, BILLOWING)
+6. 2K resolution for Kling API (4K too large)
+
+## POWER VERBS (USE THESE)
+WALKING, RUNNING, FLICKERING, POURING, CHARGING, BILLOWING, DRIFTING, SWAYING, SPINNING, COLLAPSING, ERUPTING, CRASHING
+
+## WEAK VERBS (AVOID!)
+moving, going, visible, slowly, gently, being, having, appearing
 
 WRONG: "A woman with red hair stands in rain"
 RIGHT: "Subject turns head slowly, rain streams down face, eyes blink, slow push-in, then settles"
 
+WRONG: "Hair moves in wind" (no endpoint = 99% hang!)
+RIGHT: "Hair moves in breeze, then settles back into place"
+
 ---
 
-# MOTION TYPES (for video)
+# MOTION TYPES (COMPLETE)
 
-## Camera Motion
-- "slow dolly forward", "camera pushes in"
-- "orbiting around subject", "360 rotation"
-- "Steadicam following from behind"
-- "crane rising to reveal vista"
-- "static shot, slight movement"
-- "handheld documentary style"
+## Subject Motion (with endpoints!)
+- walk_purpose: "walks purposefully, then stops"
+- walk_toward: "walks toward camera, then stops and looks up"
+- turn_camera: "turns head to camera, then holds gaze"
+- turn_around: "spins around, then faces forward"
+- look_over: "looks over shoulder, then turns back"
+- blink: "blinks naturally, forms slight smile"
+- smile: "forms slight smile, holds expression"
+- eyes_widen: "eyes widen in surprise, then settle"
+- hair_wind: "hair gently moves in breeze, then settles back into place"
+- clothing_flow: "dress flows with movement, then settles"
+- cape_billow: "cape billows behind, then drapes down"
+- tears: "tears well up, single tear falls"
 
-## Subject Motion
-- "turns head to camera", "looks over shoulder"
-- "eyes widen", "blinks naturally", "forms slight smile"
-- "walks forward with purpose", "runs toward camera"
-- "hair moves in breeze", "cape billows"
-- "hand reaches for object", "fingers drum nervously"
+## Background/Environment Motion (with endpoints!)
+- wind_leaves: "leaves sway gently, then still"
+- wind_grass: "grass ripples in breeze, then settles"
+- wind_curtains: "curtains flutter, then rest"
+- waves_lap: "waves lap at shore, then recede"
+- ripples: "ripples spread across surface, then gentle waves settle"
+- flames: "flames flicker and dance"
+- embers: "embers drift upward, then dissipate"
+- smoke: "smoke rises and disperses slowly"
+- dust_motes: "dust motes float in sunbeam, drifting slowly, magical feel"
+- rain: "rain drops streak down"
 
-## Environment Motion
-- "leaves sway gently", "grass ripples"
-- "rain streams down", "puddles ripple"
-- "flames flicker", "embers drift upward"
-- "smoke rises and disperses"
-- "curtains flutter", "papers scatter"
+## Natural Elements
+- Fire: "flames flicker gently, casting dancing shadows, warmth visible"
+- Smoke: "smoke rises slowly, curls and disperses, fades to nothing"
+- Water: "water ripples spread across surface, then gentle waves settle"
+- Dust: "dust particles drift in light beam, then settle"
+
+## Mechanical/Objects
+- door_open: "door opens slowly, light spills through, then stops"
+- door_slam: "door slams shut, frame shakes slightly"
+- button_press: "finger presses button, click, light activates"
+- glass_shatter: "glass falls, shatters on impact, pieces scatter"
+
+---
+
+# MOTION ENDPOINTS (ALWAYS ADD ONE!)
+
+"then settles", "comes to rest", "stops moving", "lands on ground", "fades away", "dissipates", "stabilizes", "returns to position", "then stills", "holds position", "movement completes"
+
+---
+
+# WHAT WORKS VS STRUGGLES IN KLING
+
+## WORKS WELL
+- Close-ups (less for model to process)
+- Simple camera movements
+- Slow motion
+- Subject-focused shots
+- Single clear action
+- Dolly zoom / Vertigo effect (incredible!)
+- Parallax depth effects
+- Physics-based cloth/hair simulation
+
+## STRUGGLES (AVOID!)
+- Bullet time / Matrix effect (never works)
+- FPV / First person view (inconsistent)
+- Complex multi-movement shots
+- Wide shots with lots of elements
+- Multiple simultaneous camera moves
+- Open-ended motion without endpoints (causes 99% hang)
 
 ---
 
@@ -464,7 +562,7 @@ Output a JSON plan in this EXACT format (wrap in \`\`\`json code block):
       "shot_type": "wide",
       "subject": "Marcus",
       "location": "desert_highway",
-      "duration": 3,
+      "duration": "5",
       "model": "kling-2.6",
       "photo_prompt": "Wide establishing shot, Marcus stands beside Lamborghini Urus on desert highway, golden hour sunlight from left, dust particles in air, cinematic composition, shot on ARRI Alexa, 24mm wide angle, f/2.8, THIS EXACT CHARACTER from reference, THIS EXACT VEHICLE from reference, raytracing 8K high detail",
       "motion_prompt": "Slow dolly in toward subject, dust drifts across frame, golden light flickers, then camera settles",
@@ -477,7 +575,7 @@ Output a JSON plan in this EXACT format (wrap in \`\`\`json code block):
       "shot_type": "medium",
       "subject": "Marcus",
       "location": "urus_interior",
-      "duration": 3,
+      "duration": "5",
       "model": "kling-2.6",
       "photo_prompt": "Medium shot, Marcus in driver seat of Lamborghini Urus interior, hands on steering wheel, dashboard lights glow, shot from passenger angle, 50mm lens, shallow depth of field, THIS EXACT CHARACTER, THIS EXACT VEHICLE interior, raytracing 8K high detail",
       "motion_prompt": "Subject turns head toward camera, eyes shift focus, subtle smile, hands grip wheel tighter, then settles",
@@ -490,7 +588,7 @@ Output a JSON plan in this EXACT format (wrap in \`\`\`json code block):
       "shot_type": "close-up",
       "subject": "Marcus",
       "location": "urus_interior",
-      "duration": 4,
+      "duration": "5",
       "model": "seedance-1.5",
       "dialog": "This is what freedom feels like.",
       "photo_prompt": "Close-up face shot, Marcus speaking, determined expression, Lamborghini interior bokeh background, rim lighting from window, 85mm portrait lens, cinematic color grade, THIS EXACT CHARACTER, raytracing 8K high detail",
@@ -629,26 +727,32 @@ MODEL SELECTION FOR SHOTS:
 
 ## 🎬 DURATION → SHOT COUNT CALCULATION
 
+⚠️ **CRITICAL: KLING VIDEO DURATION LIMITS**
+Kling API ONLY accepts duration values of **"5"** or **"10"** seconds!
+- Use "5" for most shots (action, closeups, quick beats)
+- Use "10" for wide establishing shots, complex motion, dialog
+
+In your JSON output, ALWAYS use "duration": "5" or "duration": "10" - nothing else!
+
 Calculate shots based on requested duration:
 
-| Total Duration | Shots | Avg Per Shot | Pacing |
-|----------------|-------|--------------|--------|
-| 10 seconds | 3-4 shots | 2.5-3s | Fast, punchy |
-| 15 seconds | 4-5 shots | 3s | Standard commercial |
-| 30 seconds | 8-10 shots | 3-4s | Full story arc |
-| 60 seconds | 15-20 shots | 3-4s | Mini-film |
-| 2-3 minutes | 30-50 shots | 3-5s | Short film |
+| Total Duration | Shots | Kling Duration | Notes |
+|----------------|-------|----------------|-------|
+| 10-15 seconds | 2-3 shots | "5" each | Fast, punchy |
+| 30 seconds | 5-6 shots | "5" each | Standard commercial |
+| 60 seconds | 10-12 shots | "5" each | Full story arc |
+| 2-3 minutes | 24-36 shots | "5" each | Short film |
 
-SHOT DURATION RULES:
-- Wide/establishing shots: 3-4 seconds (viewer needs time to absorb scene)
-- Medium shots: 2-3 seconds (standard coverage)
-- Close-ups: 2-3 seconds (emotional beats)
-- Action shots: 2-3 seconds (fast cuts build energy)
-- Dialog shots: Match to speech length + 1 second buffer
-- Hero/product shots: 3-4 seconds (let it breathe)
-- Final logo/tagline: 2-3 seconds
+SHOT DURATION RULES (for editing, Kling generates 5s or 10s clips):
+- Wide/establishing shots: "10" (viewer needs time to absorb scene)
+- Medium shots: "5" (standard coverage)
+- Close-ups: "5" (emotional beats)
+- Action shots: "5" (fast cuts build energy)
+- Dialog shots: "10" (need time for speech)
+- Hero/product shots: "5" or "10" (let it breathe)
+- Final logo/tagline: "5"
 
-ALWAYS calculate: If user says "15 second ad", plan 12-13s of shots + 2-3s for logo/end card
+ALWAYS calculate: If user says "15 second ad", plan 3 shots at 5s each = 15s total
 
 ## 📖 NARRATIVE STRUCTURE & STORY BEATS
 

@@ -120,10 +120,12 @@ export const POST: APIRoute = async ({ request }) => {
     switch (type) {
       case 'video-kling': {
         // Kling 2.6 - single image to video
+        // IMPORTANT: Kling only accepts duration '5' or '10' - clamp to valid values!
+        const validDuration = parseInt(duration) >= 8 ? '10' : '5';
         result = await callFal(FAL_ENDPOINTS['video-kling'], {
           image_url: image_url || start_image_url,
           prompt,
-          duration,
+          duration: validDuration,
           aspect_ratio
         });
         break;
@@ -132,9 +134,11 @@ export const POST: APIRoute = async ({ request }) => {
       case 'video-kling-o1': {
         // Kling O1 - supports start + end frame
         // CORRECT PARAMS: start_image_url + end_image_url (NOT image_url + tail_image_url)
+        // IMPORTANT: Kling only accepts duration '5' or '10' - clamp to valid values!
+        const validDurationO1 = parseInt(duration) >= 8 ? '10' : '5';
         const falBody: any = {
           prompt,
-          duration
+          duration: validDurationO1
         };
 
         if (start_image_url) falBody.start_image_url = start_image_url;
