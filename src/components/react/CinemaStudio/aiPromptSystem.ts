@@ -238,12 +238,16 @@ Signature: Hands through wheat fields, sun through trees, whispered contemplatio
 4. ADD MOTION ENDPOINTS (prevents 99% processing hang!)
 5. Use POWER VERBS (WALKING, RUNNING, FLICKERING, BILLOWING)
 6. 2K resolution for Kling API (4K too large)
+7. SPECIFY SPEED - Kling defaults to slow motion. Add "quickly, briskly" for normal speed.
 
-## POWER VERBS (USE THESE)
-WALKING, RUNNING, FLICKERING, POURING, CHARGING, BILLOWING, DRIFTING, SWAYING, SPINNING, COLLAPSING, ERUPTING, CRASHING
+## POWER VERBS (USE THESE!)
+- LOCOMOTION: WALKING, RUNNING, SPRINTING, MARCHING, STRIDING, TRUDGING, STALKING, BOUNDS
+- ELEMENTS: FLICKERING, BILLOWING, DRIFTING, SWAYING, RIPPLING, CASCADING, POURING
+- ACTIONS: CHARGING, SPINNING, COLLAPSING, ERUPTING, CRASHING, LUNGING, LEAPING
+- EXPRESSIONS: BEAMING, GRIMACING, SNARLING, TREMBLING, WIDENING, SQUINTING
 
 ## WEAK VERBS (AVOID!)
-moving, going, visible, slowly, gently, being, having, appearing
+moving, going, visible, slowly, gently, being, having, appearing, is, are, can see
 
 WRONG: "A woman with red hair stands in rain"
 RIGHT: "Subject turns head slowly, rain streams down face, eyes blink, slow push-in, then settles"
@@ -253,73 +257,219 @@ RIGHT: "Hair moves in breeze, then settles back into place"
 
 ---
 
-# MOTION TYPES (COMPLETE)
+# COMPLETE CAMERA MOVEMENT VOCABULARY
 
-## Subject Motion (with endpoints!)
-- walk_purpose: "walks purposefully, then stops"
-- walk_toward: "walks toward camera, then stops and looks up"
-- turn_camera: "turns head to camera, then holds gaze"
-- turn_around: "spins around, then faces forward"
-- look_over: "looks over shoulder, then turns back"
-- blink: "blinks naturally, forms slight smile"
-- smile: "forms slight smile, holds expression"
-- eyes_widen: "eyes widen in surprise, then settle"
-- hair_wind: "hair gently moves in breeze, then settles back into place"
-- clothing_flow: "dress flows with movement, then settles"
-- cape_billow: "cape billows behind, then drapes down"
-- tears: "tears well up, single tear falls"
+## DEPTH MOVEMENTS (Forward/Backward)
+| Movement | Prompt Examples |
+|----------|-----------------|
+| Dolly In | "slow dolly in toward face", "gentle push in over 5 seconds", "dolly forward, subject fills frame" |
+| Dolly Out | "dolly out revealing environment", "pull back to wide shot", "camera retreats revealing full scene" |
+| Push In | "slow push-in creating intimacy", "static medium close-up with slow push-in over 10 seconds" |
+| Pull Back | "pull back revealing the full scene, then settles", "camera pulls back smoothly" |
+| Crash Zoom | "crash zoom on face, dramatic impact", "rapid push in, emphasis on reaction" |
+| Dolly Zoom | "cinematic dolly zoom, zali effect", "vertigo effect, push-pull simultaneous, background warp" |
 
-## Background/Environment Motion (with endpoints!)
-- wind_leaves: "leaves sway gently, then still"
-- wind_grass: "grass ripples in breeze, then settles"
-- wind_curtains: "curtains flutter, then rest"
-- waves_lap: "waves lap at shore, then recede"
-- ripples: "ripples spread across surface, then gentle waves settle"
-- flames: "flames flicker and dance"
-- embers: "embers drift upward, then dissipate"
-- smoke: "smoke rises and disperses slowly"
-- dust_motes: "dust motes float in sunbeam, drifting slowly, magical feel"
-- rain: "rain drops streak down"
+## HORIZONTAL MOVEMENTS (Left/Right)
+| Movement | Prompt Examples |
+|----------|-----------------|
+| Pan Left/Right | "slow pan left revealing landscape", "pan right following action", "smooth horizontal sweep" |
+| Whip Pan | "whip pan left to right, motion blur, scene transition", "fast pan creating blur trail" |
+| Truck/Track | "side tracking shot", "camera trucks alongside walking subject", "lateral tracking maintaining distance" |
 
-## Natural Elements
-- Fire: "flames flicker gently, casting dancing shadows, warmth visible"
-- Smoke: "smoke rises slowly, curls and disperses, fades to nothing"
-- Water: "water ripples spread across surface, then gentle waves settle"
-- Dust: "dust particles drift in light beam, then settle"
+## VERTICAL MOVEMENTS (Up/Down)
+| Movement | Prompt Examples |
+|----------|-----------------|
+| Tilt Up | "tilt up from feet to face", "tilt up from ground level to reveal tall building" |
+| Tilt Down | "tilt down from sky to subject", "slow tilt down from clouds to character below" |
+| Crane Up | "crane shot rising to reveal vista", "camera gradually rises revealing landscape" |
+| Crane Down | "slow crane descent to eye level", "camera descends from above" |
+| Pedestal | "camera moves vertically up from street level" |
 
-## Mechanical/Objects
-- door_open: "door opens slowly, light spills through, then stops"
-- door_slam: "door slams shut, frame shakes slightly"
-- button_press: "finger presses button, click, light activates"
-- glass_shatter: "glass falls, shatters on impact, pieces scatter"
+## ORBITAL MOVEMENTS (Around Subject)
+| Movement | Prompt Examples |
+|----------|-----------------|
+| Orbit | "camera orbits slowly around subject", "slow 180-degree orbit", "360-degree orbit camera movement" |
+| Arc | "slow arc shot circling from front to side view", "90-degree arc around subject" |
+| Spiral | "spiral camera movement rising upward", "spiral descent around character" |
+
+## TRACKING/FOLLOWING
+| Movement | Prompt Examples |
+|----------|-----------------|
+| Follow | "camera follows subject movement, steady tracking", "smooth follow shot maintaining consistent distance" |
+| Track Behind | "tracking shot from behind as subject moves forward" |
+| Track Side | "side tracking shot following walking character", "tracking alongside subject at moderate speed" |
+| Steadicam | "Steadicam follows subject through corridor, smooth gliding motion" |
+
+## AERIAL/DRONE
+| Movement | Prompt Examples |
+|----------|-----------------|
+| Drone Rise | "drone shot rising to reveal vista", "aerial view ascending" |
+| Aerial Track | "wide-angle aerial shot tracking from above", "high altitude drone shot flying over" |
+| Bird's Eye | "bird's eye view of city streets", "overhead shot looking straight down" |
+| FPV Dive | "FPV drone shot, high-speed dive, vertical drop, motion blur" (inconsistent results) |
+
+## STABILITY STYLES
+| Style | Prompt Examples |
+|-------|-----------------|
+| Static | "static shot, locked tripod", "fixed camera position, stable composition" |
+| Handheld | "handheld camera shake, documentary feel", "slight handheld movement, intimate feeling" |
+| Drift | "camera drifting around subject", "gentle floating camera movement" |
+
+## FOCUS TECHNIQUES
+| Technique | Prompt Examples |
+|-----------|-----------------|
+| Rack Focus | "rack focus foreground to background", "focus pull from hands to face" |
+| Shallow DOF | "shallow depth of field, bokeh background", "subject sharp, background creamy bokeh" |
 
 ---
 
-# MOTION ENDPOINTS (ALWAYS ADD ONE!)
+# COMPLETE CHARACTER MOVEMENT VOCABULARY
 
-"then settles", "comes to rest", "stops moving", "lands on ground", "fades away", "dissipates", "stabilizes", "returns to position", "then stills", "holds position", "movement completes"
+## LOCOMOTION
+| Action | Power Verbs | Prompt Examples |
+|--------|-------------|-----------------|
+| Walking | struts, strolls, trudges, marches, shuffles, paces, saunters, stalks | "struts confidently toward camera, then stops", "trudges wearily through snow, movement slows" |
+| Running | sprints, dashes, races, bounds, scrambles, flees, jogs | "sprints toward camera, urgent energy, stops suddenly", "bounds energetically forward, then settles" |
+| Jumping | leaps, hops, bounds, vaults, springs | "leaps dramatically, lands safely", "springs upward, grabs object, lands" |
+
+## HEAD MOVEMENTS
+| Action | Prompt Examples |
+|--------|-----------------|
+| Turn | "turns head to camera, then holds gaze", "turns head sharply in surprise" |
+| Look | "looks over shoulder, then turns back", "glances left then right" |
+| Tilt | "tilts head curiously, questioning look", "tilts head gently" |
+| Nod/Shake | "nods in agreement", "shakes head slowly" |
+
+## FACIAL EXPRESSIONS (with endpoints!)
+| Expression | Prompt Examples |
+|------------|-----------------|
+| Smile | "slight smile forms, holds expression", "beams brightly, joy evident" |
+| Eyes | "eyes widen in surprise, then settle", "blinks naturally, forms slight smile" |
+| Brow | "eyebrows raise, then relax", "furrows brow, concentration visible" |
+| Lips | "lips part slightly", "grimaces in discomfort, expression softens" |
+
+## ARM/HAND MOVEMENTS
+| Action | Prompt Examples |
+|--------|-----------------|
+| Wave | "waves hand in greeting, arm lowers" |
+| Reach | "reaches for coffee cup, picks it up, takes sip, sets down" |
+| Gesture | "gestures to surroundings, hands settle" |
+| Touch | "adjusts hair, tucking strand behind ear, subtle movement" |
+
+## FULL BODY
+| Action | Prompt Examples |
+|--------|-----------------|
+| Stand | "rises from chair slowly, stretches slightly, walks forward" |
+| Sit | "settles into seat, crosses legs, relaxed posture" |
+| Turn | "turns around slowly, hair flows with movement, faces camera" |
+| Lean | "leans forward with interest, expression intent" |
+
+## EMOTIONAL MOVEMENTS
+| Emotion | Prompt Examples |
+|---------|-----------------|
+| Joy | "face lights up, jumps with joy", "pumps fist, triumphant expression" |
+| Sadness | "shoulders slump, looks down", "wipes tear from eye, composes self" |
+| Anger | "clenches fists, jaw tightens", "slams hand on desk, turns away" |
+| Fear | "freezes, eyes widen, slowly turns", "backs away slowly, trembling" |
 
 ---
 
-# WHAT WORKS VS STRUGGLES IN KLING
+# COMPLETE OBJECT/ENVIRONMENT MOVEMENT VOCABULARY
 
-## WORKS WELL
-- Close-ups (less for model to process)
-- Simple camera movements
-- Slow motion
-- Subject-focused shots
-- Single clear action
+## WIND/AIR EFFECTS
+| Element | Prompt Examples |
+|---------|-----------------|
+| Hair | "hair moves gently in breeze, strands catching light, then settles" |
+| Clothing | "dress flows with soft wind, fabric rippling, movement subtle", "cape billows dramatically, then falls" |
+| Vegetation | "leaves sway in gentle breeze, then still", "grass ripples like waves, settles" |
+
+## WATER
+| Element | Prompt Examples |
+|---------|-----------------|
+| Surface | "water ripples spread across surface, then gentle waves settle" |
+| Rain | "rain drops streak down window, collecting at bottom" |
+| Waves | "waves lap gently at shore, rhythmic motion, foam dissolves" |
+
+## FIRE/SMOKE
+| Element | Prompt Examples |
+|---------|-----------------|
+| Flames | "flames flicker gently, casting dancing shadows, warmth visible" |
+| Embers | "sparks rise from fire, drift upward, fade into darkness" |
+| Smoke | "smoke rises slowly, curls and disperses, fades to nothing" |
+| Steam | "steam rises from hot coffee, wisps curl, dissipate" |
+
+## DUST/PARTICLES
+| Element | Prompt Examples |
+|---------|-----------------|
+| Dust Motes | "dust motes float in sunbeam, drifting slowly, magical feel" |
+| Particles | "particles drift through air, catching light, ethereal" |
+| Debris | "debris scatters from impact, pieces fall, settle on ground" |
+
+## VEHICLES
+| Element | Prompt Examples |
+|---------|-----------------|
+| Cars | "car drives quickly past camera, motion blur, exhaust visible", "vehicle approaches slowly, headlights bright, stops" |
+| Background | "BACKGROUND SCENERY RUSHES PAST WINDOW, reflections shift on glass" (CRITICAL for driving shots!) |
+
+## LIGHT EFFECTS
+| Element | Prompt Examples |
+|---------|-----------------|
+| Flicker | "neon sign flickers to life, buzzes, glows steadily" |
+| Shift | "light plays across face, changing mood", "shadows shift as light source moves" |
+
+---
+
+# MOTION ENDPOINT PHRASES (ALWAYS USE ONE!)
+
+Always end object/character movements with an endpoint:
+- "then settles"
+- "comes to rest"
+- "stops moving"
+- "lands on ground"
+- "fades away"
+- "dissipates"
+- "stabilizes"
+- "returns to position"
+- "then stills"
+- "holds position"
+- "movement completes"
+- "then holds gaze"
+
+---
+
+# SPEED MODIFIERS
+
+## For Normal/Fast Movement:
+quickly, briskly, swiftly, rapidly, at regular pace, with energy, dynamically
+
+## For Slow Movement:
+slowly, gently, gracefully, smoothly, deliberately, carefully, softly
+
+## Why This Matters:
+Kling defaults to slow motion. Without speed modifiers, falling looks like slow-mo floating.
+WRONG: "falls smoothly, gracefully" (= slow motion)
+RIGHT: "falls quickly, lands with impact" (= normal speed)
+
+---
+
+# WHAT WORKS vs FAILS IN KLING
+
+## WORKS EXCELLENTLY:
 - Dolly zoom / Vertigo effect (incredible!)
-- Parallax depth effects
+- Close-ups (less for model to process)
+- Simple single camera movements
+- Slow motion
 - Physics-based cloth/hair simulation
+- Parallax depth effects
+- Subject-focused shots
 
-## STRUGGLES (AVOID!)
+## STRUGGLES / FAILS:
 - Bullet time / Matrix effect (never works)
 - FPV / First person view (inconsistent)
-- Complex multi-movement shots
-- Wide shots with lots of elements
 - Multiple simultaneous camera moves
-- Open-ended motion without endpoints (causes 99% hang)
+- Wide shots with lots of elements
+- Open-ended motion without endpoints (99% hang)
+- Complex multi-step camera choreography
 
 ---
 
