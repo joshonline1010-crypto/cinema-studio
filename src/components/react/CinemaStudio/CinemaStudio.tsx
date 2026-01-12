@@ -378,7 +378,7 @@ export default function CinemaStudio() {
   const [aiChatHistory, setAiChatHistory] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
   const [aiSessionId] = useState(() => `cinema-${Date.now()}`); // Unique session ID
   const aiChatRef = useRef<HTMLDivElement>(null); // For auto-scroll
-  const [aiMode, setAiMode] = useState<'quick' | 'chat' | 'settings'>('chat'); // Toggle between quick prompt, chat, and settings
+  const [aiMode, setAiMode] = useState<'plan' | 'quick' | 'chat' | 'settings'>('plan'); // Toggle between plan, quick prompt, chat, and settings
   const [aiCopiedIndex, setAiCopiedIndex] = useState<number | null>(null); // Track which message was copied
   const [aiRefImages, setAiRefImages] = useState<Array<{ url: string; description: string | null }>>([]);  // Up to 7 ref images
   const [aiRefLoading, setAiRefLoading] = useState<number | null>(null); // Which image is being analyzed
@@ -1298,9 +1298,61 @@ export default function CinemaStudio() {
     try {
       // Always include current session context (prompt, image, settings, ref images)
       const sessionContext = buildChatContext();
+
+      // In Plan mode, prepend instructions to output full plan with example
+      const planModePrefix = aiMode === 'plan' ? `YOU ARE IN PLAN MODE. You MUST output ONLY a JSON code block. NO explanations, NO text outside JSON.
+
+OUTPUT THIS EXACT FORMAT (wrapped in \`\`\`json code block):
+\`\`\`json
+{
+  "scene_id": "short_snake_case_id",
+  "name": "Scene Name",
+  "description": "What happens",
+  "duration_estimate": 30,
+  "mood": "cinematic",
+  "aspect_ratio": "16:9",
+  "character_references": {
+    "char_id": {
+      "id": "char_id",
+      "name": "Name",
+      "description": "Physical description",
+      "costume": "What they wear",
+      "generate_prompt": "Character reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: front view, 3/4 view, side profile. Middle row: back view, close-up face, expression variations. Bottom row: full body pose, action pose, details. White background, studio lighting, 4K"
+    }
+  },
+  "scene_references": {
+    "location_id": {
+      "id": "location_id",
+      "name": "Location",
+      "type": "location",
+      "description": "What it looks like",
+      "generate_prompt": "Location reference sheet, 3x3 grid layout, [DESCRIPTION]. Top row: wide exterior, medium exterior, architectural detail. Middle row: wide interior, medium interior, interior details. Bottom row: dawn lighting, daylight, dusk. Cinematic, no people, 4K"
+    }
+  },
+  "shots": [
+    {
+      "shot_id": "S01_B01_C01",
+      "order": 1,
+      "shot_type": "wide",
+      "subject": "character_id",
+      "location": "location_id",
+      "duration": 3,
+      "model": "kling-2.6",
+      "photo_prompt": "Full image prompt with all details, 8K",
+      "motion_prompt": "Camera and subject motion, then settles",
+      "transition_out": "cut"
+    }
+  ]
+}
+\`\`\`
+
+REQUIRED: character_references for ALL characters, scene_references for ALL locations/objects, shots array with photo_prompt AND motion_prompt for each.
+
+USER REQUEST: ` : '';
+
       const messageWithContext = sessionContext
-        ? `${userMessage}\n${sessionContext}`
-        : userMessage;
+        ? `${planModePrefix}${userMessage}\n${sessionContext}`
+        : `${planModePrefix}${userMessage}`;
 
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -1320,6 +1372,16 @@ export default function CinemaStudio() {
 
       // Add assistant response to history
       setAiChatHistory(prev => [...prev, { role: 'assistant', content: data.response }]);
+
+      // AUTO-LOAD PLAN: If in plan mode and response contains valid JSON plan, auto-load it
+      if (aiMode === 'plan') {
+        const jsonPlan = extractScenePlan(data.response);
+        if (jsonPlan) {
+          console.log('Plan mode: Auto-loading detected JSON plan with', jsonPlan.shots?.length, 'shots');
+          loadScene(jsonPlan);
+          setPlanCollapsed(false); // Expand the plan card to show loaded plan
+        }
+      }
 
       // Auto-scroll
       setTimeout(() => {
@@ -3976,12 +4038,24 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                 {/* Mode Toggle */}
                 <div className="flex bg-[#2a2a2a] rounded-lg p-0.5">
                   <button
+                    onClick={() => setAiMode('plan')}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                      aiMode === 'plan'
+                        ? 'bg-green-500 text-white'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                    title="Plan Mode - AI outputs full plans with refs & shots"
+                  >
+                    Plan
+                  </button>
+                  <button
                     onClick={() => setAiMode('chat')}
                     className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                       aiMode === 'chat'
                         ? 'bg-purple-500 text-white'
                         : 'text-gray-400 hover:text-white'
                     }`}
+                    title="Chat Mode - General conversation"
                   >
                     Chat
                   </button>
@@ -3992,6 +4066,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                         ? 'bg-yellow-500 text-black'
                         : 'text-gray-400 hover:text-white'
                     }`}
+                    title="Prompt Mode - Quick single prompts"
                   >
                     Prompt
                   </button>
@@ -4008,7 +4083,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {aiMode === 'chat' && aiChatHistory.length > 0 && (
+                {(aiMode === 'chat' || aiMode === 'plan') && aiChatHistory.length > 0 && (
                   <button
                     onClick={clearAIChatHistory}
                     className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs transition-colors"
@@ -4029,7 +4104,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                 ollamaStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
               }`} />
               <span className="text-xs text-gray-400">
-                {ollamaStatus === 'ok' ? `Ollama connected (${aiMode === 'chat' ? 'Qwen3' : 'Mistral'})` :
+                {ollamaStatus === 'ok' ? `Ollama connected (${aiMode === 'chat' || aiMode === 'plan' ? 'Qwen3' : 'Mistral'})` :
                  ollamaStatus === 'error' ? 'Ollama not running - start with: ollama serve' :
                  'Checking Ollama...'}
               </span>
@@ -4123,8 +4198,8 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
               </>
             )}
 
-            {/* CHAT MODE */}
-            {aiMode === 'chat' && (
+            {/* PLAN MODE & CHAT MODE - Same UI, different AI behavior */}
+            {(aiMode === 'chat' || aiMode === 'plan') && (
               <>
                 {/* Plan Card - Collapsible at top of chat */}
                 {currentScene && (
@@ -4503,9 +4578,18 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                 <div ref={aiChatRef} className="flex-1 overflow-y-auto mb-4 space-y-3 min-h-0">
                     {aiChatHistory.length === 0 ? (
                       <div className="text-center text-gray-500 py-8">
-                        <div className="text-lg mb-2">Chat with Qwen3</div>
-                        <div className="text-xs">Ask about cinematography, get prompts, plan videos...</div>
+                        <div className="text-lg mb-2">{aiMode === 'plan' ? 'Plan Mode' : 'Chat with Qwen3'}</div>
+                        <div className="text-xs">
+                          {aiMode === 'plan'
+                            ? 'Describe your video idea - Qwen will output a full plan with refs & shots'
+                            : 'Ask about cinematography, get prompts, plan videos...'}
+                        </div>
                         <div className="text-xs mt-1 text-purple-400">Memory is saved to disk!</div>
+                        {aiMode === 'plan' && (
+                          <div className="mt-2 px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-lg inline-block">
+                            <span className="text-green-400 text-xs">Try: "Plan a 10 second IMAX ad for a donut shop"</span>
+                          </div>
+                        )}
                         <div className="mt-4 text-xs text-gray-600">
                           Try: "Plan a 30 second video of..."
                         </div>
@@ -4786,7 +4870,7 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                         handleAIChat();
                       }
                     }}
-                    placeholder="Ask about cinematography, get prompts, refine ideas..."
+                    placeholder={aiMode === 'plan' ? "Describe your video (e.g., '10 sec IMAX ad for donut shop')..." : "Ask about cinematography, get prompts, refine ideas..."}
                     className="flex-1 bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
                     disabled={aiGenerating}
                   />
