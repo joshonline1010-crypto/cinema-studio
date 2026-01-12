@@ -578,7 +578,7 @@ Output a JSON plan in this EXACT format (wrap in \`\`\`json code block):
       "duration": "5",
       "model": "kling-2.6",
       "photo_prompt": "Medium shot, Marcus in driver seat of Lamborghini Urus interior, hands on steering wheel, dashboard lights glow, shot from passenger angle, 50mm lens, shallow depth of field, THIS EXACT CHARACTER, THIS EXACT VEHICLE interior, raytracing 8K high detail",
-      "motion_prompt": "Subject turns head toward camera, eyes shift focus, subtle smile, hands grip wheel tighter, then settles",
+      "motion_prompt": "Subject turns head toward camera, eyes shift focus, subtle smile, hands grip wheel tighter, BACKGROUND SCENERY RUSHES PAST WINDOW, reflections shift on glass, subtle road vibrations, then settles",
       "transition_out": "cut",
       "narrative_beat": "connection"
     },
@@ -592,7 +592,7 @@ Output a JSON plan in this EXACT format (wrap in \`\`\`json code block):
       "model": "seedance-1.5",
       "dialog": "This is what freedom feels like.",
       "photo_prompt": "Close-up face shot, Marcus speaking, determined expression, Lamborghini interior bokeh background, rim lighting from window, 85mm portrait lens, cinematic color grade, THIS EXACT CHARACTER, raytracing 8K high detail",
-      "motion_prompt": "Subject speaks confidently: 'This is what freedom feels like.' Slight head movement, eyes intense, then settles",
+      "motion_prompt": "Subject speaks confidently: 'This is what freedom feels like.' Slight head movement, eyes intense, blurred scenery passes in background bokeh, light shifts across face from passing environment, then settles",
       "transition_out": "cut",
       "narrative_beat": "dialogue"
     }
@@ -614,6 +614,29 @@ MOTION_PROMPT RULES:
 - Include environment motion (dust, leaves, smoke, reflections)
 - ALWAYS end with motion endpoint: "then settles", "comes to rest", "then holds"
 - For dialogue shots: include "Subject speaks: '[EXACT DIALOGUE]'"
+
+⚠️ CRITICAL - MOTION MUST MATCH THE ACTION!
+If the shot shows ACTION, the motion_prompt MUST include MATCHING MOTION:
+
+| Shot Shows | Motion MUST Include |
+|------------|---------------------|
+| Driving/in car | "background rushes past", "scenery blurs by", "road moves beneath", "parallax motion" |
+| Walking | "steps forward", "body sways", "background shifts" |
+| Running | "rapid movement", "environment streaks past", "motion blur" |
+| Flying | "clouds rush by", "ground shrinks below", "wind effects" |
+| Boat/ship | "waves roll past", "water moves beneath", "horizon shifts" |
+
+WRONG (car scene, no motion):
+"Driver grips steering wheel, slight head turn, then settles"
+
+RIGHT (car scene with motion):
+"Driver grips steering wheel, slight head turn, background scenery rushes past window, reflections shift on glass, road vibrations, then settles"
+
+WRONG (walking, static):
+"Subject walks down street, then settles"
+
+RIGHT (walking with environment):
+"Subject walks forward, background parallax as buildings pass, footsteps land, coat sways with movement, then settles"
 \`\`\`
 
 ## REF DETECTION CHECKLIST (DO THIS FIRST!)
