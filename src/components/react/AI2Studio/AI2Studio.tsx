@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAI2Store } from './ai2Store';
+import { buildAI2Prompt } from './ai2PromptSystem';
 
 // Mode descriptions
 const MODE_INFO = {
@@ -298,8 +299,9 @@ export default function AI2Studio() {
       try {
         const blob = await fetch(dataUrl).then(r => r.blob());
         const formData = new FormData();
-        formData.append('reqtype', 'fileupload');
-        formData.append('fileToUpload', blob, 'ref.jpg');
+        // FIXED: Use 'file' key to match upload endpoint expectation
+        const ext = blob.type.includes('png') ? 'png' : 'jpg';
+        formData.append('file', blob, `ref-${Date.now()}.${ext}`);
 
         const uploadRes = await fetch('/api/cinema/upload', {
           method: 'POST',
@@ -363,55 +365,18 @@ export default function AI2Studio() {
     setGenerating(true);
 
     try {
-      // Conversational instruction - Claude should talk naturally with CLEAN TEXT
-      const conversationalInstruction = `You are a creative director helping me plan video content. Talk to me like a friend and collaborator.
+      // Build comprehensive system prompt with all cinematography knowledge
+      const hasUploadedRefs = refImages.length > 0 || characterRefs.length > 0 || productRefs.length > 0 || locationRefs.length > 0;
 
-CRITICAL - OUTPUT CLEAN TEXT:
-- NO markdown formatting (no #, **, -, etc)
-- NO bullet points or lists
-- Just write normal paragraphs like a text message or email
-- Keep it short and conversational (2-4 short paragraphs max)
-- Be excited and friendly!
+      const systemPrompt = buildAI2Prompt({
+        hasUploadedRefs,
+        characterRefs: characterRefs.map(r => r.name),
+        productRefs: productRefs.map(r => r.name),
+        locationRefs: locationRefs.map(r => r.name),
+        generalRefs: refImages.map(r => r.description || 'uploaded image')
+      });
 
-HOW TO RESPOND:
-1. React to my idea with enthusiasm (1-2 sentences)
-2. Share what you're thinking visually (1-2 sentences)
-3. Briefly explain your shot plan (1-2 sentences)
-4. Then ONLY at the very end, include the JSON code block
-
-Example response style:
-"Oh I love this! A parachute bag is such a wild concept - we can make this look absolutely cinematic.
-
-I'm thinking we open with the bag looking totally normal, maybe on someone's shoulder in a city. Then BAM - they jump off something and it deploys. The reveal moment is everything.
-
-Let me set up 4 shots that build the tension and payoff..."
-
-Then end with the JSON block (this is the only code block allowed):
-\`\`\`json
-{"name":"Scene","shots":[...]}
-\`\`\`
-
-Remember: Clean readable text first, JSON code block at the end only.`;
-
-      // Build ref context for AI
-      let refContext = '';
-      if (refImages.length > 0 || characterRefs.length > 0 || productRefs.length > 0 || locationRefs.length > 0) {
-        refContext = '\n\n[You have reference images uploaded to work with]';
-        if (characterRefs.length > 0) {
-          refContext += `\nCharacters: ${characterRefs.map(r => r.name).join(', ')}`;
-        }
-        if (productRefs.length > 0) {
-          refContext += `\nProducts: ${productRefs.map(r => r.name).join(', ')}`;
-        }
-        if (locationRefs.length > 0) {
-          refContext += `\nLocations: ${locationRefs.map(r => r.name).join(', ')}`;
-        }
-        if (refImages.length > 0) {
-          refContext += `\nRef images: ${refImages.map(r => r.description || 'uploaded').join(', ')}`;
-        }
-      }
-
-      const messageToSend = `${conversationalInstruction}${refContext}\n\nUser: ${userMessage}`;
+      const messageToSend = `${systemPrompt}\n\n---\n\nUser: ${userMessage}`;
 
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -798,7 +763,18 @@ Remember: Clean readable text first, JSON code block at the end only.`;
   };
 
   // STEP 0: Generate REFS first (character + location references)
+  // SKIP if user already uploaded refs - use those instead!
   const generateRefs = async (plan: any) => {
+    // Check if user has uploaded refs - if so, SKIP AI ref generation entirely!
+    const hasUploadedRefs = refImages.length > 0 || characterRefs.length > 0 || productRefs.length > 0 || locationRefs.length > 0;
+
+    if (hasUploadedRefs) {
+      console.log('[AI2] User has uploaded refs - SKIPPING AI ref generation, going straight to images');
+      console.log(`[AI2] Using: ${refImages.length} general, ${characterRefs.length} char, ${productRefs.length} product, ${locationRefs.length} location refs`);
+      await generateImages(plan);
+      return;
+    }
+
     const charRefs = plan.character_references || {};
     const sceneRefs = plan.scene_references || {};
 
