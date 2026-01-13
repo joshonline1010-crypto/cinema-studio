@@ -1,3 +1,12 @@
 public/movie-shots/
 .env
 *.env
+
+# Build artifacts
+dist/
+node_modules/
+.astro/
+
+# Temp files
+tmpclaude-*
+ai-memory/
