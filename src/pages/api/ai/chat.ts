@@ -378,16 +378,34 @@ export const GET: APIRoute = async ({ request }) => {
 
     const history = loadChatHistory(sessionId);
 
-    // List all sessions
+    // List all sessions - sorted by most recent first
     ensureMemoryDir();
-    const sessions = fs.readdirSync(MEMORY_DIR)
+    const sessionFiles = fs.readdirSync(MEMORY_DIR)
       .filter(f => f.endsWith('.txt'))
-      .map(f => f.replace('.txt', ''));
+      .map(f => {
+        const filePath = path.join(MEMORY_DIR, f);
+        const stats = fs.statSync(filePath);
+        const sessionId = f.replace('.txt', '');
+        // Extract timestamp from session ID if it has format session-{timestamp}
+        const match = sessionId.match(/session-(\d+)/);
+        const timestamp = match ? parseInt(match[1]) : stats.mtimeMs;
+        return {
+          id: sessionId,
+          name: sessionId,
+          timestamp: timestamp,
+          modifiedAt: stats.mtime.toISOString()
+        };
+      })
+      .sort((a, b) => b.timestamp - a.timestamp); // Sort newest first
+
+    const sessions = sessionFiles.map(s => s.id);
+    const sessionsWithInfo = sessionFiles;
 
     return new Response(JSON.stringify({
       sessionId: sessionId,
       history: history,
       sessions: sessions,
+      sessionsWithInfo: sessionsWithInfo,
       availableModels: Object.keys(MODEL_MAP)
     }), {
       status: 200,

@@ -3,17 +3,21 @@ import type { APIRoute } from 'astro';
 // Proxy upload to Catbox to avoid CORS issues
 export const POST: APIRoute = async ({ request }) => {
   try {
+    console.log('[Upload] Received upload request');
     const formData = await request.formData();
+    console.log('[Upload] FormData keys:', [...formData.keys()]);
     const file = formData.get('file') as File;
 
     if (!file) {
+      console.log('[Upload] ERROR: No file in formData');
       return new Response(JSON.stringify({ error: 'No file provided' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    console.log('Uploading to Catbox:', file.name, file.size, 'bytes');
+    console.log('[Upload] File received:', file.name, file.size, 'bytes, type:', file.type);
+    console.log('[Upload] Uploading to Catbox...');
 
     // Create form data for Catbox
     const catboxForm = new FormData();

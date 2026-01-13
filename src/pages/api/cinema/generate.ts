@@ -108,12 +108,17 @@ export const POST: APIRoute = async ({ request }) => {
       reference_image,
       image_urls,  // Array of reference images (takes priority over single reference_image)
       duration = '5',
-      aspect_ratio = '16:9',
+      aspect_ratio: rawAspectRatio = '16:9',
       resolution = '2K'
     } = body;
 
-    console.log('Cinema Studio request:', { type, prompt, duration, aspect_ratio, resolution });
+    // VALIDATE ASPECT RATIO - FAL only accepts these values
+    const VALID_ASPECTS = ['21:9', '16:9', '3:2', '4:3', '5:4', '1:1', '4:5', '3:4', '2:3', '9:16'];
+    const aspect_ratio = VALID_ASPECTS.includes(rawAspectRatio) ? rawAspectRatio : '16:9';
+
+    console.log('Cinema Studio request:', { type, prompt: prompt?.substring(0, 100), duration, aspect_ratio, resolution });
     console.log('Reference image received:', reference_image ? 'YES - ' + reference_image.substring(0, 50) + '...' : 'NO');
+    console.log('image_urls array received:', image_urls ? `YES - ${image_urls.length} items: ${JSON.stringify(image_urls.map((u: string) => u.substring(0, 50) + '...'))}` : 'NO');
 
     let result: any;
 

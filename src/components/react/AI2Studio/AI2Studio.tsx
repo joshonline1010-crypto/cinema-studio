@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAI2Store } from './ai2Store';
 
 // Mode descriptions
@@ -105,225 +105,41 @@ export default function AI2Studio() {
   // Ref view tab - story, characters, locations, or items
   const [refViewTab, setRefViewTab] = useState<'story' | 'characters' | 'locations' | 'items'>('story');
 
-  // Format a nice summary from a JSON plan
+  // Segment filter tab - filter shots by segment (intro, buildup, climax, etc.)
+  const [segmentTab, setSegmentTab] = useState<string>('all');
+
+  // Zoom level for shots panel (smaller = more cards fit)
+  const [shotZoom, setShotZoom] = useState<number>(100); // 50-150 range
+
+  // Format a nice summary from a JSON plan - SIMPLIFIED: Refs row, then content
   const formatPlanSummary = (plan: any): React.ReactNode => {
     if (!plan) return null;
 
     const chars = plan.character_references || {};
     const locs = plan.scene_references || {};
     const items = plan.item_references || plan.product_references || plan.asset_references || {};
-    const shots = plan.shots || [];
 
-    // Count refs
-    const charCount = Object.keys(chars).length;
-    const locCount = Object.keys(locs).length;
-    const itemCount = Object.keys(items).length;
-    const hasRefs = charCount > 0 || locCount > 0 || itemCount > 0;
+    // Combine all refs into one list with type labels
+    const allRefs: Array<{ id: string; name: string; type: 'char' | 'loc' | 'item'; desc?: string }> = [];
+    Object.entries(chars).forEach(([id, char]: [string, any]) => {
+      allRefs.push({ id, name: char.name || id, type: 'char', desc: char.description });
+    });
+    Object.entries(locs).forEach(([id, loc]: [string, any]) => {
+      allRefs.push({ id, name: loc.name || id, type: 'loc', desc: loc.description });
+    });
+    Object.entries(items).forEach(([id, item]: [string, any]) => {
+      allRefs.push({ id, name: item.name || id, type: 'item', desc: item.description });
+    });
 
-    return (
-      <div className="space-y-3">
-        {/* Models Info */}
-        <div className="flex items-center gap-4 text-xs">
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 rounded-lg">
-            <span className="text-blue-400">📷</span>
-            <span className="text-white/50">Photo:</span>
-            <span className="text-blue-300 font-medium">Nano Banana 4K</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-orange-500/10 rounded-lg">
-            <span className="text-orange-400">🎬</span>
-            <span className="text-white/50">Video:</span>
-            <span className="text-orange-300 font-medium">{plan.video_model || 'Kling 2.6'}</span>
-          </div>
-        </div>
+    // Also include user-uploaded refs
+    const uploadedRefs = refImages.map((r, i) => ({
+      id: `uploaded-${i}`,
+      name: r.description || 'Ref',
+      type: r.description?.startsWith('👤') ? 'char' as const : r.description?.startsWith('📍') ? 'loc' as const : 'item' as const,
+      url: r.url
+    }));
 
-        {/* Story & References with Tabs */}
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="text-teal-400 text-xs font-medium">📖 PROJECT</div>
-            {/* Story + Ref Type Tabs */}
-            <div className="flex bg-white/5 rounded-lg p-0.5">
-              <button
-                onClick={() => setRefViewTab('story')}
-                className={`px-3 py-1 text-xs rounded-md transition ${refViewTab === 'story' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' : 'text-white/50 hover:text-white/70'}`}
-              >
-                Story
-              </button>
-              {charCount > 0 && (
-                <button
-                  onClick={() => setRefViewTab('characters')}
-                  className={`px-3 py-1 text-xs rounded-md transition ${refViewTab === 'characters' ? 'bg-purple-500 text-white' : 'text-white/50 hover:text-white/70'}`}
-                >
-                  Characters ({charCount})
-                </button>
-              )}
-              {locCount > 0 && (
-                <button
-                  onClick={() => setRefViewTab('locations')}
-                  className={`px-3 py-1 text-xs rounded-md transition ${refViewTab === 'locations' ? 'bg-blue-500 text-white' : 'text-white/50 hover:text-white/70'}`}
-                >
-                  Locations ({locCount})
-                </button>
-              )}
-              <button
-                onClick={() => setRefViewTab('items')}
-                className={`px-3 py-1 text-xs rounded-md transition ${refViewTab === 'items' ? 'bg-orange-500 text-white' : 'text-white/50 hover:text-white/70'}`}
-              >
-                Props/Assets ({itemCount})
-              </button>
-            </div>
-          </div>
-
-          {/* Story Tab - compact view with logline + expandable details */}
-          {refViewTab === 'story' && (
-            <div className="ml-3">
-              {/* Logline - always visible, compact */}
-              {(plan.log_line || plan.logline) && (
-                <div className="text-white/90 text-sm mb-2 italic">
-                  "{plan.log_line || plan.logline}"
-                </div>
-              )}
-
-              {/* Compact info grid - single line summaries */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                {(plan.story || plan.concept || plan.idea || plan.description || plan.overview) && (
-                  <div className="p-2 bg-blue-500/10 rounded border border-blue-500/20">
-                    <span className="text-blue-400">💡 </span>
-                    <span className="text-white/60 line-clamp-1">{(plan.story || plan.concept || plan.idea || plan.description || plan.overview).slice(0, 80)}...</span>
-                  </div>
-                )}
-                {(plan.reasoning || plan.shot_reasoning || plan.why || plan.approach) && (
-                  <div className="p-2 bg-green-500/10 rounded border border-green-500/20">
-                    <span className="text-green-400">🎯 </span>
-                    <span className="text-white/60 line-clamp-1">{(plan.reasoning || plan.shot_reasoning || plan.why || plan.approach).slice(0, 80)}...</span>
-                  </div>
-                )}
-                {(plan.technique || plan.method || plan.how || plan.visual_strategy) && (
-                  <div className="p-2 bg-orange-500/10 rounded border border-orange-500/20">
-                    <span className="text-orange-400">🎬 </span>
-                    <span className="text-white/60 line-clamp-1">{(plan.technique || plan.method || plan.how || plan.visual_strategy).slice(0, 80)}...</span>
-                  </div>
-                )}
-                {plan.director_style && (
-                  <div className="p-2 bg-yellow-500/10 rounded border border-yellow-500/20">
-                    <span className="text-yellow-400">🎥 </span>
-                    <span className="text-white/60 line-clamp-1">{plan.director_style.slice(0, 80)}...</span>
-                  </div>
-                )}
-              </div>
-
-              {/* No story fallback */}
-              {!plan.log_line && !plan.logline && !plan.story && !plan.concept && !plan.idea && (
-                <div className="p-2 text-white/30 text-xs italic">No story details</div>
-              )}
-            </div>
-          )}
-
-          {/* Characters Tab */}
-          {refViewTab === 'characters' && charCount > 0 && (
-            <div className="space-y-1">
-              {Object.entries(chars).map(([id, char]: [string, any]) => (
-                <div key={id} className="ml-3 p-2 bg-purple-500/10 rounded-lg">
-                  <div className="text-purple-300 font-medium text-sm">{char.name || id}</div>
-                  {char.description && <div className="text-white/50 text-xs mt-1">{char.description}</div>}
-                </div>
-              ))}
-            </div>
-          )}
-          {/* Locations Tab */}
-          {refViewTab === 'locations' && locCount > 0 && (
-            <div className="space-y-1">
-              {Object.entries(locs).map(([id, loc]: [string, any]) => (
-                <div key={id} className="ml-3 p-2 bg-blue-500/10 rounded-lg">
-                  <div className="text-blue-300 font-medium text-sm">{loc.name || id}</div>
-                  {loc.description && <div className="text-white/50 text-xs mt-1">{loc.description}</div>}
-                </div>
-              ))}
-            </div>
-          )}
-          {/* Props/Assets Tab */}
-          {refViewTab === 'items' && (
-            <div className="space-y-1">
-              {itemCount > 0 ? (
-                Object.entries(items).map(([id, item]: [string, any]) => (
-                  <div key={id} className="ml-3 p-2 bg-orange-500/10 rounded-lg">
-                    <div className="text-orange-300 font-medium text-sm">{item.name || id}</div>
-                    {item.description && <div className="text-white/50 text-xs mt-1">{item.description}</div>}
-                  </div>
-                ))
-              ) : (
-                <div className="ml-3 p-2 text-white/30 text-sm italic">No props/assets defined</div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Voiceover/Narration - compact */}
-        {(plan.voiceover || shots.some((s: any) => s.voiceover)) && (
-          <div className="p-2 bg-cyan-500/10 border border-cyan-500/20 rounded text-xs">
-            <span className="text-cyan-400">🎙️ V/O: </span>
-            <span className="text-white/60 italic">
-              {plan.voiceover ? (typeof plan.voiceover === 'string' ? plan.voiceover : plan.voiceover.text).slice(0, 100) + '...' : 'Per-shot narration'}
-            </span>
-          </div>
-        )}
-
-        {/* Shots Grid - Compact cards that fit on screen */}
-        {shots.length > 0 && (
-          <div className="flex-1 min-h-0">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-green-400 text-xs font-medium">🎬 SHOTS ({shots.length})</span>
-              {generatedAssets.length > 0 && (
-                <span className="text-xs text-green-400/50">• {generatedAssets.filter(a => a.status === 'done').length} done</span>
-              )}
-            </div>
-
-            {/* Compact Shot Grid - 3-4 columns, small cards */}
-            <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-              {shots.map((shot: any, i: number) => {
-                const asset = generatedAssets[i];
-                const hasImage = asset?.status === 'done' && asset?.url;
-                const hasVideo = asset?.videoStatus === 'done' && asset?.videoUrl;
-                const isGenerating = asset?.status === 'generating' || asset?.videoStatus === 'generating';
-                const shotType = shot.shot_type || shot.type || 'Shot';
-
-                return (
-                  <div key={i} className="bg-white/5 rounded-lg border border-white/10 overflow-hidden group">
-                    {/* Thumbnail - small fixed height */}
-                    <div className="relative h-20 bg-vs-dark">
-                      {hasImage ? (
-                        <>
-                          <img src={asset.url} alt="" className="w-full h-full object-cover" />
-                          {hasVideo && (
-                            <a href={asset.videoUrl} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                              <span className="text-white text-lg">▶</span>
-                            </a>
-                          )}
-                          {asset.approved === true && <div className="absolute top-1 left-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center text-[8px] text-white">✓</div>}
-                          {asset.approved === false && <div className="absolute top-1 left-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[8px] text-white">✗</div>}
-                        </>
-                      ) : isGenerating ? (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                        </div>
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-white/20 text-xs">{i + 1}</span>
-                        </div>
-                      )}
-                    </div>
-                    {/* Minimal info */}
-                    <div className="p-1.5">
-                      <div className="text-[10px] text-white/80 truncate">{i + 1}. {shotType}</div>
-                      <div className="text-[9px] text-white/40 truncate">{shot.duration || '5s'}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-    );
+    return null; // No longer needed in plan summary - refs shown in main panel
   };
 
   // Character DNA - persistent character description
@@ -521,10 +337,13 @@ export default function AI2Studio() {
     loadSessions();
   }, []);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom - like Claude web
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    // Scroll to bottom whenever messages change
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  }, [messages, isGenerating, generatedAssets]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -882,6 +701,34 @@ Remember: Clean readable text first, JSON code block at the end only.`;
     }
   }, [generatedAssets, generatedRefs, finalVideoUrl, currentSessionId]);
 
+  // MEMOIZE: Pre-calculate all refs data to avoid recalculation on every render
+  // This fixes lag when many photos are displayed
+  const memoizedRefData = useMemo(() => {
+    // Convert uploaded refs to standard format
+    const uploadedRefs = refImages.map((r, i) => ({
+      id: `upload-${i}`,
+      type: (r.description?.startsWith('👤') ? 'char' : r.description?.startsWith('📍') ? 'loc' : 'item') as 'char' | 'loc' | 'item',
+      name: r.description?.replace(/^(👤|📍|📦)\s*/, '') || 'Ref',
+      url: r.url,
+      isUploaded: true,
+      isUploading: (r as any)._uploading === true,
+      isFailed: (r as any)._failed === true
+    }));
+
+    // Count uploaded refs that are ready (have catbox URLs)
+    const readyUploadCount = uploadedRefs.filter(r => r.url?.startsWith('http')).length;
+    const pendingUploadCount = uploadedRefs.filter(r => r.isUploading).length;
+    const failedUploadCount = uploadedRefs.filter(r => r.isFailed).length;
+
+    return {
+      uploadedRefs,
+      readyUploadCount,
+      pendingUploadCount,
+      failedUploadCount,
+      totalUploadedRefs: uploadedRefs.length
+    };
+  }, [refImages]);
+
   // Build motion prompt from selected motions
   const buildMotionPromptFromSelections = (): string => {
     const parts: string[] = [];
@@ -1037,31 +884,37 @@ Remember: Clean readable text first, JSON code block at the end only.`;
         ));
         setGenerationProgress(prev => ({ ...prev, current: prev.current + 1 }));
 
-        return { index: i, success: !!imageUrl, url: imageUrl };
+        return { index: i, success: !!imageUrl, url: imageUrl, name: ref.name, id: ref.id };
       } catch (error) {
         setGeneratedRefs(prev => prev.map((r, idx) =>
           idx === i ? { ...r, status: 'error' } : r
         ));
-        return { index: i, success: false };
+        return { index: i, success: false, name: ref.name, id: ref.id };
       }
     });
 
-    await Promise.all(refPromises);
+    const refResults = await Promise.all(refPromises);
+
+    // Collect successfully generated refs
+    const successfulRefs = refResults.filter(r => r.success).map(r => ({
+      url: r.url!,
+      name: r.name,
+      id: r.id
+    }));
+
+    console.log(`[AI2] Refs complete: ${successfulRefs.length}/${refResults.length} successful`);
 
     // If auto-approve is ON, skip approval and continue
     if (autoApprove) {
-      console.log('[AI2] Auto-approve ON - auto-approving refs and continuing...');
+      console.log('[AI2] Auto-approve ON - auto-approving refs and continuing to images...');
       // Auto-approve all refs
       setGeneratedRefs(prev => prev.map(r => ({ ...r, approved: true })));
-      setIsGeneratingAssets(false);
-      // Small delay to let state update, then continue
-      setTimeout(async () => {
-        const refs = generatedRefs.filter(r => r.url);
-        setRefImages(refs.map(r => ({ url: r.url!, description: r.name })));
-        if (currentPlan) {
-          await generateImages(currentPlan);
-        }
-      }, 100);
+      // Store refs for image generation
+      setRefImages(prev => [...prev, ...successfulRefs.map(r => ({ url: r.url, description: r.name }))]);
+      // Continue to images immediately
+      if (plan) {
+        await generateImages(plan);
+      }
     } else {
       setPipelinePhase('refs-approval');
       setIsGeneratingAssets(false);
@@ -1103,20 +956,39 @@ Remember: Clean readable text first, JSON code block at the end only.`;
     });
 
     // Also include manually added ref images (from upload) AND labeled refs
-    const uploadedRefUrls = refImages.map(r => r.url).filter(url => url && !url.startsWith('data:'));
+    // IMPORTANT: Include ALL refs, even data URLs - let API handle conversion
+    const uploadedRefUrls = refImages
+      .map(r => r.url)
+      .filter(url => url && url.startsWith('http')); // Only catbox URLs work with FAL
+
     const labeledRefUrls = [
       ...characterRefs.map(r => r.url),
       ...productRefs.map(r => r.url),
       ...locationRefs.map(r => r.url)
-    ];
+    ].filter(url => url && url.startsWith('http'));
+
+    const generatedRefUrls = generatedRefs
+      .filter(r => r.approved !== false && r.url)
+      .map(r => r.url!);
+
     const allApprovedRefUrls = [
-      ...generatedRefs.filter(r => r.approved !== false && r.url).map(r => r.url!),
+      ...generatedRefUrls,
       ...uploadedRefUrls,
       ...labeledRefUrls
     ];
 
     const useColorLock = allApprovedRefUrls.length > 0;
-    console.log(`[AI2] Ref URL map:`, Object.keys(refUrlMap), `All refs: ${allApprovedRefUrls.length} (labeled: ${labeledRefUrls.length})`);
+    console.log(`[AI2] ============ REF DEBUG ============`);
+    console.log(`[AI2] refImages RAW:`, JSON.stringify(refImages.map(r => ({
+      desc: r.description,
+      url: r.url?.substring(0, 60),
+      uploading: (r as any)._uploading,
+      failed: (r as any)._failed
+    })), null, 2));
+    console.log(`[AI2] uploadedRefUrls (http only):`, uploadedRefUrls.length, uploadedRefUrls.map(u => u.substring(0, 60)));
+    console.log(`[AI2] generatedRefUrls:`, generatedRefUrls.length);
+    console.log(`[AI2] allApprovedRefUrls TOTAL:`, allApprovedRefUrls.length);
+    console.log(`[AI2] =====================================`);
 
     // Initialize assets from plan shots
     const assets: GeneratedAsset[] = shots.map((shot: any, i: number) => ({
@@ -1140,7 +1012,7 @@ Remember: Clean readable text first, JSON code block at the end only.`;
       ));
 
       try {
-        // Get per-shot refs if specified, otherwise use all refs
+        // Get per-shot refs if specified, otherwise use ALL refs
         let shotRefUrls: string[] = [];
         const charRefs = shot.character_refs || [];
         const sceneRefs = shot.scene_refs || [];
@@ -1151,26 +1023,46 @@ Remember: Clean readable text first, JSON code block at the end only.`;
           shotRefUrls = shotSpecificRefs
             .map((refId: string) => refUrlMap[refId] || refUrlMap[`char-${refId}`] || refUrlMap[`loc-${refId}`])
             .filter(Boolean);
-          console.log(`[AI2] Shot ${i + 1}: Using ${shotRefUrls.length} specific refs:`, shotSpecificRefs);
-        } else {
-          // Fall back to all approved refs
-          shotRefUrls = allApprovedRefUrls;
-          console.log(`[AI2] Shot ${i + 1}: Using all ${shotRefUrls.length} refs`);
+          console.log(`[AI2] Shot ${i + 1}: Using ${shotRefUrls.length} specific refs from plan:`, shotSpecificRefs);
         }
+
+        // ALWAYS add user-uploaded refs - they should be used for every shot
+        if (uploadedRefUrls.length > 0) {
+          shotRefUrls = [...shotRefUrls, ...uploadedRefUrls];
+          console.log(`[AI2] Shot ${i + 1}: Added ${uploadedRefUrls.length} uploaded refs`);
+        }
+
+        // If still no refs, use all approved refs (generated + labeled)
+        if (shotRefUrls.length === 0 && allApprovedRefUrls.length > 0) {
+          shotRefUrls = allApprovedRefUrls;
+          console.log(`[AI2] Shot ${i + 1}: Fallback to all ${allApprovedRefUrls.length} refs`);
+        }
+
+        console.log(`[AI2] Shot ${i + 1} FINAL: ${shotRefUrls.length} refs, type=${shotRefUrls.length > 0 ? 'EDIT' : 'TEXT-TO-IMAGE'}`);
 
         const prompt = shot.photo_prompt || shot.prompt || `Shot ${i + 1}`;
         const finalPrompt = buildPrompt(prompt, useColorLock && shotRefUrls.length > 0);
 
+        // Determine request type based on refs
+        const requestType = shotRefUrls.length > 0 ? 'edit' : 'image';
+        const requestBody = {
+          type: requestType,
+          prompt: finalPrompt,
+          aspect_ratio: '16:9',
+          resolution: '2K',
+          image_urls: shotRefUrls.length > 0 ? shotRefUrls : undefined
+        };
+
+        console.log(`[AI2] Shot ${i + 1} REQUEST:`, JSON.stringify({
+          ...requestBody,
+          prompt: requestBody.prompt.substring(0, 100) + '...',
+          image_urls: requestBody.image_urls?.map(u => u.substring(0, 50) + '...')
+        }));
+
         const response = await fetch('/api/cinema/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: shotRefUrls.length > 0 ? 'edit' : 'image',
-            prompt: finalPrompt,
-            aspect_ratio: '16:9',
-            resolution: '2K',
-            image_urls: shotRefUrls.length > 0 ? shotRefUrls : undefined
-          })
+          body: JSON.stringify(requestBody)
         });
 
         const data = await response.json();
@@ -1195,17 +1087,33 @@ Remember: Clean readable text first, JSON code block at the end only.`;
       }
     });
 
-    await Promise.all(imagePromises);
+    const imageResults = await Promise.all(imagePromises);
+    const successfulImages = imageResults.filter(r => r.success && r.url);
+    console.log(`[AI2] All images complete: ${successfulImages.length}/${imageResults.length} successful`);
 
     // If auto-approve is ON, skip approval and continue to videos
     if (autoApprove) {
       console.log('[AI2] Auto-approve ON - auto-approving images and generating videos...');
-      // Auto-approve all images
-      setGeneratedAssets(prev => prev.map(a => ({ ...a, approved: true })));
-      // Small delay then continue to videos
-      setTimeout(() => {
-        generateVideosForApproved();
-      }, 100);
+
+      // Build the approved assets directly from results to avoid stale closure
+      const approvedAssets = successfulImages.map(result => ({
+        ...assets[result.index],
+        url: result.url,
+        status: 'done' as const,
+        approved: true
+      }));
+
+      // Update state for UI
+      setGeneratedAssets(prev => prev.map((a, idx) => {
+        const result = successfulImages.find(r => r.index === idx);
+        if (result) {
+          return { ...a, status: 'done', url: result.url, approved: true };
+        }
+        return a;
+      }));
+
+      // Pass approved assets directly to video generation (fixes stale closure!)
+      await generateVideosWithAssets(approvedAssets);
     } else {
       // STOP at approval phase - user must approve before videos
       setPipelinePhase('approval');
@@ -1302,12 +1210,14 @@ Remember: Clean readable text first, JSON code block at the end only.`;
   };
 
   // STEP 2: Generate videos for APPROVED shots only
-  const generateVideosForApproved = async () => {
-    const approvedAssets = generatedAssets.filter(a => a.approved === true && a.status === 'done' && a.url);
+  // Can receive assets directly to avoid stale closure issues
+  const generateVideosWithAssets = async (passedAssets?: GeneratedAsset[]) => {
+    const approvedAssets = passedAssets || generatedAssets.filter(a => a.approved === true && a.status === 'done' && a.url);
     if (approvedAssets.length === 0) {
       console.log('[AI2] No approved shots to generate videos for');
       return;
     }
+    console.log(`[AI2] generateVideosWithAssets called with ${approvedAssets.length} assets (passed directly: ${!!passedAssets})`);
 
     setIsGeneratingAssets(true);
     setPipelinePhase('videos');
@@ -1452,6 +1362,11 @@ Remember: Clean readable text first, JSON code block at the end only.`;
     setIsGeneratingAssets(false);
   };
 
+  // Wrapper for UI buttons (reads from state)
+  const generateVideosForApproved = async () => {
+    await generateVideosWithAssets();
+  };
+
   // Legacy function for backwards compatibility - now uses approval flow
   const generateFromJsonPlan = async (plan: any) => {
     // Start with refs, then images
@@ -1580,7 +1495,7 @@ Remember: Clean readable text first, JSON code block at the end only.`;
   };
 
   return (
-    <div className="min-h-screen bg-vs-dark flex flex-col">
+    <div className="h-screen bg-vs-dark flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-vs-border px-6 py-4 flex items-center justify-between bg-vs-card">
         <div className="flex items-center gap-3">
@@ -1674,8 +1589,8 @@ Remember: Clean readable text first, JSON code block at the end only.`;
       {/* Main Content - Lovable-style layout */}
       <div className="flex-1 flex overflow-hidden">
 
-        {/* LEFT: Chat Panel - Wider for better readability */}
-        <aside className="w-[480px] min-w-[480px] border-r border-vs-border bg-vs-card/30 flex flex-col">
+        {/* LEFT: Chat Panel - Wide for comfortable reading */}
+        <aside className="w-[520px] min-w-[520px] border-r border-vs-border bg-vs-card/30 flex flex-col">
           {/* Chat Header */}
           <div className="p-3 border-b border-vs-border flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -1689,8 +1604,8 @@ Remember: Clean readable text first, JSON code block at the end only.`;
             <span className="text-xs text-white/30">{MODEL_INFO[model]?.name || model}</span>
           </div>
 
-          {/* Chat Messages - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          {/* Chat Messages - Scrollable, content pushed to bottom like Claude web */}
+          <div className="flex-1 overflow-y-auto p-3 flex flex-col">
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center px-4">
                 <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/30 to-pink-500/30 flex items-center justify-center mb-4">
@@ -1705,7 +1620,11 @@ Remember: Clean readable text first, JSON code block at the end only.`;
                 </div>
               </div>
             ) : (
-              messages.map((msg) => {
+              <>
+              {/* Spacer to push messages to bottom when few */}
+              <div className="flex-1 min-h-0" />
+              <div className="space-y-3">
+              {messages.map((msg) => {
                 // For assistant messages, extract text before JSON (Claude's discussion)
                 const hasPlan = msg.role === 'assistant' && extractJsonPlan(msg.content)?.shots;
                 let displayText = msg.content;
@@ -1753,7 +1672,9 @@ Remember: Clean readable text first, JSON code block at the end only.`;
                     </div>
                   </div>
                 );
-              })
+              })}
+              </div>
+              </>
             )}
             {isGenerating && (
               <div className="flex justify-start">
@@ -1778,86 +1699,98 @@ Remember: Clean readable text first, JSON code block at the end only.`;
             {/* Ref Images */}
             {refImages.length > 0 && (
               <div className="flex gap-2 flex-wrap">
-                {refImages.map((img, idx) => (
-                  <div key={idx} className="relative group w-12 h-12 rounded-lg overflow-hidden border border-white/20">
-                    <img src={img.url} alt="" className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => removeRefImage(idx)}
-                      className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-red-400 text-sm"
-                    >×</button>
-                  </div>
-                ))}
+                {refImages.map((img, idx) => {
+                  const isUploading = (img as any)._uploading === true;
+                  const isFailed = (img as any)._failed === true;
+                  const isReady = img.url?.startsWith('http');
+                  return (
+                    <div key={idx} className={`relative group w-12 h-12 rounded-lg overflow-hidden border ${
+                      isUploading ? 'border-yellow-500 animate-pulse' :
+                      isFailed ? 'border-red-500' :
+                      isReady ? 'border-green-500' : 'border-white/20'
+                    }`}>
+                      <img src={img.url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                      {isUploading && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                      {isFailed && (
+                        <div className="absolute inset-0 bg-red-500/30 flex items-center justify-center">
+                          <span className="text-red-300 text-lg">!</span>
+                        </div>
+                      )}
+                      {isReady && !isUploading && (
+                        <div className="absolute top-0.5 right-0.5 w-2 h-2 bg-green-500 rounded-full" />
+                      )}
+                      <button
+                        onClick={() => removeRefImage(idx)}
+                        className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-red-400 text-sm"
+                      >×</button>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            {/* Input row - bigger icons and input */}
-            <div className="flex gap-3 items-end">
-              {/* Upload buttons - bigger */}
-              <div className="flex gap-2">
-                <input type="file" id="char-upload" accept="image/*" className="hidden" onChange={async (e) => {
-                  const file = e.target.files?.[0]; if (!file) return;
-                  const name = prompt('Character name:') || 'Character';
-                  const reader = new FileReader();
-                  reader.onload = async (ev) => {
-                    const dataUrl = ev.target?.result as string;
-                    setRefImages(prev => [...prev, { url: dataUrl, description: `👤 ${name}` }]);
-                    try {
-                      const blob = await fetch(dataUrl).then(r => r.blob());
-                      const formData = new FormData(); formData.append('reqtype', 'fileupload'); formData.append('fileToUpload', blob, 'ref.jpg');
-                      const res = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: formData });
-                      const url = await res.text();
-                      if (url.startsWith('https://')) setRefImages(prev => prev.map((img, i) => i === prev.length - 1 ? { ...img, url: url.trim() } : img));
-                    } catch (err) { console.log('Upload failed:', err); }
-                  };
-                  reader.readAsDataURL(file);
-                  e.target.value = '';
-                }} />
-                <input type="file" id="loc-upload" accept="image/*" className="hidden" onChange={async (e) => {
-                  const file = e.target.files?.[0]; if (!file) return;
-                  const name = prompt('Location name:') || 'Location';
-                  const reader = new FileReader();
-                  reader.onload = async (ev) => {
-                    const dataUrl = ev.target?.result as string;
-                    setRefImages(prev => [...prev, { url: dataUrl, description: `📍 ${name}` }]);
-                    try {
-                      const blob = await fetch(dataUrl).then(r => r.blob());
-                      const formData = new FormData(); formData.append('reqtype', 'fileupload'); formData.append('fileToUpload', blob, 'ref.jpg');
-                      const res = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: formData });
-                      const url = await res.text();
-                      if (url.startsWith('https://')) setRefImages(prev => prev.map((img, i) => i === prev.length - 1 ? { ...img, url: url.trim() } : img));
-                    } catch (err) { console.log('Upload failed:', err); }
-                  };
-                  reader.readAsDataURL(file);
-                  e.target.value = '';
-                }} />
-                <input type="file" id="asset-upload" accept="image/*" className="hidden" onChange={async (e) => {
-                  const file = e.target.files?.[0]; if (!file) return;
-                  const name = prompt('Asset/Product name:') || 'Asset';
-                  const reader = new FileReader();
-                  reader.onload = async (ev) => {
-                    const dataUrl = ev.target?.result as string;
-                    setRefImages(prev => [...prev, { url: dataUrl, description: `📦 ${name}` }]);
-                    try {
-                      const blob = await fetch(dataUrl).then(r => r.blob());
-                      const formData = new FormData(); formData.append('reqtype', 'fileupload'); formData.append('fileToUpload', blob, 'ref.jpg');
-                      const res = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: formData });
-                      const url = await res.text();
-                      if (url.startsWith('https://')) setRefImages(prev => prev.map((img, i) => i === prev.length - 1 ? { ...img, url: url.trim() } : img));
-                    } catch (err) { console.log('Upload failed:', err); }
-                  };
-                  reader.readAsDataURL(file);
-                  e.target.value = '';
-                }} />
-                <button onClick={() => document.getElementById('char-upload')?.click()} className="p-3 bg-purple-500/20 text-purple-300 rounded-xl hover:bg-purple-500/30 transition" title="Add Character">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                </button>
-                <button onClick={() => document.getElementById('loc-upload')?.click()} className="p-3 bg-blue-500/20 text-blue-300 rounded-xl hover:bg-blue-500/30 transition" title="Add Location">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
-                </button>
-                <button onClick={() => document.getElementById('asset-upload')?.click()} className="p-3 bg-orange-500/20 text-orange-300 rounded-xl hover:bg-orange-500/30 transition" title="Add Asset">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-                </button>
-              </div>
+            {/* Input row - clean and aligned */}
+            <div className="flex gap-2 items-center">
+              {/* Single image upload button */}
+              <input type="file" id="ref-upload" accept="image/*" className="hidden" onChange={async (e) => {
+                const file = e.target.files?.[0]; if (!file) return;
+                const name = prompt('Name this reference (character, location, or prop):') || 'Reference';
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                  const dataUrl = ev.target?.result as string;
+                  // Create unique ID to track this specific upload
+                  const uploadId = `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                  setRefImages(prev => [...prev, { url: dataUrl, description: name, _uploadId: uploadId, _uploading: true } as any]);
+                  try {
+                    console.log(`[AI2] Converting data URL to blob...`);
+                    const blob = await fetch(dataUrl).then(r => r.blob());
+                    console.log(`[AI2] Blob created: ${blob.size} bytes, type: ${blob.type}`);
+
+                    const formData = new FormData();
+                    // Use a proper filename with extension based on type
+                    const ext = blob.type.includes('png') ? 'png' : 'jpg';
+                    formData.append('file', blob, `ref-${Date.now()}.${ext}`);
+
+                    // Use server-side proxy to avoid CORS issues
+                    console.log(`[AI2] Uploading ref via /api/cinema/upload...`);
+                    const res = await fetch('/api/cinema/upload', {
+                      method: 'POST',
+                      body: formData
+                    });
+
+                    console.log(`[AI2] Upload response status: ${res.status}`);
+                    const data = await res.json();
+                    console.log(`[AI2] Upload response data:`, data);
+                    // Update by unique ID, not by index (fixes race condition!)
+                    if (data.success && data.url) {
+                      console.log(`[AI2] Ref upload complete: ${name} → ${data.url}`);
+                      setRefImages(prev => prev.map(img => (img as any)._uploadId === uploadId ? { ...img, url: data.url, _uploading: false } : img));
+                    } else {
+                      console.log(`[AI2] Upload failed:`, data.error || data);
+                      setRefImages(prev => prev.map(img => (img as any)._uploadId === uploadId ? { ...img, _uploading: false, _failed: true } : img));
+                    }
+                  } catch (err) {
+                    console.log('Upload failed:', err);
+                    // Mark as failed but keep the data URL - user can still proceed
+                    setRefImages(prev => prev.map(img => (img as any)._uploadId === uploadId ? { ...img, _uploading: false, _failed: true } : img));
+                  }
+                };
+                reader.readAsDataURL(file);
+                e.target.value = '';
+              }} />
+              <button
+                onClick={() => document.getElementById('ref-upload')?.click()}
+                className="h-11 w-11 flex items-center justify-center bg-purple-500/20 text-purple-300 rounded-xl hover:bg-purple-500/30 transition flex-shrink-0"
+                title="Add Reference Image"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </button>
 
               <textarea
                 ref={inputRef}
@@ -1865,14 +1798,14 @@ Remember: Clean readable text first, JSON code block at the end only.`;
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Describe your video..."
-                className="flex-1 bg-vs-dark border border-vs-border rounded-xl px-4 py-3 text-base text-white placeholder-white/40 resize-none focus:outline-none focus:border-purple-500/50"
-                rows={2}
+                className="flex-1 h-11 bg-vs-dark border border-vs-border rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/40 resize-none focus:outline-none focus:border-purple-500/50"
+                rows={1}
                 disabled={isGenerating}
               />
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() || isGenerating || isGeneratingAssets}
-                className="p-3 bg-purple-500 text-white rounded-xl hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="h-11 w-11 flex items-center justify-center bg-purple-500 text-white rounded-xl hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition flex-shrink-0"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
               </button>
@@ -1884,17 +1817,36 @@ Remember: Clean readable text first, JSON code block at the end only.`;
               const latestPlan = latestPlanMsg ? extractJsonPlan(latestPlanMsg.content) : null;
               const hasPlan = latestPlan && latestPlan.shots && latestPlan.shots.length > 0;
 
+              // Check if any refs are still uploading (have _uploading flag)
+              const pendingUploads = refImages.filter(r => (r as any)._uploading === true);
+              const failedUploads = refImages.filter(r => (r as any)._failed === true);
+              const hasReadyRefs = refImages.filter(r => r.url?.startsWith('http')).length;
+
               if (hasPlan && !isGenerating && !isGeneratingAssets) {
                 return (
-                  <button
-                    onClick={() => generateFromJsonPlan(latestPlan)}
-                    className="w-full py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition flex items-center justify-center gap-2 font-semibold"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Execute Plan ({latestPlan.shots.length} shots)
-                  </button>
+                  <div className="space-y-2">
+                    {pendingUploads.length > 0 && (
+                      <div className="text-xs text-yellow-400 flex items-center gap-2 justify-center">
+                        <div className="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                        Uploading {pendingUploads.length} ref(s)... (15s timeout)
+                      </div>
+                    )}
+                    {failedUploads.length > 0 && pendingUploads.length === 0 && (
+                      <div className="text-xs text-red-400 flex items-center gap-2 justify-center">
+                        ⚠️ {failedUploads.length} ref(s) failed to upload - will run without them
+                      </div>
+                    )}
+                    <button
+                      onClick={() => generateFromJsonPlan(latestPlan)}
+                      disabled={pendingUploads.length > 0}
+                      className="w-full py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition flex items-center justify-center gap-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Execute Plan ({latestPlan.shots.length} shots){hasReadyRefs > 0 ? ` + ${hasReadyRefs} refs` : ''}
+                    </button>
+                  </div>
                 );
               }
 
@@ -1912,7 +1864,7 @@ Remember: Clean readable text first, JSON code block at the end only.`;
           </div>
         </aside>
 
-        {/* CENTER: Output Panel - Fits on one page without scrolling */}
+        {/* CENTER: Output Panel - Clean: Refs → Photos → Videos */}
         <main className="flex-1 flex flex-col overflow-hidden bg-vs-dark">
           <div className="flex-1 flex flex-col p-4 min-h-0">
             {(() => {
@@ -1921,8 +1873,57 @@ Remember: Clean readable text first, JSON code block at the end only.`;
               const latestPlan = latestPlanMsg ? extractJsonPlan(latestPlanMsg.content) : null;
               const hasPlan = latestPlan && latestPlan.shots && latestPlan.shots.length > 0;
 
+              // Combine all refs from plan + user uploads
+              const planChars = latestPlan?.character_references || {};
+              const planLocs = latestPlan?.scene_references || {};
+              const planItems = latestPlan?.item_references || latestPlan?.product_references || {};
+
+              const allRefs: Array<{ id: string; name: string; type: 'char' | 'loc' | 'item'; desc?: string; url?: string; generated?: boolean }> = [];
+
+              // User uploaded refs first
+              refImages.forEach((r, i) => {
+                const isChar = r.description?.startsWith('👤');
+                const isLoc = r.description?.startsWith('📍');
+                allRefs.push({
+                  id: `upload-${i}`,
+                  name: r.description?.replace(/^(👤|📍|📦)\s*/, '') || 'Ref',
+                  type: isChar ? 'char' : isLoc ? 'loc' : 'item',
+                  url: r.url,
+                  generated: false
+                });
+              });
+
+              // Generated refs
+              generatedRefs.forEach(ref => {
+                allRefs.push({
+                  id: ref.id,
+                  name: ref.name,
+                  type: ref.type === 'character' ? 'char' : 'loc',
+                  desc: ref.description,
+                  url: ref.url,
+                  generated: true
+                });
+              });
+
+              // Plan-defined refs (not yet generated)
+              Object.entries(planChars).forEach(([id, char]: [string, any]) => {
+                if (!allRefs.find(r => r.name === (char.name || id))) {
+                  allRefs.push({ id, name: char.name || id, type: 'char', desc: char.description });
+                }
+              });
+              Object.entries(planLocs).forEach(([id, loc]: [string, any]) => {
+                if (!allRefs.find(r => r.name === (loc.name || id))) {
+                  allRefs.push({ id, name: loc.name || id, type: 'loc', desc: loc.description });
+                }
+              });
+              Object.entries(planItems).forEach(([id, item]: [string, any]) => {
+                if (!allRefs.find(r => r.name === (item.name || id))) {
+                  allRefs.push({ id, name: item.name || id, type: 'item', desc: item.description });
+                }
+              });
+
               // Show output content
-              if (!hasPlan && messages.length === 0 && generatedAssets.length === 0 && generatedRefs.length === 0) {
+              if (!hasPlan && messages.length === 0 && generatedAssets.length === 0 && allRefs.length === 0) {
                 // Empty state - show welcome
                 return (
                   <div className="h-full flex flex-col items-center justify-center">
@@ -1932,160 +1933,451 @@ Remember: Clean readable text first, JSON code block at the end only.`;
                       </svg>
                     </div>
                     <h2 className="text-xl font-semibold text-white mb-2">Your Project</h2>
-                    <p className="text-white/50 text-sm text-center max-w-md">Plans and generated content will appear here</p>
+                    <p className="text-white/50 text-sm text-center max-w-md">Upload refs and describe your video</p>
                   </div>
                 );
               }
 
               return (
-                <div className="flex flex-col h-full min-h-0 gap-3">
-                  {/* Plan Header - Compact */}
-                  {hasPlan && (
-                    <div className="bg-vs-card border border-green-500/30 rounded-xl p-3 flex-shrink-0">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full font-medium">
-                            {latestPlan.shots.length} shots
-                          </span>
-                          <span className="text-white font-medium text-sm">{latestPlan.name || latestPlan.scene_id || 'Scene'}</span>
-                        </div>
-                        {!isGenerating && !isGeneratingAssets && (
+                <div className="flex flex-col h-full min-h-0 gap-4">
+                  {/* SECTION 1: REFS - With tabs for filtering (max 30% height) */}
+                  {allRefs.length > 0 && (
+                    <div className="flex-shrink-0 max-h-[30%] overflow-hidden flex flex-col">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-teal-400 text-xs font-semibold uppercase tracking-wider">REFS</span>
+                        {/* Tabs for filtering */}
+                        <div className="flex gap-1 bg-white/5 rounded-lg p-0.5">
                           <button
-                            onClick={() => generateFromJsonPlan(latestPlan)}
-                            className="px-4 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition flex items-center gap-1.5 font-semibold text-sm"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                            EXECUTE
-                          </button>
-                        )}
+                            onClick={() => setRefViewTab('story')}
+                            className={`px-2 py-0.5 text-[10px] rounded ${refViewTab === 'story' ? 'bg-teal-500 text-white' : 'text-white/50 hover:text-white'}`}
+                          >All ({allRefs.length})</button>
+                          <button
+                            onClick={() => setRefViewTab('characters')}
+                            className={`px-2 py-0.5 text-[10px] rounded ${refViewTab === 'characters' ? 'bg-purple-500 text-white' : 'text-white/50 hover:text-white'}`}
+                          >Characters ({allRefs.filter(r => r.type === 'char').length})</button>
+                          <button
+                            onClick={() => setRefViewTab('locations')}
+                            className={`px-2 py-0.5 text-[10px] rounded ${refViewTab === 'locations' ? 'bg-blue-500 text-white' : 'text-white/50 hover:text-white'}`}
+                          >Locations ({allRefs.filter(r => r.type === 'loc').length})</button>
+                          <button
+                            onClick={() => setRefViewTab('items')}
+                            className={`px-2 py-0.5 text-[10px] rounded ${refViewTab === 'items' ? 'bg-orange-500 text-white' : 'text-white/50 hover:text-white'}`}
+                          >Items ({allRefs.filter(r => r.type === 'item').length})</button>
+                        </div>
                       </div>
-                      {formatPlanSummary(latestPlan)}
-                    </div>
-                  )}
-
-                  {/* Generated Assets Display - Compact */}
-                  {(generatedAssets.length > 0 || generatedRefs.length > 0) && (
-                    <div className="bg-vs-card border border-vs-border rounded-xl p-3 flex-1 min-h-0 flex flex-col">
-                      {/* Pipeline Phase Indicator - Inline */}
-                      <div className="mb-2 flex items-center gap-1.5 flex-wrap text-[10px]">
-                        {generatedRefs.length > 0 && (
-                          <>
-                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs ${pipelinePhase === 'refs' ? 'bg-teal-500/20 text-teal-300' : (pipelinePhase === 'refs-approval' || pipelinePhase === 'images' || pipelinePhase === 'approval' || pipelinePhase === 'videos' || pipelinePhase === 'stitching' || pipelinePhase === 'done') ? 'text-green-400' : 'text-white/30'}`}>
-                              <span>{pipelinePhase === 'refs' ? '...' : (pipelinePhase !== 'idle') ? '✓' : '○'}</span>Refs
-                            </div>
-                            <span className="text-white/20">→</span>
-                          </>
-                        )}
-                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs ${pipelinePhase === 'images' ? 'bg-blue-500/20 text-blue-300' : (pipelinePhase === 'approval' || pipelinePhase === 'videos' || pipelinePhase === 'stitching' || pipelinePhase === 'done') ? 'text-green-400' : 'text-white/30'}`}>
-                          <span>{pipelinePhase === 'images' ? '...' : (pipelinePhase === 'approval' || pipelinePhase === 'videos' || pipelinePhase === 'stitching' || pipelinePhase === 'done') ? '✓' : '○'}</span>Images
-                        </div>
-                        <span className="text-white/20">→</span>
-                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs ${pipelinePhase === 'approval' ? 'bg-yellow-500/20 text-yellow-300' : (pipelinePhase === 'videos' || pipelinePhase === 'stitching' || pipelinePhase === 'done') ? 'text-green-400' : 'text-white/30'}`}>
-                          <span>{pipelinePhase === 'approval' ? '!' : (pipelinePhase === 'videos' || pipelinePhase === 'stitching' || pipelinePhase === 'done') ? '✓' : '○'}</span>Approve
-                        </div>
-                        <span className="text-white/20">→</span>
-                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs ${pipelinePhase === 'videos' ? 'bg-purple-500/20 text-purple-300' : (pipelinePhase === 'stitching' || pipelinePhase === 'done') ? 'text-green-400' : 'text-white/30'}`}>
-                          <span>{pipelinePhase === 'videos' ? '...' : (pipelinePhase === 'stitching' || pipelinePhase === 'done') ? '✓' : '○'}</span>Videos
-                        </div>
-                        <span className="text-white/20">→</span>
-                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs ${pipelinePhase === 'stitching' ? 'bg-orange-500/20 text-orange-300' : pipelinePhase === 'done' ? 'text-green-400' : 'text-white/30'}`}>
-                          <span>{pipelinePhase === 'stitching' ? '...' : pipelinePhase === 'done' ? '✓' : '○'}</span>Render
-                        </div>
-                        {pipelinePhase === 'done' && (
-                          <>
-                            <span className="text-white/20">→</span>
-                            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs bg-green-500/20 text-green-300">
-                              <span>✓</span>Done!
-                            </div>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Approval Controls */}
-                      {pipelinePhase === 'approval' && (
-                        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
-                          <div className="flex items-center justify-between">
-                            <span className="text-yellow-300 font-medium">Review & Approve Shots</span>
-                            <div className="flex gap-2">
-                              <button onClick={approveAll} className="px-3 py-1.5 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30 text-sm">Approve All</button>
-                              <button
-                                onClick={generateVideosForApproved}
-                                disabled={generatedAssets.filter(a => a.approved === true).length === 0}
-                                className="px-4 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 text-sm font-medium"
-                              >
-                                Generate Videos ({generatedAssets.filter(a => a.approved === true).length})
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Assets Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {generatedAssets.map((asset, idx) => (
-                          <div key={asset.id} className="relative aspect-video bg-vs-dark rounded-lg overflow-hidden">
-                            {asset.status === 'pending' && <div className="absolute inset-0 flex items-center justify-center"><span className="text-white/30 text-sm">Waiting...</span></div>}
-                            {asset.status === 'generating' && (
-                              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2" />
-                                <span className="text-blue-400 text-xs">Image...</span>
-                              </div>
-                            )}
-                            {asset.status === 'done' && asset.url && (
-                              <>
-                                <img src={asset.url} alt={`Shot ${idx + 1}`} className={`w-full h-full object-cover ${asset.approved === false ? 'opacity-40' : ''}`} />
-                                {pipelinePhase === 'approval' && asset.approved === undefined && (
-                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2">
-                                    <button onClick={() => approveShot(idx)} className="px-2 py-1 bg-green-500 text-white rounded text-sm">✓</button>
-                                    <button onClick={() => rejectShot(idx)} className="px-2 py-1 bg-red-500 text-white rounded text-sm">✗</button>
-                                  </div>
-                                )}
-                                {asset.approved === true && <div className="absolute top-2 left-2 px-2 py-0.5 bg-green-500 text-white rounded text-xs">✓</div>}
-                                {asset.videoStatus === 'generating' && (
-                                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
-                                    <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-2" />
-                                    <span className="text-purple-400 text-xs">Video...</span>
-                                  </div>
-                                )}
-                                {asset.videoStatus === 'done' && asset.videoUrl && (
-                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                    <a href={asset.videoUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-green-500 text-white rounded-lg flex items-center gap-1 text-sm">
-                                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>Play
-                                    </a>
-                                  </div>
-                                )}
-                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 p-2">
-                                  <span className="text-xs text-white/70">Shot {idx + 1}</span>
+                      <div className="flex gap-3 overflow-x-auto overflow-y-hidden pb-2 flex-1 min-h-0">
+                        {allRefs
+                          .filter(ref => {
+                            if (refViewTab === 'story') return true;
+                            if (refViewTab === 'characters') return ref.type === 'char';
+                            if (refViewTab === 'locations') return ref.type === 'loc';
+                            if (refViewTab === 'items') return ref.type === 'item';
+                            return true;
+                          })
+                          .map((ref) => (
+                          <div key={ref.id} className={`flex-shrink-0 p-3 rounded-xl border w-[220px] ${
+                            ref.type === 'char' ? 'bg-purple-500/10 border-purple-500/30' :
+                            ref.type === 'loc' ? 'bg-blue-500/10 border-blue-500/30' : 'bg-orange-500/10 border-orange-500/30'
+                          }`}>
+                            {/* Large Thumbnail */}
+                            <div className={`w-full aspect-video rounded-lg overflow-hidden relative mb-2 ${
+                              ref.type === 'char' ? 'border border-purple-500/30' :
+                              ref.type === 'loc' ? 'border border-blue-500/30' : 'border border-orange-500/30'
+                            } bg-vs-dark`}>
+                              {ref.url ? (
+                                <img src={ref.url} alt={ref.name} loading="lazy" className="w-full h-full object-cover" />
+                              ) : generatedRefs.find(r => r.name === ref.name)?.status === 'generating' ? (
+                                <div className="absolute inset-0 flex items-center justify-center bg-white/5">
+                                  <div className="w-8 h-8 border-2 border-teal-400 border-t-transparent rounded-full animate-spin" />
                                 </div>
-                              </>
-                            )}
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-white/20 text-4xl">
+                                  {ref.type === 'char' ? '👤' : ref.type === 'loc' ? '📍' : '📦'}
+                                </div>
+                              )}
+                            </div>
+                            {/* Info */}
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <div className={`text-sm font-semibold ${
+                                  ref.type === 'char' ? 'text-purple-300' :
+                                  ref.type === 'loc' ? 'text-blue-300' : 'text-orange-300'
+                                }`}>{ref.name}</div>
+                                <div className={`text-[9px] px-1.5 py-0.5 rounded ${
+                                  ref.type === 'char' ? 'bg-purple-500/20 text-purple-400' :
+                                  ref.type === 'loc' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'
+                                }`}>
+                                  {ref.type === 'char' ? 'Character' : ref.type === 'loc' ? 'Location' : 'Prop'}
+                                </div>
+                              </div>
+                              {ref.desc && (
+                                <div className="text-[11px] text-white/60 mt-1 leading-snug line-clamp-3">{ref.desc}</div>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
-
-                      {/* Final Video */}
-                      {finalVideoUrl && (
-                        <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-xl">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                                <svg className="w-6 h-6 text-green-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                              </div>
-                              <div>
-                                <h4 className="text-green-300 font-medium">Final Video Ready!</h4>
-                                <p className="text-xs text-green-400/60">{generatedAssets.filter(a => a.videoStatus === 'done').length} clips stitched</p>
-                              </div>
-                            </div>
-                            <a href={finalVideoUrl} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium flex items-center gap-2">
-                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>Watch
-                            </a>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
+
+                  {/* SECTION 2: SHOTS - Tabs for Photos/Videos */}
+                  {(generatedAssets.length > 0 || (hasPlan && latestPlan.shots.length > 0)) && (() => {
+                    // Extract unique segments from shots
+                    const shots = latestPlan?.shots || [];
+                    const segments = [...new Set(shots.map((s: any) =>
+                      s.segment || s.section || s.phase || s.act || s.beat || 'all'
+                    ).filter((s: string) => s && s !== 'all'))];
+                    // Calculate shot counts per segment
+                    const getSegmentCount = (seg: string) => seg === 'all'
+                      ? shots.length
+                      : shots.filter((s: any) => (s.segment || s.section || s.phase || s.act || s.beat) === seg).length;
+
+                    return (
+                    <div className="flex-1 min-h-0 flex flex-col">
+                      <div className="flex flex-col gap-2 mb-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {/* Tabs for Photos/Videos */}
+                            <div className="flex gap-1 bg-white/5 rounded-lg p-0.5">
+                              <button
+                                onClick={() => setShotViewTab('photo')}
+                                className={`px-3 py-1 text-xs rounded ${shotViewTab === 'photo' ? 'bg-blue-500 text-white' : 'text-white/50 hover:text-white'}`}
+                              >📷 Photos ({generatedAssets.filter(a => a.status === 'done').length}/{latestPlan?.shots?.length || generatedAssets.length})</button>
+                              <button
+                                onClick={() => setShotViewTab('video')}
+                                className={`px-3 py-1 text-xs rounded ${shotViewTab === 'video' ? 'bg-purple-500 text-white' : 'text-white/50 hover:text-white'}`}
+                              >🎬 Videos ({generatedAssets.filter(a => a.videoStatus === 'done').length}/{generatedAssets.filter(a => a.approved).length || 0})</button>
+                            </div>
+                            {/* Pipeline Progress - Show ALL phases */}
+                            {pipelinePhase !== 'idle' && pipelinePhase !== 'done' && (
+                              <div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${
+                                pipelinePhase === 'refs' ? 'bg-teal-500/20 text-teal-300' :
+                                pipelinePhase === 'refs-approval' ? 'bg-teal-500/20 text-teal-300' :
+                                pipelinePhase === 'images' ? 'bg-blue-500/20 text-blue-300' :
+                                pipelinePhase === 'approval' ? 'bg-amber-500/20 text-amber-300' :
+                                pipelinePhase === 'videos' ? 'bg-purple-500/20 text-purple-300' :
+                                pipelinePhase === 'stitching' ? 'bg-green-500/20 text-green-300' : 'bg-white/10 text-white/60'
+                              }`}>
+                                <div className={`w-3 h-3 border-2 border-t-transparent rounded-full animate-spin ${
+                                  pipelinePhase === 'refs' || pipelinePhase === 'refs-approval' ? 'border-teal-400' :
+                                  pipelinePhase === 'images' ? 'border-blue-400' :
+                                  pipelinePhase === 'approval' ? 'border-amber-400' :
+                                  pipelinePhase === 'videos' ? 'border-purple-400' :
+                                  pipelinePhase === 'stitching' ? 'border-green-400' : 'border-white/40'
+                                }`} />
+                                <span className="text-xs font-medium">
+                                  {pipelinePhase === 'refs' && '1/5 Generating refs...'}
+                                  {pipelinePhase === 'refs-approval' && '2/5 Review refs...'}
+                                  {pipelinePhase === 'images' && `3/5 Generating photos (${generatedAssets.filter(a => a.status === 'done').length}/${latestPlan?.shots?.length || 0})...`}
+                                  {pipelinePhase === 'approval' && '4/5 Approve photos...'}
+                                  {pipelinePhase === 'videos' && `5/5 Rendering videos (${generatedAssets.filter(a => a.videoStatus === 'done').length}/${generatedAssets.filter(a => a.approved).length || 0})...`}
+                                  {pipelinePhase === 'stitching' && 'Stitching final video...'}
+                                </span>
+                              </div>
+                            )}
+                            {pipelinePhase === 'done' && (
+                              <div className="flex items-center gap-2 px-3 py-1 bg-green-500/20 text-green-300 rounded-lg">
+                                <span className="text-xs font-medium">✓ Complete!</span>
+                              </div>
+                            )}
+                          </div>
+                          {/* Approval controls inline */}
+                          {pipelinePhase === 'approval' && (
+                            <div className="flex gap-2">
+                              <button onClick={approveAll} className="px-2 py-1 bg-green-500/20 text-green-300 rounded text-xs hover:bg-green-500/30">Approve All</button>
+                              <button
+                                onClick={generateVideosForApproved}
+                                disabled={generatedAssets.filter(a => a.approved === true).length === 0}
+                                className="px-3 py-1 bg-purple-500 text-white rounded text-xs hover:bg-purple-600 disabled:opacity-50"
+                              >
+                                → Videos ({generatedAssets.filter(a => a.approved === true).length})
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Segment Filter Tabs - only show if we have segments */}
+                        {segments.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-white/40 text-[10px] uppercase tracking-wider">Segment:</span>
+                            <div className="flex gap-1 bg-white/5 rounded-lg p-0.5 flex-wrap">
+                              <button
+                                onClick={() => setSegmentTab('all')}
+                                className={`px-2 py-0.5 text-[10px] rounded ${segmentTab === 'all' ? 'bg-teal-500 text-white' : 'text-white/50 hover:text-white'}`}
+                              >All ({shots.length})</button>
+                              {segments.map((seg: string) => (
+                                <button
+                                  key={seg}
+                                  onClick={() => setSegmentTab(seg)}
+                                  className={`px-2 py-0.5 text-[10px] rounded capitalize ${segmentTab === seg ? 'bg-amber-500 text-white' : 'text-white/50 hover:text-white'}`}
+                                >{seg} ({getSegmentCount(seg)})</button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* ZOOM SLIDER - control card size */}
+                        <div className="flex items-center gap-2 ml-auto">
+                          <span className="text-white/40 text-[10px]">🔍</span>
+                          <input
+                            type="range"
+                            min="30"
+                            max="150"
+                            value={shotZoom}
+                            onChange={(e) => setShotZoom(parseInt(e.target.value))}
+                            className="w-20 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                            title={`Zoom: ${shotZoom}%`}
+                          />
+                          <span className="text-white/40 text-[10px] w-8">{shotZoom}%</span>
+                        </div>
+                      </div>
+
+                      {/* PHOTOS TAB */}
+                      {shotViewTab === 'photo' && (() => {
+                        // Zoom-based sizing - use slider value to control card size
+                        // 30% zoom = 120px min (tiny), 100% = 280px (normal), 150% = 400px (large)
+                        const minWidth = Math.round(120 + (shotZoom - 30) * 2.3);
+                        return (
+                        <div className="grid gap-2 overflow-y-auto flex-1" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}px, 1fr))` }}>
+                          {(generatedAssets.length > 0 ? generatedAssets : (latestPlan?.shots || []).map((s: any, i: number) => ({ id: `placeholder-${i}`, status: 'pending' as const, prompt: s.prompt || s.image_prompt || s.photo_prompt || s.visual_prompt || '', type: 'image' as const, motionPrompt: s.motion_prompt || s.video_prompt || s.motion || '', _segment: s.segment || s.section || s.phase || s.act || s.beat })))
+                          .filter((asset: any, idx: number) => {
+                            if (segmentTab === 'all') return true;
+                            const shot = latestPlan?.shots?.[idx];
+                            const shotSegment = asset._segment || shot?.segment || shot?.section || shot?.phase || shot?.act || shot?.beat;
+                            return shotSegment === segmentTab;
+                          })
+                          .map((asset: GeneratedAsset, idx: number) => {
+                            const shot = latestPlan?.shots?.[idx];
+                            const hasImage = asset.status === 'done' && asset.url;
+                            // Check ALL possible prompt field names
+                            const promptText = asset.prompt || shot?.prompt || shot?.image_prompt || shot?.photo_prompt || shot?.visual_prompt || shot?.description || '';
+                            const isChained = idx > 0;
+
+                            // USE MEMOIZED ref data instead of recalculating (fixes lag!)
+                            const { uploadedRefs, readyUploadCount } = memoizedRefData;
+                            const hasAnyRefs = readyUploadCount > 0 || generatedRefs.length > 0;
+
+                            return (
+                              <div key={asset.id} className="bg-white/5 rounded-xl p-3 border border-white/10">
+                                {/* Header */}
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-white font-medium text-sm">{idx + 1}. {shot?.shot_type || 'Shot'}</span>
+                                    {asset.approved === true && <span className="text-green-400 text-xs">✓</span>}
+                                    {asset.approved === false && <span className="text-red-400 text-xs">✗</span>}
+                                  </div>
+                                  <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 text-[10px] rounded">Nano Banana 4K</span>
+                                </div>
+
+                                {/* Image */}
+                                <div className="relative aspect-video bg-vs-dark rounded-lg overflow-hidden mb-3 group">
+                                  {asset.status === 'pending' && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <span className="text-white/20 text-2xl font-bold">{idx + 1}</span>
+                                    </div>
+                                  )}
+                                  {asset.status === 'generating' && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-blue-500/10">
+                                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                    </div>
+                                  )}
+                                  {hasImage && (
+                                    <>
+                                      <img src={asset.url} alt="" loading="lazy" className={`w-full h-full object-cover ${asset.approved === false ? 'opacity-30 grayscale' : ''}`} />
+                                      {pipelinePhase === 'approval' && asset.approved === undefined && (
+                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition">
+                                          <button onClick={() => approveShot(idx)} className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600">✓ Approve</button>
+                                          <button onClick={() => rejectShot(idx)} className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600">✗ Reject</button>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+
+                                {/* Refs used - SIMPLIFIED summary (memoized for performance) */}
+                                <div className="mb-2 p-2 bg-orange-500/10 rounded-lg border border-orange-500/20">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-[10px] text-orange-400 font-medium">📎 REFS:</span>
+                                    {hasAnyRefs ? (
+                                      <>
+                                        {readyUploadCount > 0 && (
+                                          <span className="px-1.5 py-0.5 bg-purple-500/20 rounded text-[9px] text-purple-200">
+                                            📷 {readyUploadCount} uploaded
+                                          </span>
+                                        )}
+                                        {generatedRefs.filter(r => r.approved !== false).length > 0 && (
+                                          <span className="px-1.5 py-0.5 bg-blue-500/20 rounded text-[9px] text-blue-200">
+                                            🎨 {generatedRefs.filter(r => r.approved !== false).length} generated
+                                          </span>
+                                        )}
+                                        {isChained && (
+                                          <span className="px-1.5 py-0.5 bg-teal-500/20 rounded text-[9px] text-teal-300">
+                                            🔗 chained
+                                          </span>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <span className="text-[9px] text-white/40 italic">
+                                        prompt only {isChained && '+ 🔗 chained'}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Prompt - Full text visible - ALWAYS show */}
+                                <div className="bg-blue-500/10 rounded-lg p-2 border border-blue-500/20">
+                                  <div className="text-[10px] text-blue-400 font-medium mb-1">📷 IMAGE PROMPT:</div>
+                                  {promptText ? (
+                                    <div className="text-[11px] text-white/90 leading-relaxed whitespace-pre-wrap">{promptText}</div>
+                                  ) : (
+                                    <div className="text-[11px] text-white/40 italic">No prompt found in plan - check JSON structure</div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        );
+                      })()}
+
+                      {/* VIDEOS TAB */}
+                      {shotViewTab === 'video' && (() => {
+                        // Dynamic sizing - smaller cards when more shots
+                        // Zoom-based sizing - use slider value to control card size
+                        const minWidth = Math.round(120 + (shotZoom - 30) * 2.3);
+                        return (
+                        <div className="grid gap-2 overflow-y-auto flex-1" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}px, 1fr))` }}>
+                          {(generatedAssets.length > 0 ? generatedAssets : (latestPlan?.shots || []).map((s: any, i: number) => ({ id: `placeholder-${i}`, status: 'pending' as const, prompt: '', type: 'image' as const, motionPrompt: s.motion_prompt || s.video_prompt || s.motion || s.camera_movement || '', _segment: s.segment || s.section || s.phase || s.act || s.beat })))
+                          .filter((asset: any, idx: number) => {
+                            if (segmentTab === 'all') return true;
+                            const shot = latestPlan?.shots?.[idx];
+                            const shotSegment = asset._segment || shot?.segment || shot?.section || shot?.phase || shot?.act || shot?.beat;
+                            return shotSegment === segmentTab;
+                          })
+                          .map((asset: GeneratedAsset, idx: number) => {
+                            const shot = latestPlan?.shots?.[idx];
+                            const hasImage = asset.status === 'done' && asset.url;
+                            const hasVideo = asset.videoStatus === 'done' && asset.videoUrl;
+                            // Check ALL possible motion prompt field names
+                            const motionText = asset.motionPrompt || shot?.motion_prompt || shot?.video_prompt || shot?.motion || shot?.camera_movement || shot?.movement || '';
+                            const isDialogue = motionText.toLowerCase().includes('speak') || motionText.toLowerCase().includes('talk') || motionText.toLowerCase().includes('dialogue');
+                            const hasEndFrame = idx < (latestPlan?.shots?.length || 0) - 1;
+                            const videoType = isDialogue ? 'Dialogue' : hasEndFrame && videoModel === 'kling-o1' ? 'Start→End' : 'Motion';
+                            const modelName = isDialogue ? 'Seedance' : videoModel === 'kling-2.6' ? 'Kling 2.6' : videoModel === 'kling-o1' ? 'Kling O1' : 'Seedance';
+
+                            return (
+                              <div key={asset.id} className="bg-white/5 rounded-xl p-3 border border-purple-500/20">
+                                {/* Header */}
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-white font-medium text-sm">{idx + 1}. {shot?.shot_type || 'Shot'}</span>
+                                    {hasVideo && <span className="text-green-400 text-xs">▶ Ready</span>}
+                                    {asset.videoStatus === 'generating' && <span className="text-purple-400 text-xs">⏳ Rendering...</span>}
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <span className={`px-2 py-0.5 text-[10px] rounded ${
+                                      isDialogue ? 'bg-pink-500/20 text-pink-300' :
+                                      videoModel === 'kling-o1' ? 'bg-cyan-500/20 text-cyan-300' :
+                                      'bg-purple-500/20 text-purple-300'
+                                    }`}>{modelName}</span>
+                                    <span className="px-2 py-0.5 bg-white/10 text-white/60 text-[10px] rounded">{asset.duration || defaultDuration}s</span>
+                                  </div>
+                                </div>
+
+                                {/* Video thumbnail */}
+                                <div className="relative aspect-video bg-vs-dark rounded-lg overflow-hidden mb-3 group">
+                                  {!hasImage && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <span className="text-white/20 text-2xl font-bold">{idx + 1}</span>
+                                    </div>
+                                  )}
+                                  {hasImage && !asset.approved && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white/5">
+                                      <span className="text-white/30 text-sm">Not approved</span>
+                                    </div>
+                                  )}
+                                  {hasImage && asset.approved && (
+                                    <>
+                                      <img src={asset.url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                                      {!asset.videoStatus && (
+                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                          <span className="text-white/50">Waiting for video gen...</span>
+                                        </div>
+                                      )}
+                                      {asset.videoStatus === 'generating' && (
+                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                          <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                                        </div>
+                                      )}
+                                      {hasVideo && (
+                                        <a href={asset.videoUrl} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/40 flex items-center justify-center hover:bg-black/60 transition">
+                                          <div className="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center">
+                                            <svg className="w-7 h-7 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                          </div>
+                                        </a>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+
+                                {/* Video type info */}
+                                <div className="mb-2">
+                                  <div className="text-[10px] text-purple-400 font-medium mb-1">VIDEO TYPE:</div>
+                                  <div className="flex gap-1 flex-wrap">
+                                    <span className={`px-1.5 py-0.5 text-[9px] rounded ${
+                                      isDialogue ? 'bg-pink-500/10 text-pink-300' :
+                                      videoType === 'Start→End' ? 'bg-cyan-500/10 text-cyan-300' :
+                                      'bg-purple-500/10 text-purple-300'
+                                    }`}>{videoType}</span>
+                                    {videoType === 'Start→End' && (
+                                      <span className="px-1.5 py-0.5 bg-cyan-500/10 text-cyan-300 text-[9px] rounded">Uses next shot as end frame</span>
+                                    )}
+                                    {isDialogue && (
+                                      <span className="px-1.5 py-0.5 bg-pink-500/10 text-pink-300 text-[9px] rounded">Auto-detected dialogue</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Motion prompt - Full text visible - ALWAYS show */}
+                                <div className="bg-purple-500/10 rounded-lg p-2 border border-purple-500/20">
+                                  <div className="text-[10px] text-purple-400 font-medium mb-1">🎬 MOTION PROMPT:</div>
+                                  {motionText ? (
+                                    <div className="text-[11px] text-white/90 leading-relaxed whitespace-pre-wrap">{motionText}</div>
+                                  ) : (
+                                    <div className="text-[11px] text-white/40 italic">No motion prompt - will use default camera movement</div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        );
+                      })()}
+                    </div>
+                    );
+                  })()}
+
+                  {/* FINAL VIDEO */}
+                  {finalVideoUrl && (
+                    <div className="flex-shrink-0 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                          </div>
+                          <div>
+                            <h4 className="text-green-300 font-semibold">Final Video Ready!</h4>
+                            <p className="text-xs text-green-400/60">{generatedAssets.filter(a => a.videoStatus === 'done').length} clips stitched</p>
+                          </div>
+                        </div>
+                        <a href={finalVideoUrl} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium flex items-center gap-2">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>Watch
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Execute button is only in the chat panel now */}
                 </div>
               );
             })()}
