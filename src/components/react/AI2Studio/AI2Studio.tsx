@@ -1773,27 +1773,27 @@ Remember: Clean readable text first, JSON code block at the end only.`;
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Chat Input Area */}
-          <div className="border-t border-vs-border p-3 space-y-2">
-            {/* Ref Images - compact */}
+          {/* Chat Input Area - Bigger, more comfortable */}
+          <div className="border-t border-vs-border p-4 space-y-3">
+            {/* Ref Images */}
             {refImages.length > 0 && (
               <div className="flex gap-2 flex-wrap">
                 {refImages.map((img, idx) => (
-                  <div key={idx} className="relative group w-10 h-10 rounded-lg overflow-hidden border border-white/20">
+                  <div key={idx} className="relative group w-12 h-12 rounded-lg overflow-hidden border border-white/20">
                     <img src={img.url} alt="" className="w-full h-full object-cover" />
                     <button
                       onClick={() => removeRefImage(idx)}
-                      className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-red-400 text-xs"
+                      className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-red-400 text-sm"
                     >×</button>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Input row */}
-            <div className="flex gap-2">
-              {/* Upload buttons - compact */}
-              <div className="flex gap-1">
+            {/* Input row - bigger icons and input */}
+            <div className="flex gap-3 items-end">
+              {/* Upload buttons - bigger */}
+              <div className="flex gap-2">
                 <input type="file" id="char-upload" accept="image/*" className="hidden" onChange={async (e) => {
                   const file = e.target.files?.[0]; if (!file) return;
                   const name = prompt('Character name:') || 'Character';
@@ -1848,14 +1848,14 @@ Remember: Clean readable text first, JSON code block at the end only.`;
                   reader.readAsDataURL(file);
                   e.target.value = '';
                 }} />
-                <button onClick={() => document.getElementById('char-upload')?.click()} className="p-2 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30" title="Character">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                <button onClick={() => document.getElementById('char-upload')?.click()} className="p-3 bg-purple-500/20 text-purple-300 rounded-xl hover:bg-purple-500/30 transition" title="Add Character">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 </button>
-                <button onClick={() => document.getElementById('loc-upload')?.click()} className="p-2 bg-blue-500/20 text-blue-300 rounded-lg hover:bg-blue-500/30" title="Location">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
+                <button onClick={() => document.getElementById('loc-upload')?.click()} className="p-3 bg-blue-500/20 text-blue-300 rounded-xl hover:bg-blue-500/30 transition" title="Add Location">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
                 </button>
-                <button onClick={() => document.getElementById('asset-upload')?.click()} className="p-2 bg-orange-500/20 text-orange-300 rounded-lg hover:bg-orange-500/30" title="Asset">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                <button onClick={() => document.getElementById('asset-upload')?.click()} className="p-3 bg-orange-500/20 text-orange-300 rounded-xl hover:bg-orange-500/30 transition" title="Add Asset">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
                 </button>
               </div>
 
@@ -1865,16 +1865,16 @@ Remember: Clean readable text first, JSON code block at the end only.`;
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Describe your video..."
-                className="flex-1 bg-vs-dark border border-vs-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 resize-none focus:outline-none focus:border-purple-500/50"
-                rows={1}
+                className="flex-1 bg-vs-dark border border-vs-border rounded-xl px-4 py-3 text-base text-white placeholder-white/40 resize-none focus:outline-none focus:border-purple-500/50"
+                rows={2}
                 disabled={isGenerating}
               />
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() || isGenerating || isGeneratingAssets}
-                className="p-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-3 bg-purple-500 text-white rounded-xl hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
               </button>
             </div>
 
