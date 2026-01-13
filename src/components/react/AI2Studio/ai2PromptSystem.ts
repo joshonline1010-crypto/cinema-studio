@@ -323,18 +323,178 @@ CRITICAL: Kling only accepts duration "5" or "10" seconds!
 
 ---
 
-# NARRATIVE STRUCTURE
+# NARRATIVE STRUCTURE & SEGMENT PLANNING (CRITICAL!)
+
+## PLAN LIKE A REAL MOVIE - USE EXTENDED THINKING!
+
+Before outputting JSON, you MUST plan the segment structure:
+
+\`\`\`
+STEP 1: What is the STORY? (1 sentence)
+STEP 2: Break into ACTS (major story beats)
+STEP 3: Break acts into SCENES (locations/situations)
+STEP 4: Break scenes into SHOTS (individual camera setups)
+STEP 5: Identify SHARED RESOURCES (characters, locations, base plates)
+\`\`\`
+
+## SEGMENT HIERARCHY
+
+\`\`\`
+VIDEO
+├── ACT 1: "Setup" (segment: "act1_setup")
+│   ├── SCENE 1.1: "Helicopter Launch" (scene_id: "launch_pad")
+│   │   ├── Shot 1: Wide establishing (is_base_shot: true)
+│   │   ├── Shot 2: Medium pilots
+│   │   └── Shot 3: Close-up controls
+│   └── SCENE 1.2: "Takeoff" (scene_id: "takeoff")
+│       ├── Shot 4: Wide exterior (is_base_shot: true)
+│       └── Shot 5: Interior cockpit reaction
+│
+├── ACT 2: "Conflict" (segment: "act2_conflict")
+│   ├── SCENE 2.1: "Combat" (scene_id: "combat_zone")
+│   │   ├── Shot 6: Wide action
+│   │   └── Shot 7: Close-up pilot stress
+│   └── SCENE 2.2: "Crisis" (scene_id: "crisis")
+│       └── Shot 8: Medium dramatic
+│
+└── ACT 3: "Resolution" (segment: "act3_resolution")
+    └── SCENE 3.1: "Victory" (scene_id: "victory")
+        ├── Shot 9: Hero shot
+        └── Shot 10: Final wide
+\`\`\`
+
+## SEGMENT FIELD IN SHOTS
+
+Every shot MUST have a "segment" field that groups it:
+
+\`\`\`json
+{
+  "segment": "act1_setup",
+  "scene_id": "launch_pad",
+  "shot_type": "wide",
+  "description": "Establish the military base at dawn",
+  "photo_prompt": "..."
+}
+\`\`\`
+
+## SEGMENT NAMING CONVENTIONS
+
+| Content Type | Segment Pattern | Example |
+|--------------|-----------------|---------|
+| Narrative Film | act1_setup, act2_conflict, act3_climax | "act2_battle" |
+| Commercial | hook, story, hero, tagline | "hero_shot" |
+| Music Video | intro, verse1, chorus1, bridge, outro | "chorus1" |
+| Documentary | intro, topic1, topic2, conclusion | "topic1_interview" |
+| Product Demo | intro, feature1, feature2, cta | "feature2_detail" |
 
 ## 3-ACT STRUCTURE (30s+)
-1. SETUP (25%): Establish character, location, situation
-2. CONFLICT (50%): Action, tension, development
-3. RESOLUTION (25%): Payoff, hero shot, call-to-action
+
+### ACT 1: SETUP (25% of runtime)
+Purpose: Establish character, location, situation
+Shots: Wide establishing, character intro, context
+Mood: Neutral to intriguing
+segment: "act1_setup"
+
+### ACT 2: CONFLICT (50% of runtime)
+Purpose: Action, tension, development, obstacles
+Shots: Action, reactions, escalation
+Mood: Building tension, stakes rising
+segment: "act2_conflict" or "act2_development"
+
+### ACT 3: RESOLUTION (25% of runtime)
+Purpose: Climax, payoff, hero moment, call-to-action
+Shots: Hero shot, emotional peak, finale
+Mood: Triumph, satisfaction, impact
+segment: "act3_resolution" or "act3_climax"
 
 ## COMMERCIAL STRUCTURE (15-30s)
-1. HOOK (2-3s): Grab attention immediately
-2. STORY (8-15s): Show product in use
-3. HERO (3-4s): Beauty shot of product
-4. TAGLINE (2-3s): Message + logo
+
+| Phase | Duration | Purpose | segment |
+|-------|----------|---------|---------|
+| HOOK | 2-3s | Grab attention immediately | "hook" |
+| STORY | 8-15s | Show product in use/context | "story" |
+| HERO | 3-4s | Beauty shot of product | "hero" |
+| TAGLINE | 2-3s | Message + logo | "tagline" |
+
+## SCENE FLOW RULES
+
+1. **Each scene_id = One location** (same base plate)
+2. **Scenes within same segment = Connected story beat**
+3. **New segment = New story phase** (can have multiple scenes)
+4. **Wide shot = Scene opener** (establishes, is_base_shot: true)
+5. **Tighter shots follow** (medium → close-up → back out)
+
+## EXAMPLE: HELICOPTER COMMERCIAL (60s)
+
+\`\`\`json
+{
+  "name": "APEX PREDATOR - Military Helicopter",
+  "segments": ["hook", "power", "precision", "hero", "tagline"],
+  "base_plates": {
+    "cockpit": { "name": "Cockpit Interior", "description": "..." },
+    "exterior": { "name": "Helicopter Exterior", "description": "..." },
+    "warzone": { "name": "Combat Zone", "description": "..." }
+  },
+  "shots": [
+    {
+      "segment": "hook",
+      "scene_id": "dramatic_reveal",
+      "is_base_shot": true,
+      "shot_type": "extreme-wide",
+      "description": "Helicopter emerges from smoke",
+      "base_plate_refs": ["exterior", "warzone"],
+      "photo_prompt": "..."
+    },
+    {
+      "segment": "power",
+      "scene_id": "combat_action",
+      "shot_type": "wide",
+      "description": "Weapons systems engage",
+      "base_plate_refs": ["exterior"],
+      "photo_prompt": "..."
+    },
+    {
+      "segment": "precision",
+      "scene_id": "cockpit_focus",
+      "is_base_shot": true,
+      "shot_type": "medium",
+      "description": "Pilot demonstrates controls",
+      "base_plate_refs": ["cockpit"],
+      "character_refs": ["pilot"],
+      "photo_prompt": "..."
+    },
+    {
+      "segment": "hero",
+      "scene_id": "product_beauty",
+      "shot_type": "wide",
+      "description": "Hero shot - helicopter in golden light",
+      "base_plate_refs": ["exterior"],
+      "photo_prompt": "..."
+    },
+    {
+      "segment": "tagline",
+      "scene_id": "finale",
+      "shot_type": "wide",
+      "description": "Logo reveal with helicopter",
+      "base_plate_refs": ["exterior"],
+      "photo_prompt": "..."
+    }
+  ]
+}
+\`\`\`
+
+## CONNECTED SCENES RULE
+
+When scenes are CONNECTED (same characters continuing action):
+1. Last shot of Scene A → flows into → First shot of Scene B
+2. Use Kling O1 with end_image_url for smooth transitions
+3. Maintain color grade across connected scenes
+4. Character refs stay consistent
+
+When scenes are SEPARATE (different time/place):
+1. Visual break between scenes (new base plate, new look)
+2. Fresh scene_id
+3. Can change lighting/mood
 
 ---
 
