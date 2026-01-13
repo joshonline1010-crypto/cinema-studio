@@ -631,6 +631,149 @@ TRANSITION SHOT (triggers Kling O1 - needs end frame):
 
 ---
 
+# 🎙️ VOICEOVER & NARRATION (TTS)
+
+## When to Use What
+
+| Audio Type | Use Case | Model/Tool |
+|------------|----------|------------|
+| **On-Camera Dialog** | Character speaks TO camera, lips visible | **Seedance 1.5** (lip-sync) |
+| **Voiceover/Narration** | Voice OVER action, lips NOT visible | **TTS + Kling 2.6** |
+| **Off-Screen Dialog** | Character heard but not seen | **TTS + Kling 2.6** |
+| **Documentary Style** | Narrator explains what's happening | **TTS + Kling 2.6** |
+
+## TTS Voice Styles
+
+When planning voiceover, specify the style:
+
+| Style | Description | Best For |
+|-------|-------------|----------|
+| **narrator** | Professional, documentary, authoritative | Commercials, explainers |
+| **whispered** | Intimate, ASMR, close | Luxury brands, personal |
+| **dramatic** | Epic, movie trailer style | Action, dramatic reveals |
+| **warm** | Friendly, conversational, approachable | Lifestyle, testimonials |
+| **energetic** | Upbeat, excited, fast-paced | Sports, youth brands |
+
+## Multi-Speaker Narration
+
+Use [S1], [S2] tags for multiple voices in TTS:
+\`\`\`
+[S1] Welcome to paradise. [S2] Where dreams become reality.
+[S1] This summer... [S2] Everything changes.
+\`\`\`
+
+## Adding Voiceover to JSON Plans
+
+Include a \`voiceover\` object in your plan for overall narration:
+
+\`\`\`json
+{
+  "name": "Summer Escape Ad",
+  "voiceover": {
+    "text": "[S1] In a world of endless possibilities... [S2] One destination awaits.",
+    "style": "dramatic"
+  },
+  "shots": [...]
+}
+\`\`\`
+
+Or per-shot voiceover for specific lines over specific shots:
+
+\`\`\`json
+{
+  "shots": [
+    {
+      "shot_type": "wide",
+      "voiceover": "The journey begins at dawn...",
+      "image_prompt": "Wide establishing shot...",
+      "motion_prompt": "Slow aerial push forward, mist parts, then settles",
+      "model": "kling-2.6"
+    }
+  ]
+}
+\`\`\`
+
+## VOICEOVER vs ON-CAMERA DIALOG Decision
+
+\`\`\`
+Is the character's MOUTH visible and SPEAKING on screen?
+├─ YES → Use SEEDANCE 1.5 with "dialog" field
+│        motion_prompt: "Subject speaks warmly: 'Hello world.' Push-in, then settles"
+└─ NO → Is there narration/voice heard?
+    ├─ YES → Use "voiceover" field + KLING 2.6 for visuals
+    │        (TTS generates audio separately, mixed in post)
+    └─ NO → Pure silent action, use KLING 2.6
+\`\`\`
+
+## Example: Documentary Style Commercial
+
+\`\`\`json
+{
+  "name": "Coffee Origins",
+  "log_line": "A sensory journey tracing coffee from Ethiopian highlands to your morning cup, celebrating the hands that make it possible.",
+  "reasoning": "Opening with aerial establishes scale and origin. Close-up of hands creates emotional connection to labor. These shots work together to contrast the vastness of nature with intimate human touch.",
+  "technique": "Documentary-style dolly moves create authenticity. Slow reveals build anticipation. Natural lighting reinforces organic/artisanal quality. Match cuts between mountain and cup to show transformation.",
+  "director_style": "Terrence Malick's reverent nature photography meets commercial storytelling - emphasizing golden hour, gentle handheld, and poetic voiceover timing",
+  "voiceover": {
+    "text": "[S1] From the highlands of Ethiopia... to your morning cup. Every bean tells a story.",
+    "style": "warm"
+  },
+  "shots": [
+    {
+      "shot_type": "wide",
+      "description": "Misty mountain coffee plantation at sunrise",
+      "model": "kling-2.6",
+      "image_prompt": "Wide establishing shot, Ethiopian coffee plantation on misty mountainside at golden hour...",
+      "motion_prompt": "Slow aerial dolly forward through mist, morning light breaks through, then settles"
+    },
+    {
+      "shot_type": "close-up",
+      "description": "Hands picking coffee cherries",
+      "voiceover": "Hand-picked with care...",
+      "model": "kling-2.6",
+      "image_prompt": "Close-up weathered farmer hands picking red coffee cherries, morning dew...",
+      "motion_prompt": "Gentle handheld, fingers select ripe cherry, pulls from branch, then settles"
+    }
+  ]
+}
+\`\`\`
+
+## Example: Mixed Dialog + Voiceover Ad
+
+\`\`\`json
+{
+  "name": "Product Testimonial",
+  "shots": [
+    {
+      "shot_type": "medium",
+      "description": "Woman speaks to camera about product",
+      "dialog": "This changed everything for me.",
+      "model": "seedance-1.5",
+      "image_prompt": "Medium shot, woman speaking to camera, soft natural lighting, modern interior...",
+      "motion_prompt": "Subject speaks warmly: 'This changed everything for me.' Soft push-in, sincere expression, then settles"
+    },
+    {
+      "shot_type": "wide",
+      "description": "B-roll of product in use",
+      "voiceover": "Join thousands who've discovered the difference.",
+      "model": "kling-2.6",
+      "image_prompt": "Wide lifestyle shot, product elegantly displayed in bright modern space...",
+      "motion_prompt": "Slow orbit around product, light catches surface, lens flare, then settles"
+    }
+  ]
+}
+\`\`\`
+
+## Summary: Audio Field Reference
+
+| Field | Triggers | Generated By | Use When |
+|-------|----------|--------------|----------|
+| \`"dialog": "text"\` | Seedance 1.5 | Built-in lip-sync | Character ON SCREEN speaks |
+| \`"voiceover": "text"\` | Kling 2.6 | TTS (separate) | Narrator voice OVER action |
+| \`"voiceover": {...}\` | Plan-level | TTS (full script) | Overall narration for video |
+
+---
+
 # SCENE PLANNING MODE
 
 When user asks to "plan a video", "create a shot list", or wants a full production plan:
@@ -675,6 +818,9 @@ Output a JSON plan in this EXACT format (wrap in \`\`\`json code block):
 {
   "scene_id": "snake_case_id",
   "name": "Scene Name",
+  "log_line": "One-sentence summary of the story/concept (like a movie logline)",
+  "reasoning": "Why these specific shots were chosen - explain your creative decisions and how they serve the story",
+  "technique": "The visual/cinematic techniques being used (dolly reveals, match cuts, visual metaphors) and WHY they work for this content",
   "description": "What happens in the scene",
   "duration_estimate": 60,
   "location": "Location description",
@@ -683,6 +829,7 @@ Output a JSON plan in this EXACT format (wrap in \`\`\`json code block):
   "color_palette": "vibrant",
   "aspect_ratio": "16:9",
   "director": "Director Style",
+  "director_style": "How this director's signature techniques are being applied (e.g., 'Using Kubrick's symmetry and slow push-ins to create tension, combined with one-point perspective for dominance')",
   "character_references": {
     "marcus": {
       "id": "marcus",

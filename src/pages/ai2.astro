@@ -1,0 +1,10 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AI2Studio from '../components/react/AI2Studio/AI2Studio';
+
+const user = Astro.locals.user;
+---
+
+<BaseLayout title="AI Studio 2">
+  <AI2Studio client:load />
+</BaseLayout>
