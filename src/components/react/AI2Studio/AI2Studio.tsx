@@ -173,54 +173,47 @@ export default function AI2Studio() {
             </div>
           </div>
 
-          {/* Story Tab - logline, concept, reasoning */}
+          {/* Story Tab - compact view with logline + expandable details */}
           {refViewTab === 'story' && (
-            <div className="ml-3 space-y-3">
-              {/* Log Line */}
+            <div className="ml-3">
+              {/* Logline - always visible, compact */}
               {(plan.log_line || plan.logline) && (
-                <div className="p-3 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-lg">
-                  <div className="text-purple-400 text-xs font-medium mb-1">📝 LOG LINE</div>
-                  <div className="text-white font-medium text-sm">{plan.log_line || plan.logline}</div>
+                <div className="text-white/90 text-sm mb-2 italic">
+                  "{plan.log_line || plan.logline}"
                 </div>
               )}
 
-              {/* Concept / Vision */}
-              {(plan.story || plan.concept || plan.idea || plan.description || plan.overview) && (
-                <div className="p-3 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-lg">
-                  <div className="text-blue-400 text-xs font-medium mb-1">💡 CONCEPT</div>
-                  <div className="text-white/80 text-sm leading-relaxed">{plan.story || plan.concept || plan.idea || plan.description || plan.overview}</div>
-                </div>
-              )}
+              {/* Compact info grid - single line summaries */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {(plan.story || plan.concept || plan.idea || plan.description || plan.overview) && (
+                  <div className="p-2 bg-blue-500/10 rounded border border-blue-500/20">
+                    <span className="text-blue-400">💡 </span>
+                    <span className="text-white/60 line-clamp-1">{(plan.story || plan.concept || plan.idea || plan.description || plan.overview).slice(0, 80)}...</span>
+                  </div>
+                )}
+                {(plan.reasoning || plan.shot_reasoning || plan.why || plan.approach) && (
+                  <div className="p-2 bg-green-500/10 rounded border border-green-500/20">
+                    <span className="text-green-400">🎯 </span>
+                    <span className="text-white/60 line-clamp-1">{(plan.reasoning || plan.shot_reasoning || plan.why || plan.approach).slice(0, 80)}...</span>
+                  </div>
+                )}
+                {(plan.technique || plan.method || plan.how || plan.visual_strategy) && (
+                  <div className="p-2 bg-orange-500/10 rounded border border-orange-500/20">
+                    <span className="text-orange-400">🎬 </span>
+                    <span className="text-white/60 line-clamp-1">{(plan.technique || plan.method || plan.how || plan.visual_strategy).slice(0, 80)}...</span>
+                  </div>
+                )}
+                {plan.director_style && (
+                  <div className="p-2 bg-yellow-500/10 rounded border border-yellow-500/20">
+                    <span className="text-yellow-400">🎥 </span>
+                    <span className="text-white/60 line-clamp-1">{plan.director_style.slice(0, 80)}...</span>
+                  </div>
+                )}
+              </div>
 
-              {/* Why These Shots / Reasoning */}
-              {(plan.reasoning || plan.shot_reasoning || plan.why || plan.approach) && (
-                <div className="p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-lg">
-                  <div className="text-green-400 text-xs font-medium mb-1">🎯 WHY THESE SHOTS</div>
-                  <div className="text-white/70 text-sm leading-relaxed">{plan.reasoning || plan.shot_reasoning || plan.why || plan.approach}</div>
-                </div>
-              )}
-
-              {/* How it Achieves Goal */}
-              {(plan.technique || plan.method || plan.how || plan.visual_strategy) && (
-                <div className="p-3 bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/20 rounded-lg">
-                  <div className="text-orange-400 text-xs font-medium mb-1">🎬 TECHNIQUE</div>
-                  <div className="text-white/70 text-sm leading-relaxed">{plan.technique || plan.method || plan.how || plan.visual_strategy}</div>
-                </div>
-              )}
-
-              {/* Director Style if specified */}
-              {plan.director_style && (
-                <div className="p-3 bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/20 rounded-lg">
-                  <div className="text-yellow-400 text-xs font-medium mb-1">🎥 DIRECTOR INFLUENCE</div>
-                  <div className="text-white/70 text-sm">{plan.director_style}</div>
-                </div>
-              )}
-
-              {/* If no story info, show prompt */}
-              {!plan.log_line && !plan.logline && !plan.story && !plan.concept && !plan.idea && !plan.description && !plan.overview && !plan.reasoning && (
-                <div className="p-3 text-white/40 text-sm italic">
-                  No story details provided. Ask AI to explain the concept and shot choices.
-                </div>
+              {/* No story fallback */}
+              {!plan.log_line && !plan.logline && !plan.story && !plan.concept && !plan.idea && (
+                <div className="p-2 text-white/30 text-xs italic">No story details</div>
               )}
             </div>
           )}
@@ -264,176 +257,64 @@ export default function AI2Studio() {
           )}
         </div>
 
-        {/* Voiceover/Narration */}
+        {/* Voiceover/Narration - compact */}
         {(plan.voiceover || shots.some((s: any) => s.voiceover)) && (
-          <div className="p-3 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border border-cyan-500/20 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-cyan-400 text-xs font-medium">🎙️ VOICEOVER / NARRATION</div>
-              {plan.voiceover?.style && (
-                <span className="text-xs px-2 py-0.5 bg-cyan-500/20 rounded text-cyan-300">
-                  {plan.voiceover.style}
-                </span>
-              )}
-            </div>
-            {/* Plan-level voiceover */}
-            {plan.voiceover && (
-              <div className="text-white/70 text-sm leading-relaxed italic bg-black/20 p-2 rounded mb-2">
-                "{typeof plan.voiceover === 'string' ? plan.voiceover : plan.voiceover.text}"
-              </div>
-            )}
-            {/* Per-shot voiceovers */}
-            {shots.filter((s: any) => s.voiceover).length > 0 && !plan.voiceover && (
-              <div className="space-y-1">
-                {shots.map((shot: any, i: number) => shot.voiceover && (
-                  <div key={i} className="text-sm">
-                    <span className="text-cyan-400/70">Shot {i + 1}:</span>
-                    <span className="text-white/60 italic ml-2">"{shot.voiceover}"</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="text-xs text-white/30 mt-2">
-              TTS will generate audio • Mixed with video in post
-            </div>
+          <div className="p-2 bg-cyan-500/10 border border-cyan-500/20 rounded text-xs">
+            <span className="text-cyan-400">🎙️ V/O: </span>
+            <span className="text-white/60 italic">
+              {plan.voiceover ? (typeof plan.voiceover === 'string' ? plan.voiceover : plan.voiceover.text).slice(0, 100) + '...' : 'Per-shot narration'}
+            </span>
           </div>
         )}
 
-        {/* Shots Grid - Shows generated images with refs */}
+        {/* Shots Grid - Compact cards that fit on screen */}
         {shots.length > 0 && (
-          <div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="text-green-400 text-xs font-medium">🎬 SHOTS ({shots.length})</div>
+          <div className="flex-1 min-h-0">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-green-400 text-xs font-medium">🎬 SHOTS ({shots.length})</span>
               {generatedAssets.length > 0 && (
-                <span className="text-xs text-green-400/60">• {generatedAssets.filter(a => a.status === 'done').length} generated</span>
+                <span className="text-xs text-green-400/50">• {generatedAssets.filter(a => a.status === 'done').length} done</span>
               )}
             </div>
 
-            {/* Shot Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Compact Shot Grid - 3-4 columns, small cards */}
+            <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
               {shots.map((shot: any, i: number) => {
-                // Get generated asset for this shot
                 const asset = generatedAssets[i];
-                const hasGeneratedImage = asset?.status === 'done' && asset?.url;
-                const hasGeneratedVideo = asset?.videoStatus === 'done' && asset?.videoUrl;
-
-                // Get refs for this shot
-                const shotCharRefs = shot.character_refs || shot.characters_in_shot || [];
-                const shotSceneRefs = shot.scene_refs || shot.locations_in_shot || [];
-                const allShotRefs = [...(Array.isArray(shotCharRefs) ? shotCharRefs : [shotCharRefs]), ...(Array.isArray(shotSceneRefs) ? shotSceneRefs : [shotSceneRefs])].filter(Boolean);
-
-                // Find matching ref images
-                const matchingRefs = generatedRefs.filter(r => {
-                  const shortId = r.id.replace(/^(char-|loc-)/, '');
-                  return allShotRefs.includes(shortId) || allShotRefs.includes(r.id) || allShotRefs.some((ref: string) => r.name?.toLowerCase().includes(ref.toLowerCase()));
-                });
-
-                // Auto-detect model based on shot content
-                const hasDialog = !!(shot.dialog || shot.dialogue || shot.speech);
-                const hasEndFrame = !!(shot.photo_prompt_end || shot.end_frame || shot.end_image);
-                const hasCameraMove = /dolly|orbit|zoom|push|pull|pan|tilt|track|crane|move/i.test(shot.motion_prompt || shot.video_prompt || '');
-
-                let autoModel = 'Kling 2.6';
-                if (hasDialog) autoModel = 'Seedance 1.5';
-                else if (hasEndFrame) autoModel = 'Kling O1';
-
-                const shotVideoModel = shot.video_model || autoModel;
-                const duration = shot.duration || '5s';
-                const shotType = shot.shot_type || shot.type || shot.framing_start || 'Scene';
+                const hasImage = asset?.status === 'done' && asset?.url;
+                const hasVideo = asset?.videoStatus === 'done' && asset?.videoUrl;
+                const isGenerating = asset?.status === 'generating' || asset?.videoStatus === 'generating';
+                const shotType = shot.shot_type || shot.type || 'Shot';
 
                 return (
-                  <div key={i} className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
-                    {/* Shot Image/Video Preview */}
-                    <div className="relative aspect-video bg-vs-dark">
-                      {hasGeneratedImage ? (
+                  <div key={i} className="bg-white/5 rounded-lg border border-white/10 overflow-hidden group">
+                    {/* Thumbnail - small fixed height */}
+                    <div className="relative h-20 bg-vs-dark">
+                      {hasImage ? (
                         <>
-                          <img src={asset.url} alt={`Shot ${i + 1}`} className="w-full h-full object-cover" />
-                          {/* Video overlay if generated */}
-                          {hasGeneratedVideo && (
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                              <a href={asset.videoUrl} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-green-500 text-white rounded-lg flex items-center gap-2 hover:bg-green-600">
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                                Play Video
-                              </a>
-                            </div>
+                          <img src={asset.url} alt="" className="w-full h-full object-cover" />
+                          {hasVideo && (
+                            <a href={asset.videoUrl} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                              <span className="text-white text-lg">▶</span>
+                            </a>
                           )}
-                          {/* Approval badge */}
-                          {asset.approved === true && !hasGeneratedVideo && (
-                            <div className="absolute top-2 left-2 px-2 py-0.5 bg-green-500 text-white rounded text-xs">✓ Approved</div>
-                          )}
-                          {asset.approved === false && (
-                            <div className="absolute top-2 left-2 px-2 py-0.5 bg-red-500/80 text-white rounded text-xs">✗ Rejected</div>
-                          )}
-                          {/* Generating video spinner */}
-                          {asset.videoStatus === 'generating' && (
-                            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
-                              <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-2" />
-                              <span className="text-purple-400 text-sm">Generating video...</span>
-                            </div>
-                          )}
+                          {asset.approved === true && <div className="absolute top-1 left-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center text-[8px] text-white">✓</div>}
+                          {asset.approved === false && <div className="absolute top-1 left-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[8px] text-white">✗</div>}
                         </>
-                      ) : asset?.status === 'generating' ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2" />
-                          <span className="text-blue-400 text-sm">Generating image...</span>
+                      ) : isGenerating ? (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                         </div>
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-white/30 text-sm">Shot {i + 1} - Not generated</span>
+                          <span className="text-white/20 text-xs">{i + 1}</span>
                         </div>
                       )}
                     </div>
-
-                    {/* Shot Info */}
-                    <div className="p-3 space-y-2">
-                      {/* Header */}
-                      <div className="flex items-center justify-between">
-                        <span className="text-white font-medium text-sm">Shot {i + 1}: {shotType}</span>
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-white/40">{duration}</span>
-                          {hasDialog && <span className="text-pink-400">🎤</span>}
-                        </div>
-                      </div>
-
-                      {/* Description */}
-                      <div className="text-white/60 text-xs line-clamp-2">
-                        {shot.description || shot.action || shot.story || (shot.image_prompt || shot.prompt || '').substring(0, 100)}
-                      </div>
-
-                      {/* Model badges */}
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded">📷 Nano</span>
-                        <span className="px-2 py-0.5 bg-orange-500/20 text-orange-300 rounded">🎬 {shotVideoModel}</span>
-                      </div>
-
-                      {/* Refs Used - Show thumbnails */}
-                      {(matchingRefs.length > 0 || allShotRefs.length > 0) && (
-                        <div className="border-t border-white/10 pt-2 mt-2">
-                          <div className="text-xs text-purple-400/70 mb-1.5">Refs used:</div>
-                          <div className="flex gap-2 flex-wrap">
-                            {matchingRefs.map(ref => (
-                              <div key={ref.id} className="flex items-center gap-1.5 px-2 py-1 bg-purple-500/10 rounded-lg">
-                                {ref.url && (
-                                  <img src={ref.url} alt={ref.name} className="w-6 h-6 rounded object-cover" />
-                                )}
-                                <span className="text-purple-300 text-xs">{ref.name}</span>
-                              </div>
-                            ))}
-                            {/* Show ref names if no matching images yet */}
-                            {matchingRefs.length === 0 && allShotRefs.map((refId: string) => (
-                              <span key={refId} className="px-2 py-1 bg-purple-500/10 text-purple-300 rounded-lg text-xs">
-                                {refId}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Motion prompt preview */}
-                      {(shot.motion_prompt || shot.video_prompt) && (
-                        <div className="text-xs text-orange-400/60 italic line-clamp-1">
-                          🎬 {shot.motion_prompt || shot.video_prompt}
-                        </div>
-                      )}
+                    {/* Minimal info */}
+                    <div className="p-1.5">
+                      <div className="text-[10px] text-white/80 truncate">{i + 1}. {shotType}</div>
+                      <div className="text-[9px] text-white/40 truncate">{shot.duration || '5s'}</div>
                     </div>
                   </div>
                 );
@@ -2031,9 +1912,9 @@ Remember: Clean readable text first, JSON code block at the end only.`;
           </div>
         </aside>
 
-        {/* CENTER: Output Panel - Large area for plans, assets, results */}
+        {/* CENTER: Output Panel - Fits on one page without scrolling */}
         <main className="flex-1 flex flex-col overflow-hidden bg-vs-dark">
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 flex flex-col p-4 min-h-0">
             {(() => {
               // Find the latest plan from messages
               const latestPlanMsg = [...messages].reverse().find(m => m.role === 'assistant' && extractJsonPlan(m.content)?.shots);
@@ -2045,35 +1926,35 @@ Remember: Clean readable text first, JSON code block at the end only.`;
                 // Empty state - show welcome
                 return (
                   <div className="h-full flex flex-col items-center justify-center">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mb-6">
-                      <svg className="w-10 h-10 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mb-4">
+                      <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
                     </div>
-                    <h2 className="text-2xl font-semibold text-white mb-2">Output Panel</h2>
-                    <p className="text-white/50 text-center max-w-md">Your plans, shots, and generated assets will appear here. Start by chatting on the left.</p>
+                    <h2 className="text-xl font-semibold text-white mb-2">Your Project</h2>
+                    <p className="text-white/50 text-sm text-center max-w-md">Plans and generated content will appear here</p>
                   </div>
                 );
               }
 
               return (
-                <div className="space-y-6">
-                  {/* Plan Display */}
+                <div className="flex flex-col h-full min-h-0 gap-3">
+                  {/* Plan Header - Compact */}
                   {hasPlan && (
-                    <div className="bg-vs-card border border-green-500/30 rounded-2xl p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <span className="px-3 py-1 bg-green-500/20 text-green-400 text-sm rounded-full font-medium">
-                            PLAN: {latestPlan.shots.length} shots
+                    <div className="bg-vs-card border border-green-500/30 rounded-xl p-3 flex-shrink-0">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full font-medium">
+                            {latestPlan.shots.length} shots
                           </span>
-                          <span className="text-white font-medium">{latestPlan.name || latestPlan.scene_id || 'Scene'}</span>
+                          <span className="text-white font-medium text-sm">{latestPlan.name || latestPlan.scene_id || 'Scene'}</span>
                         </div>
                         {!isGenerating && !isGeneratingAssets && (
                           <button
                             onClick={() => generateFromJsonPlan(latestPlan)}
-                            className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 transition flex items-center gap-2 font-bold shadow-lg shadow-green-500/25"
+                            className="px-4 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition flex items-center gap-1.5 font-semibold text-sm"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
                             EXECUTE
@@ -2084,11 +1965,11 @@ Remember: Clean readable text first, JSON code block at the end only.`;
                     </div>
                   )}
 
-                  {/* Generated Assets Display */}
+                  {/* Generated Assets Display - Compact */}
                   {(generatedAssets.length > 0 || generatedRefs.length > 0) && (
-                    <div className="bg-vs-card border border-vs-border rounded-2xl p-6">
-                      {/* Pipeline Phase Indicator */}
-                      <div className="mb-4 flex items-center gap-2 flex-wrap">
+                    <div className="bg-vs-card border border-vs-border rounded-xl p-3 flex-1 min-h-0 flex flex-col">
+                      {/* Pipeline Phase Indicator - Inline */}
+                      <div className="mb-2 flex items-center gap-1.5 flex-wrap text-[10px]">
                         {generatedRefs.length > 0 && (
                           <>
                             <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs ${pipelinePhase === 'refs' ? 'bg-teal-500/20 text-teal-300' : (pipelinePhase === 'refs-approval' || pipelinePhase === 'images' || pipelinePhase === 'approval' || pipelinePhase === 'videos' || pipelinePhase === 'stitching' || pipelinePhase === 'done') ? 'text-green-400' : 'text-white/30'}`}>
