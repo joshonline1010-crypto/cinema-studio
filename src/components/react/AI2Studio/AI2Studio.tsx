@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAI2Store } from './ai2Store';
 import { buildAI2Prompt } from './ai2PromptSystem';
+import CameraControl, { buildFullCameraPrompt } from './CameraControl';
 
 // Mode descriptions
 const MODE_INFO = {
@@ -39,11 +40,13 @@ type PipelinePhase = 'idle' | 'refs' | 'refs-approval' | 'images' | 'approval' |
 interface GeneratedRef {
   id: string;
   name: string;
-  type: 'character' | 'location';
+  type: 'character' | 'location' | 'baseplate' | 'item';
   description: string;
   url?: string;
   status: 'pending' | 'generating' | 'done' | 'error';
   approved?: boolean;
+  // For baseplates: which scene/environment does this establish?
+  establishes?: string; // e.g., "cockpit_interior", "exterior_helicopter", "location_bg"
 }
 
 export default function AI2Studio() {
@@ -112,6 +115,10 @@ export default function AI2Studio() {
   // Zoom level for shots panel (smaller = more cards fit)
   const [shotZoom, setShotZoom] = useState<number>(100); // 50-150 range
 
+  // 3D Camera Control state
+  const [cameraPrompt, setCameraPrompt] = useState<string>('');
+  const [showCameraControl, setShowCameraControl] = useState(false);
+
   // Format a nice summary from a JSON plan - SIMPLIFIED: Refs row, then content
   const formatPlanSummary = (plan: any): React.ReactNode => {
     if (!plan) return null;
@@ -151,7 +158,8 @@ export default function AI2Studio() {
   const [defaultDuration, setDefaultDuration] = useState<'5' | '10'>('5');
 
   // Auto-approve mode - skips approval phases, runs straight through
-  const [autoApprove, setAutoApprove] = useState(false);
+  // DEFAULT: true - Execute Plan now runs fully automatic (refs→images→videos→stitch)
+  const [autoApprove, setAutoApprove] = useState(true);
 
   // Video model selection
   type VideoModel = 'kling-2.6' | 'kling-o1' | 'seedance';
@@ -739,7 +747,7 @@ export default function AI2Studio() {
     setSelectedMotions({});
   };
 
-  // Build prompt with character DNA, color lock, and director style
+  // Build prompt with character DNA, color lock, director style, and 3D camera
   const buildPrompt = (basePrompt: string, useColorLock: boolean = false) => {
     let prompt = basePrompt;
 
@@ -754,6 +762,11 @@ export default function AI2Studio() {
       prompt = `${characterDNA.trim()}. ${prompt}`;
     }
 
+    // Add 3D camera control prompt (maintains shot consistency)
+    if (cameraPrompt.trim()) {
+      prompt = `${prompt}, ${cameraPrompt.trim()}`;
+    }
+
     // Add color lock for consistency
     if (useColorLock) {
       prompt = `${COLOR_LOCK} ${prompt}`;
@@ -763,45 +776,100 @@ export default function AI2Studio() {
   };
 
   // STEP 0: Generate REFS first (character + location references)
-  // SKIP if user already uploaded refs - use those instead!
+  // If user uploaded refs, use them as INPUT to generate better 8K versions
+  // Still generate location refs if plan has them
   const generateRefs = async (plan: any) => {
-    // Check if user has uploaded refs - if so, SKIP AI ref generation entirely!
-    const hasUploadedRefs = refImages.length > 0 || characterRefs.length > 0 || productRefs.length > 0 || locationRefs.length > 0;
+    const hasUploadedCharRefs = characterRefs.length > 0 || refImages.length > 0;
+    const hasUploadedLocRefs = locationRefs.length > 0;
 
-    if (hasUploadedRefs) {
-      console.log('[AI2] User has uploaded refs - SKIPPING AI ref generation, going straight to images');
-      console.log(`[AI2] Using: ${refImages.length} general, ${characterRefs.length} char, ${productRefs.length} product, ${locationRefs.length} location refs`);
-      await generateImages(plan);
-      return;
-    }
+    const charRefsFromPlan = plan.character_references || {};
+    const sceneRefsFromPlan = plan.scene_references || {};
 
-    const charRefs = plan.character_references || {};
-    const sceneRefs = plan.scene_references || {};
-
-    // Build refs list
+    // Build refs list - combining user uploads with plan refs
     const refs: GeneratedRef[] = [];
 
-    // Add character refs
-    Object.entries(charRefs).forEach(([id, char]: [string, any]) => {
-      refs.push({
-        id: `char-${id}`,
-        name: char.name || id,
-        type: 'character',
-        description: char.description || `Character: ${char.name || id}`,
-        status: 'pending'
+    // CHARACTER REFS: Use user uploads as base, or plan descriptions
+    if (hasUploadedCharRefs) {
+      // User uploaded character refs - create enhanced versions from them
+      characterRefs.forEach((ref, i) => {
+        refs.push({
+          id: `char-uploaded-${i}`,
+          name: ref.name || `Character ${i + 1}`,
+          type: 'character',
+          description: ref.name || 'uploaded character',
+          url: ref.url, // Keep original URL as base
+          status: 'pending'
+        });
       });
-    });
+      // Also include general refs as potential character refs
+      refImages.forEach((ref, i) => {
+        if (ref.description?.toLowerCase().includes('character') || ref.description?.startsWith('👤')) {
+          refs.push({
+            id: `char-general-${i}`,
+            name: ref.description?.replace(/^👤\s*/, '') || `Character`,
+            type: 'character',
+            description: ref.description || 'uploaded character',
+            url: ref.url,
+            status: 'pending'
+          });
+        }
+      });
+      console.log(`[AI2] Using ${refs.filter(r => r.type === 'character').length} uploaded character refs as base for 8K generation`);
+    } else {
+      // No user uploads - use plan's character descriptions
+      Object.entries(charRefsFromPlan).forEach(([id, char]: [string, any]) => {
+        refs.push({
+          id: `char-${id}`,
+          name: char.name || id,
+          type: 'character',
+          description: char.description || `Character: ${char.name || id}`,
+          status: 'pending'
+        });
+      });
+    }
 
-    // Add location refs
-    Object.entries(sceneRefs).forEach(([id, scene]: [string, any]) => {
+    // LOCATION REFS: Generate from plan if user didn't upload locations
+    if (!hasUploadedLocRefs) {
+      Object.entries(sceneRefsFromPlan).forEach(([id, scene]: [string, any]) => {
+        refs.push({
+          id: `loc-${id}`,
+          name: scene.name || id,
+          type: 'location',
+          description: scene.description || `Location: ${scene.name || id}`,
+          status: 'pending'
+        });
+      });
+      console.log(`[AI2] Will generate ${Object.keys(sceneRefsFromPlan).length} location refs from plan`);
+    } else {
+      // User uploaded locations - use them directly (already good)
+      locationRefs.forEach((ref, i) => {
+        refs.push({
+          id: `loc-uploaded-${i}`,
+          name: ref.name || `Location ${i + 1}`,
+          type: 'location',
+          description: ref.name || 'uploaded location',
+          url: ref.url,
+          status: 'done' // Already done - use as-is
+        });
+      });
+      console.log(`[AI2] Using ${locationRefs.length} uploaded location refs directly`);
+    }
+
+    // BASE PLATES: Generate environment base plates from plan (cockpit, exterior, etc.)
+    const basePlatesFromPlan = plan.base_plates || {};
+    Object.entries(basePlatesFromPlan).forEach(([id, plate]: [string, any]) => {
       refs.push({
-        id: `loc-${id}`,
-        name: scene.name || id,
-        type: 'location',
-        description: scene.description || `Location: ${scene.name || id}`,
+        id: `baseplate-${id}`,
+        name: plate.name || id,
+        type: 'baseplate',
+        description: plate.description || `Base plate: ${plate.name || id}`,
+        establishes: id, // What this base plate establishes (e.g., "cockpit_interior")
         status: 'pending'
       });
     });
+    if (Object.keys(basePlatesFromPlan).length > 0) {
+      console.log(`[AI2] Will generate ${Object.keys(basePlatesFromPlan).length} base plates from plan:`, Object.keys(basePlatesFromPlan));
+    }
 
     // If no refs defined, skip to images
     if (refs.length === 0) {
@@ -826,34 +894,61 @@ export default function AI2Studio() {
 
     console.log(`[AI2] Generating refs with director style: ${directorPreset?.name || 'default'}`);
 
-    // Generate refs in parallel
+    // Generate refs in parallel - some may already have URLs (user uploads)
     const refPromises = refs.map(async (ref, i) => {
+      // Skip refs that are already done (like user-uploaded locations)
+      if (ref.status === 'done' && ref.url) {
+        console.log(`[AI2] Ref ${i} "${ref.name}": Already done, using existing URL`);
+        return { index: i, success: true, url: ref.url, name: ref.name, id: ref.id };
+      }
+
       setGeneratedRefs(prev => prev.map((r, idx) =>
         idx === i ? { ...r, status: 'generating' } : r
       ));
 
       try {
         // IMPORTANT: Refs use SAME director style as shots for consistency
-        // This way "THIS EXACT LIGHTING" actually matches!
-        const prompt = ref.type === 'character'
-          ? `${ref.description}, single character portrait, clear full body view${directorStyle}, 8K detailed`
-          : `${ref.description}, establishing wide shot${directorStyle}, 8K detailed`;
+        // Different prompt templates for different ref types
+        let prompt: string;
+        if (ref.type === 'character') {
+          prompt = `THIS EXACT CHARACTER, single character portrait, clear full body view${directorStyle}, 8K detailed, maintain exact likeness`;
+        } else if (ref.type === 'baseplate') {
+          // Base plates are wide establishing shots that define the environment
+          prompt = `${ref.description}, wide establishing shot, empty environment, no people, clean background plate${directorStyle}, 8K detailed, cinematic`;
+        } else if (ref.type === 'item') {
+          prompt = `${ref.description}, product shot, clean background, detailed${directorStyle}, 8K detailed`;
+        } else {
+          // Location ref
+          prompt = `${ref.description}, establishing wide shot${directorStyle}, 8K detailed`;
+        }
+
+        // If ref has a URL (user uploaded), use EDIT endpoint to enhance it
+        // Otherwise use IMAGE endpoint for text-to-image
+        const hasBaseImage = !!ref.url;
+        const requestBody: any = {
+          type: hasBaseImage ? 'edit' : 'image',
+          prompt,
+          aspect_ratio: '16:9',
+          resolution: '4K' // Use 4K for refs to get best quality
+        };
+
+        if (hasBaseImage) {
+          requestBody.image_urls = [ref.url];
+          console.log(`[AI2] Ref ${i} "${ref.name}": Enhancing uploaded image to 8K`);
+        } else {
+          console.log(`[AI2] Ref ${i} "${ref.name}": Generating from description`);
+        }
 
         const response = await fetch('/api/cinema/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'image',
-            prompt,
-            aspect_ratio: '16:9',
-            resolution: '2K'
-          })
+          body: JSON.stringify(requestBody)
         });
 
         const data = await response.json();
         // API returns image_url (not images array)
         const imageUrl = data.image_url || data.images?.[0]?.url || data.image?.url || data.url;
-        console.log(`[AI2] Ref ${i} result:`, imageUrl ? 'SUCCESS' : 'NO URL', data);
+        console.log(`[AI2] Ref ${i} "${ref.name}" result:`, imageUrl ? 'SUCCESS' : 'NO URL', data);
 
         setGeneratedRefs(prev => prev.map((r, idx) =>
           idx === i ? { ...r, status: imageUrl ? 'done' : 'error', url: imageUrl } : r
@@ -862,6 +957,7 @@ export default function AI2Studio() {
 
         return { index: i, success: !!imageUrl, url: imageUrl, name: ref.name, id: ref.id };
       } catch (error) {
+        console.error(`[AI2] Ref ${i} "${ref.name}" error:`, error);
         setGeneratedRefs(prev => prev.map((r, idx) =>
           idx === i ? { ...r, status: 'error' } : r
         ));
@@ -984,47 +1080,99 @@ export default function AI2Studio() {
     }));
     setGeneratedAssets(assets);
 
-    // Generate ALL images in PARALLEL
-    console.log(`[AI2] Generating ${assets.length} images in parallel...`);
+    // ============ BASE SHOT SYSTEM ============
+    // Group shots by scene_id, generate BASE shots first, then use as ref for others
 
-    const imagePromises = shots.map(async (shot: any, i: number) => {
+    // Step 1: Identify BASE shots for each scene_id
+    const sceneBaseMap: Record<string, number> = {}; // scene_id -> shot index
+    const shotsByScene: Record<string, number[]> = {}; // scene_id -> [shot indices]
+
+    shots.forEach((shot: any, i: number) => {
+      const sceneId = shot.scene_id || 'default';
+      if (!shotsByScene[sceneId]) {
+        shotsByScene[sceneId] = [];
+      }
+      shotsByScene[sceneId].push(i);
+
+      // If shot is marked as base, or it's the first wide shot for this scene
+      if (shot.is_base_shot) {
+        sceneBaseMap[sceneId] = i;
+      }
+    });
+
+    // Auto-detect base shots if not marked (prefer wide shots)
+    Object.entries(shotsByScene).forEach(([sceneId, indices]) => {
+      if (sceneBaseMap[sceneId] === undefined) {
+        // Find widest shot type as base
+        const wideIndex = indices.find(i =>
+          shots[i].shot_type === 'wide' || shots[i].shot_type === 'establishing'
+        );
+        sceneBaseMap[sceneId] = wideIndex !== undefined ? wideIndex : indices[0];
+      }
+    });
+
+    const baseIndices = new Set(Object.values(sceneBaseMap));
+    const nonBaseIndices = shots.map((_: any, i: number) => i).filter((i: number) => !baseIndices.has(i));
+
+    console.log(`[AI2] ============ BASE SHOT SYSTEM ============`);
+    console.log(`[AI2] Scenes found:`, Object.keys(shotsByScene));
+    console.log(`[AI2] Base shots:`, sceneBaseMap);
+    console.log(`[AI2] Base indices:`, [...baseIndices]);
+    console.log(`[AI2] Non-base indices:`, nonBaseIndices);
+    console.log(`[AI2] ===========================================`);
+
+    // Store base shot URLs after generation
+    const sceneBaseUrls: Record<string, string> = {};
+
+    // Helper function to generate a single shot
+    const generateShot = async (shot: any, i: number, extraRefs: string[] = []) => {
       setGeneratedAssets(prev => prev.map((a, idx) =>
         idx === i ? { ...a, status: 'generating' } : a
       ));
 
       try {
-        // Get per-shot refs if specified, otherwise use ALL refs
+        // Get per-shot refs if specified
         let shotRefUrls: string[] = [];
         const charRefs = shot.character_refs || [];
-        const sceneRefs = shot.scene_refs || [];
-        const shotSpecificRefs = [...charRefs, ...sceneRefs];
+        const sceneRefIds = shot.scene_refs || [];
+        const basePlateRefIds = shot.base_plate_refs || []; // NEW: base plate refs
+        const shotSpecificRefs = [...basePlateRefIds, ...charRefs, ...sceneRefIds]; // Base plates FIRST for priority
 
         if (shotSpecificRefs.length > 0) {
-          // Use only the refs specified for this shot
           shotRefUrls = shotSpecificRefs
-            .map((refId: string) => refUrlMap[refId] || refUrlMap[`char-${refId}`] || refUrlMap[`loc-${refId}`])
+            .map((refId: string) => refUrlMap[refId] || refUrlMap[`char-${refId}`] || refUrlMap[`loc-${refId}`] || refUrlMap[`baseplate-${refId}`])
             .filter(Boolean);
-          console.log(`[AI2] Shot ${i + 1}: Using ${shotRefUrls.length} specific refs from plan:`, shotSpecificRefs);
+          console.log(`[AI2] Shot ${i + 1}: Using ${shotRefUrls.length} specific refs:`, shotSpecificRefs);
+          if (basePlateRefIds.length > 0) {
+            console.log(`[AI2] Shot ${i + 1}: Includes ${basePlateRefIds.length} BASE PLATE refs for environment consistency`);
+          }
         }
 
-        // ALWAYS add user-uploaded refs - they should be used for every shot
+        // Add user-uploaded refs
         if (uploadedRefUrls.length > 0) {
           shotRefUrls = [...shotRefUrls, ...uploadedRefUrls];
-          console.log(`[AI2] Shot ${i + 1}: Added ${uploadedRefUrls.length} uploaded refs`);
         }
 
-        // If still no refs, use all approved refs (generated + labeled)
+        // Add extra refs (base shot URL for non-base shots)
+        if (extraRefs.length > 0) {
+          shotRefUrls = [...extraRefs, ...shotRefUrls]; // Base shot FIRST for priority
+          console.log(`[AI2] Shot ${i + 1}: Added BASE shot ref for scene consistency`);
+        }
+
+        // Fallback to all refs if none specified
         if (shotRefUrls.length === 0 && allApprovedRefUrls.length > 0) {
           shotRefUrls = allApprovedRefUrls;
-          console.log(`[AI2] Shot ${i + 1}: Fallback to all ${allApprovedRefUrls.length} refs`);
         }
 
-        console.log(`[AI2] Shot ${i + 1} FINAL: ${shotRefUrls.length} refs, type=${shotRefUrls.length > 0 ? 'EDIT' : 'TEXT-TO-IMAGE'}`);
+        let prompt = shot.photo_prompt || shot.prompt || `Shot ${i + 1}`;
 
-        const prompt = shot.photo_prompt || shot.prompt || `Shot ${i + 1}`;
+        // For non-base shots, add "THIS EXACT BACKGROUND" to lock environment
+        if (extraRefs.length > 0 && !prompt.includes('THIS EXACT BACKGROUND')) {
+          prompt = `THIS EXACT BACKGROUND, THIS EXACT ENVIRONMENT, ${prompt}`;
+        }
+
         const finalPrompt = buildPrompt(prompt, useColorLock && shotRefUrls.length > 0);
 
-        // Determine request type based on refs
         const requestType = shotRefUrls.length > 0 ? 'edit' : 'image';
         const requestBody = {
           type: requestType,
@@ -1034,11 +1182,11 @@ export default function AI2Studio() {
           image_urls: shotRefUrls.length > 0 ? shotRefUrls : undefined
         };
 
-        console.log(`[AI2] Shot ${i + 1} REQUEST:`, JSON.stringify({
-          ...requestBody,
-          prompt: requestBody.prompt.substring(0, 100) + '...',
-          image_urls: requestBody.image_urls?.map(u => u.substring(0, 50) + '...')
-        }));
+        console.log(`[AI2] Shot ${i + 1} ${baseIndices.has(i) ? '(BASE)' : ''} REQUEST:`, {
+          type: requestType,
+          refs: shotRefUrls.length,
+          prompt: finalPrompt.substring(0, 80) + '...'
+        });
 
         const response = await fetch('/api/cinema/generate', {
           method: 'POST',
@@ -1048,27 +1196,49 @@ export default function AI2Studio() {
 
         const data = await response.json();
         const imageUrl = data.image_url || data.images?.[0]?.url || data.image?.url || data.url;
-        console.log(`[AI2] Shot ${i + 1} result:`, imageUrl ? 'SUCCESS' : 'FAILED', imageUrl || data);
+        console.log(`[AI2] Shot ${i + 1} result:`, imageUrl ? 'SUCCESS' : 'FAILED');
 
-        setGeneratedAssets(prev => {
-          const updated = prev.map((a, idx) =>
-            idx === i ? { ...a, status: (imageUrl ? 'done' : 'error') as 'done' | 'error', url: imageUrl } : a
-          );
-          console.log(`[AI2] Updated assets:`, updated.map(a => ({ id: a.id, status: a.status, hasUrl: !!a.url })));
-          return updated;
-        });
+        setGeneratedAssets(prev => prev.map((a, idx) =>
+          idx === i ? { ...a, status: (imageUrl ? 'done' : 'error') as 'done' | 'error', url: imageUrl } : a
+        ));
         setGenerationProgress(prev => ({ ...prev, current: prev.current + 1 }));
 
-        return { index: i, success: !!imageUrl, url: imageUrl };
+        return { index: i, success: !!imageUrl, url: imageUrl, sceneId: shot.scene_id || 'default' };
       } catch (error) {
+        console.error(`[AI2] Shot ${i + 1} error:`, error);
         setGeneratedAssets(prev => prev.map((a, idx) =>
           idx === i ? { ...a, status: 'error', error: String(error) } : a
         ));
         return { index: i, success: false };
       }
+    };
+
+    // ============ PHASE 1: Generate BASE shots first ============
+    console.log(`[AI2] PHASE 1: Generating ${baseIndices.size} base shots...`);
+    const basePromises = [...baseIndices].map(i => generateShot(shots[i], i, []));
+    const baseResults = await Promise.all(basePromises);
+
+    // Store base shot URLs for each scene
+    baseResults.forEach(result => {
+      if (result.success && result.url && result.sceneId) {
+        sceneBaseUrls[result.sceneId] = result.url;
+        console.log(`[AI2] Scene "${result.sceneId}" base shot URL stored`);
+      }
     });
 
-    const imageResults = await Promise.all(imagePromises);
+    // ============ PHASE 2: Generate NON-BASE shots with base refs ============
+    console.log(`[AI2] PHASE 2: Generating ${nonBaseIndices.length} non-base shots with base refs...`);
+    const nonBasePromises = nonBaseIndices.map(i => {
+      const shot = shots[i];
+      const sceneId = shot.scene_id || 'default';
+      const baseUrl = sceneBaseUrls[sceneId];
+      const extraRefs = baseUrl ? [baseUrl] : [];
+      return generateShot(shot, i, extraRefs);
+    });
+    const nonBaseResults = await Promise.all(nonBasePromises);
+
+    // Combine all results
+    const imageResults = [...baseResults, ...nonBaseResults];
     const successfulImages = imageResults.filter(r => r.success && r.url);
     console.log(`[AI2] All images complete: ${successfulImages.length}/${imageResults.length} successful`);
 
@@ -1540,6 +1710,22 @@ export default function AI2Studio() {
             Auto
           </button>
 
+          {/* 3D Camera toggle - OPTIONAL override for specific angles (consistency is automatic) */}
+          <button
+            onClick={() => setShowCameraControl(!showCameraControl)}
+            className={`px-3 py-1.5 text-sm rounded-lg transition flex items-center gap-1.5 ${
+              showCameraControl
+                ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/50'
+                : 'bg-white/10 text-white/50 hover:bg-white/20'
+            }`}
+            title="3D Camera: OPTIONAL - Force specific angle/distance. Consistency is already automatic for same-scene shots."
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            3D
+          </button>
+
           {/* Reset button - shows when generating is stuck */}
           {(isGeneratingAssets || pipelinePhase !== 'idle') && (
             <button
@@ -1879,7 +2065,7 @@ export default function AI2Studio() {
                 allRefs.push({
                   id: ref.id,
                   name: ref.name,
-                  type: ref.type === 'character' ? 'char' : 'loc',
+                  type: ref.type === 'character' ? 'char' : ref.type === 'location' ? 'loc' : ref.type, // 'baseplate' and 'item' stay as-is
                   desc: ref.description,
                   url: ref.url,
                   generated: true
@@ -1921,6 +2107,16 @@ export default function AI2Studio() {
 
               return (
                 <div className="flex flex-col h-full min-h-0 gap-4">
+                  {/* 3D Camera Control Panel - for shot consistency */}
+                  {showCameraControl && (
+                    <div className="flex-shrink-0">
+                      <CameraControl
+                        onCameraChange={setCameraPrompt}
+                        compact={false}
+                      />
+                    </div>
+                  )}
+
                   {/* SECTION 1: REFS - With tabs for filtering (max 30% height) */}
                   {allRefs.length > 0 && (
                     <div className="flex-shrink-0 max-h-[30%] overflow-hidden flex flex-col">
@@ -1941,6 +2137,10 @@ export default function AI2Studio() {
                             className={`px-2 py-0.5 text-[10px] rounded ${refViewTab === 'locations' ? 'bg-blue-500 text-white' : 'text-white/50 hover:text-white'}`}
                           >Locations ({allRefs.filter(r => r.type === 'loc').length})</button>
                           <button
+                            onClick={() => setRefViewTab('baseplates')}
+                            className={`px-2 py-0.5 text-[10px] rounded ${refViewTab === 'baseplates' ? 'bg-green-500 text-white' : 'text-white/50 hover:text-white'}`}
+                          >Base Plates ({allRefs.filter(r => r.type === 'baseplate').length})</button>
+                          <button
                             onClick={() => setRefViewTab('items')}
                             className={`px-2 py-0.5 text-[10px] rounded ${refViewTab === 'items' ? 'bg-orange-500 text-white' : 'text-white/50 hover:text-white'}`}
                           >Items ({allRefs.filter(r => r.type === 'item').length})</button>
@@ -1952,18 +2152,21 @@ export default function AI2Studio() {
                             if (refViewTab === 'story') return true;
                             if (refViewTab === 'characters') return ref.type === 'char';
                             if (refViewTab === 'locations') return ref.type === 'loc';
+                            if (refViewTab === 'baseplates') return ref.type === 'baseplate';
                             if (refViewTab === 'items') return ref.type === 'item';
                             return true;
                           })
                           .map((ref) => (
                           <div key={ref.id} className={`flex-shrink-0 p-3 rounded-xl border w-[220px] ${
                             ref.type === 'char' ? 'bg-purple-500/10 border-purple-500/30' :
-                            ref.type === 'loc' ? 'bg-blue-500/10 border-blue-500/30' : 'bg-orange-500/10 border-orange-500/30'
+                            ref.type === 'loc' ? 'bg-blue-500/10 border-blue-500/30' :
+                            ref.type === 'baseplate' ? 'bg-green-500/10 border-green-500/30' : 'bg-orange-500/10 border-orange-500/30'
                           }`}>
                             {/* Large Thumbnail */}
                             <div className={`w-full aspect-video rounded-lg overflow-hidden relative mb-2 ${
                               ref.type === 'char' ? 'border border-purple-500/30' :
-                              ref.type === 'loc' ? 'border border-blue-500/30' : 'border border-orange-500/30'
+                              ref.type === 'loc' ? 'border border-blue-500/30' :
+                              ref.type === 'baseplate' ? 'border border-green-500/30' : 'border border-orange-500/30'
                             } bg-vs-dark`}>
                               {ref.url ? (
                                 <img src={ref.url} alt={ref.name} loading="lazy" className="w-full h-full object-cover" />
@@ -1973,7 +2176,7 @@ export default function AI2Studio() {
                                 </div>
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-white/20 text-4xl">
-                                  {ref.type === 'char' ? '👤' : ref.type === 'loc' ? '📍' : '📦'}
+                                  {ref.type === 'char' ? '👤' : ref.type === 'loc' ? '📍' : ref.type === 'baseplate' ? '🖼️' : '📦'}
                                 </div>
                               )}
                             </div>
@@ -1982,13 +2185,15 @@ export default function AI2Studio() {
                               <div className="flex items-center justify-between">
                                 <div className={`text-sm font-semibold ${
                                   ref.type === 'char' ? 'text-purple-300' :
-                                  ref.type === 'loc' ? 'text-blue-300' : 'text-orange-300'
+                                  ref.type === 'loc' ? 'text-blue-300' :
+                                  ref.type === 'baseplate' ? 'text-green-300' : 'text-orange-300'
                                 }`}>{ref.name}</div>
                                 <div className={`text-[9px] px-1.5 py-0.5 rounded ${
                                   ref.type === 'char' ? 'bg-purple-500/20 text-purple-400' :
-                                  ref.type === 'loc' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'
+                                  ref.type === 'loc' ? 'bg-blue-500/20 text-blue-400' :
+                                  ref.type === 'baseplate' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'
                                 }`}>
-                                  {ref.type === 'char' ? 'Character' : ref.type === 'loc' ? 'Location' : 'Prop'}
+                                  {ref.type === 'char' ? 'Character' : ref.type === 'loc' ? 'Location' : ref.type === 'baseplate' ? 'Base Plate' : 'Prop'}
                                 </div>
                               </div>
                               {ref.desc && (

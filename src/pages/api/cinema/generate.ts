@@ -9,7 +9,7 @@ const FAL_API_KEY = 'Key 30048d83-df50-41fa-9c2f-61be8fcdb719:8bb12ec91651bf9dc7
 const FAL_ENDPOINTS = {
   'video-kling': 'https://queue.fal.run/fal-ai/kling-video/v2.6/pro/image-to-video',
   'video-kling-o1': 'https://queue.fal.run/fal-ai/kling-video/o1/image-to-video',
-  'video-seedance': 'https://queue.fal.run/fal-ai/bytedance/seedance/v1/lite/image-to-video', // FIXED: correct Seedance endpoint
+  'video-seedance': 'https://queue.fal.run/fal-ai/bytedance/seedance/v1.5/pro/image-to-video', // Seedance 1.5 Pro
   'image': 'https://fal.run/fal-ai/nano-banana-pro',           // Text-to-image
   'image-edit': 'https://fal.run/fal-ai/nano-banana-pro/edit', // Image-to-image (with reference)
   'face-adapter': 'https://fal.run/fal-ai/ip-adapter-face-id'
@@ -50,7 +50,7 @@ async function pollFalResult(requestId: string, endpoint: string, maxAttempts = 
   // Determine base path for polling based on endpoint
   let basePath = 'fal-ai/kling-video';
   if (endpoint.includes('seedance')) {
-    basePath = 'fal-ai/bytedance/seedance/v1/lite'; // FIXED: correct Seedance polling path
+    basePath = 'fal-ai/bytedance/seedance/v1.5/pro'; // Seedance 1.5 Pro polling path
   } else if (endpoint.includes('nano-banana')) {
     basePath = 'fal-ai/nano-banana-pro';
   }
