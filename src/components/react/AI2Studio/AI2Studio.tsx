@@ -909,11 +909,12 @@ Remember: Clean readable text first, JSON code block at the end only.`;
       console.log('[AI2] Auto-approve ON - auto-approving refs and continuing to images...');
       // Auto-approve all refs
       setGeneratedRefs(prev => prev.map(r => ({ ...r, approved: true })));
-      // Store refs for image generation
+      // Store refs for image generation (for display)
       setRefImages(prev => [...prev, ...successfulRefs.map(r => ({ url: r.url, description: r.name }))]);
-      // Continue to images immediately
+      // Continue to images immediately - PASS REFS DIRECTLY to avoid stale closure!
       if (plan) {
-        await generateImages(plan);
+        const generatedRefUrls = successfulRefs.map(r => r.url);
+        await generateImages(plan, generatedRefUrls);
       }
     } else {
       setPipelinePhase('refs-approval');
@@ -927,17 +928,18 @@ Remember: Clean readable text first, JSON code block at the end only.`;
     const approvedRefs = generatedRefs.filter(r => r.approved !== false && r.url);
     const refUrls = approvedRefs.map(r => r.url!);
 
-    // Store approved ref URLs for image generation
+    // Store approved ref URLs for image generation (for display)
     setRefImages(approvedRefs.map(r => ({ url: r.url!, description: r.name })));
 
-    // Continue to image generation with refs
+    // Continue to image generation - PASS REFS DIRECTLY to avoid stale closure!
     if (currentPlan) {
-      await generateImages(currentPlan);
+      await generateImages(currentPlan, refUrls);
     }
   };
 
   // STEP 1: Generate images only (stops at approval)
-  const generateImages = async (plan: any) => {
+  // directRefUrls: Pass refs directly to avoid stale closure (from generateRefs)
+  const generateImages = async (plan: any, directRefUrls?: string[]) => {
     const shots = plan.shots || [];
     if (shots.length === 0) return;
 
@@ -967,15 +969,18 @@ Remember: Clean readable text first, JSON code block at the end only.`;
       ...locationRefs.map(r => r.url)
     ].filter(url => url && url.startsWith('http'));
 
-    const generatedRefUrls = generatedRefs
-      .filter(r => r.approved !== false && r.url)
-      .map(r => r.url!);
+    // Use directly-passed refs if available (avoids stale closure!), otherwise read from state
+    const generatedRefUrls = directRefUrls && directRefUrls.length > 0
+      ? directRefUrls
+      : generatedRefs.filter(r => r.approved !== false && r.url).map(r => r.url!);
 
     const allApprovedRefUrls = [
       ...generatedRefUrls,
       ...uploadedRefUrls,
       ...labeledRefUrls
     ];
+
+    console.log(`[AI2] Using ${directRefUrls ? 'DIRECT' : 'STATE'} refs: ${generatedRefUrls.length} generated`);
 
     const useColorLock = allApprovedRefUrls.length > 0;
     console.log(`[AI2] ============ REF DEBUG ============`);
