@@ -99,8 +99,8 @@ export default function AI2Studio() {
   // Expanded message JSON - track which messages show full JSON
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
 
-  // Shot view tab - story, photo, video, dialog, voiceover
-  const [shotViewTab, setShotViewTab] = useState<'photo' | 'video' | 'dialog' | 'story' | 'voiceover'>('story');
+  // Shot view tab - no longer used (replaced with card grid), keeping for backward compat
+  const [shotViewTab, setShotViewTab] = useState<'photo' | 'video' | 'dialog' | 'voiceover'>('photo');
 
   // Ref view tab - story, characters, locations, or items
   const [refViewTab, setRefViewTab] = useState<'story' | 'characters' | 'locations' | 'items'>('story');
@@ -298,215 +298,149 @@ export default function AI2Studio() {
           </div>
         )}
 
-        {/* Shots with Tabs */}
-        {shots.length > 0 && (() => {
-          // Check if any shots have dialog or voiceover
-          const hasAnyDialog = shots.some((s: any) => s.dialog || s.dialogue || s.speech);
-          const hasAnyVoiceover = shots.some((s: any) => s.voiceover);
-
-          return (
+        {/* Shots Grid - Shows generated images with refs */}
+        {shots.length > 0 && (
           <div>
-            <div className="flex items-center gap-3 mb-2 flex-wrap">
+            <div className="flex items-center gap-3 mb-3">
               <div className="text-green-400 text-xs font-medium">🎬 SHOTS ({shots.length})</div>
-              {/* All tabs */}
-              <div className="flex bg-white/5 rounded-lg p-0.5">
-                <button
-                  onClick={() => setShotViewTab('story')}
-                  className={`px-3 py-1 text-xs rounded-md transition ${shotViewTab === 'story' ? 'bg-purple-500 text-white' : 'text-white/50 hover:text-white/70'}`}
-                >
-                  Story
-                </button>
-                <button
-                  onClick={() => setShotViewTab('photo')}
-                  className={`px-3 py-1 text-xs rounded-md transition ${shotViewTab === 'photo' ? 'bg-blue-500 text-white' : 'text-white/50 hover:text-white/70'}`}
-                >
-                  Photo
-                </button>
-                <button
-                  onClick={() => setShotViewTab('video')}
-                  className={`px-3 py-1 text-xs rounded-md transition ${shotViewTab === 'video' ? 'bg-orange-500 text-white' : 'text-white/50 hover:text-white/70'}`}
-                >
-                  Video
-                </button>
-                {hasAnyDialog && (
-                  <button
-                    onClick={() => setShotViewTab('dialog')}
-                    className={`px-3 py-1 text-xs rounded-md transition ${shotViewTab === 'dialog' ? 'bg-pink-500 text-white' : 'text-white/50 hover:text-white/70'}`}
-                  >
-                    Dialog
-                  </button>
-                )}
-                {hasAnyVoiceover && (
-                  <button
-                    onClick={() => setShotViewTab('voiceover')}
-                    className={`px-3 py-1 text-xs rounded-md transition ${shotViewTab === 'voiceover' ? 'bg-cyan-500 text-white' : 'text-white/50 hover:text-white/70'}`}
-                  >
-                    Voiceover
-                  </button>
-                )}
-              </div>
+              {generatedAssets.length > 0 && (
+                <span className="text-xs text-green-400/60">• {generatedAssets.filter(a => a.status === 'done').length} generated</span>
+              )}
             </div>
-            {shots.map((shot: any, i: number) => {
-              // Auto-detect model based on shot content
-              const hasDialog = !!(shot.dialog || shot.dialogue || shot.speech);
-              const hasEndFrame = !!(shot.photo_prompt_end || shot.end_frame || shot.end_image);
-              const hasCameraMove = /dolly|orbit|zoom|push|pull|pan|tilt|track|crane|move/i.test(shot.motion_prompt || shot.video_prompt || '');
-              const isChained = i > 0 && (shot.chain_from_previous || shot.chained);
 
-              // Model selection logic (like Shaun pipeline)
-              let autoModel = 'Kling 2.6';
-              let modelReason = 'Default action/motion';
-              if (hasDialog) {
-                autoModel = 'Seedance 1.5';
-                modelReason = 'Dialog detected - lip sync';
-              } else if (hasEndFrame && hasCameraMove) {
-                autoModel = 'Kling O1';
-                modelReason = 'End frame + camera move';
-              } else if (hasEndFrame) {
-                autoModel = 'Kling O1';
-                modelReason = 'State change (end frame)';
-              }
+            {/* Shot Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {shots.map((shot: any, i: number) => {
+                // Get generated asset for this shot
+                const asset = generatedAssets[i];
+                const hasGeneratedImage = asset?.status === 'done' && asset?.url;
+                const hasGeneratedVideo = asset?.videoStatus === 'done' && asset?.videoUrl;
 
-              const shotVideoModel = shot.video_model || autoModel;
-              const duration = shot.duration || '5s';
+                // Get refs for this shot
+                const shotCharRefs = shot.character_refs || shot.characters_in_shot || [];
+                const shotSceneRefs = shot.scene_refs || shot.locations_in_shot || [];
+                const allShotRefs = [...(Array.isArray(shotCharRefs) ? shotCharRefs : [shotCharRefs]), ...(Array.isArray(shotSceneRefs) ? shotSceneRefs : [shotSceneRefs])].filter(Boolean);
 
-              // Shot type display (show transition if end type differs)
-              const startType = shot.shot_type || shot.type || shot.framing_start || 'Scene';
-              const endType = shot.framing_end || shot.end_type;
-              const shotTypeDisplay = endType && endType !== startType ? `${startType} → ${endType}` : startType;
+                // Find matching ref images
+                const matchingRefs = generatedRefs.filter(r => {
+                  const shortId = r.id.replace(/^(char-|loc-)/, '');
+                  return allShotRefs.includes(shortId) || allShotRefs.includes(r.id) || allShotRefs.some((ref: string) => r.name?.toLowerCase().includes(ref.toLowerCase()));
+                });
 
-              return (
-                <div key={i} className="ml-3 text-sm mb-3 p-3 bg-white/5 rounded-lg border border-white/10">
-                  {/* Header row */}
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {/* Chain indicator */}
-                      {isChained && (
-                        <span className="text-yellow-400" title="Chained from previous shot">⛓</span>
-                      )}
-                      <span className="text-white/90 font-medium">Shot {i + 1}: {shotTypeDisplay}</span>
-                      {/* Speaker indicator */}
-                      {hasDialog && (
-                        <span className="text-pink-400 text-xs" title="Speaker on camera">🎤 ON CAM</span>
-                      )}
-                      {!hasDialog && shot.voiceover && (
-                        <span className="text-cyan-400 text-xs" title="Voiceover">🔊 V/O</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {/* Duration */}
-                      <span className="text-white/40 text-xs">{duration}</span>
-                    </div>
-                  </div>
+                // Auto-detect model based on shot content
+                const hasDialog = !!(shot.dialog || shot.dialogue || shot.speech);
+                const hasEndFrame = !!(shot.photo_prompt_end || shot.end_frame || shot.end_image);
+                const hasCameraMove = /dolly|orbit|zoom|push|pull|pan|tilt|track|crane|move/i.test(shot.motion_prompt || shot.video_prompt || '');
 
-                  {/* Model info row */}
-                  <div className="flex items-center gap-3 mb-2 text-xs">
-                    <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 rounded">
-                      <span className="text-blue-400">📷</span>
-                      <span className="text-blue-300">Nano Banana 4K</span>
-                    </div>
-                    <div className="flex items-center gap-1 px-2 py-0.5 bg-orange-500/20 rounded">
-                      <span className="text-orange-400">🎬</span>
-                      <span className="text-orange-300">{shotVideoModel}</span>
-                    </div>
-                    <span className="text-white/30 italic">{modelReason}</span>
-                  </div>
+                let autoModel = 'Kling 2.6';
+                if (hasDialog) autoModel = 'Seedance 1.5';
+                else if (hasEndFrame) autoModel = 'Kling O1';
 
-                  {/* Content based on tab */}
-                  {shotViewTab === 'story' && (
-                    <div className="text-white/70 text-sm">
-                      <div className="text-green-400/70 text-xs mb-1 font-medium">📖 WHAT HAPPENS:</div>
-                      <div className="bg-black/20 p-2 rounded">
-                        {shot.description || shot.action || shot.story || shot.what_happens ||
-                         `${shot.shot_type || 'Shot'}: ${(shot.image_prompt || shot.prompt || '').substring(0, 150)}...`}
-                      </div>
-                      {hasDialog && (
-                        <div className="mt-2 text-pink-300/70 italic">
-                          💬 "{shot.dialog || shot.dialogue || shot.speech}"
-                        </div>
-                      )}
-                    </div>
-                  )}
+                const shotVideoModel = shot.video_model || autoModel;
+                const duration = shot.duration || '5s';
+                const shotType = shot.shot_type || shot.type || shot.framing_start || 'Scene';
 
-                  {shotViewTab === 'photo' && (
-                    <div className="space-y-2">
-                      {/* Start frame prompt */}
-                      <div>
-                        <div className="text-blue-400/70 text-xs mb-1 font-medium">
-                          {hasEndFrame ? '📷 START FRAME:' : '📷 PHOTO PROMPT:'}
-                        </div>
-                        <div className="text-white/60 text-xs whitespace-pre-wrap bg-black/20 p-2 rounded">
-                          {shot.photo_prompt_start || shot.image_prompt || shot.prompt || 'No image prompt'}
-                        </div>
-                      </div>
-                      {/* End frame prompt (if exists) */}
-                      {hasEndFrame && (
-                        <div>
-                          <div className="text-purple-400/70 text-xs mb-1 font-medium">📷 END FRAME:</div>
-                          <div className="text-white/60 text-xs whitespace-pre-wrap bg-black/20 p-2 rounded">
-                            {shot.photo_prompt_end || shot.end_frame_prompt || 'No end frame prompt'}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {shotViewTab === 'video' && (
-                    <div>
-                      <div className="text-orange-400/70 text-xs mb-1 font-medium">🎬 VIDEO PROMPT:</div>
-                      <div className="text-orange-300/70 text-xs whitespace-pre-wrap bg-black/20 p-2 rounded">
-                        {shot.motion_prompt || shot.video_prompt || 'No video prompt'}
-                      </div>
-                    </div>
-                  )}
-
-                  {shotViewTab === 'dialog' && (
-                    <div>
-                      {hasDialog ? (
+                return (
+                  <div key={i} className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+                    {/* Shot Image/Video Preview */}
+                    <div className="relative aspect-video bg-vs-dark">
+                      {hasGeneratedImage ? (
                         <>
-                          <div className="text-pink-400/70 text-xs mb-1 font-medium">💬 DIALOG:</div>
-                          <div className="text-pink-300 text-sm whitespace-pre-wrap bg-pink-500/10 p-3 rounded italic border border-pink-500/20">
-                            "{shot.dialog || shot.dialogue || shot.speech}"
-                          </div>
-                          {shot.speaker && (
-                            <div className="mt-1 text-xs text-pink-400/50">— {shot.speaker}</div>
+                          <img src={asset.url} alt={`Shot ${i + 1}`} className="w-full h-full object-cover" />
+                          {/* Video overlay if generated */}
+                          {hasGeneratedVideo && (
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                              <a href={asset.videoUrl} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-green-500 text-white rounded-lg flex items-center gap-2 hover:bg-green-600">
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                Play Video
+                              </a>
+                            </div>
+                          )}
+                          {/* Approval badge */}
+                          {asset.approved === true && !hasGeneratedVideo && (
+                            <div className="absolute top-2 left-2 px-2 py-0.5 bg-green-500 text-white rounded text-xs">✓ Approved</div>
+                          )}
+                          {asset.approved === false && (
+                            <div className="absolute top-2 left-2 px-2 py-0.5 bg-red-500/80 text-white rounded text-xs">✗ Rejected</div>
+                          )}
+                          {/* Generating video spinner */}
+                          {asset.videoStatus === 'generating' && (
+                            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
+                              <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-2" />
+                              <span className="text-purple-400 text-sm">Generating video...</span>
+                            </div>
                           )}
                         </>
+                      ) : asset?.status === 'generating' ? (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2" />
+                          <span className="text-blue-400 text-sm">Generating image...</span>
+                        </div>
                       ) : (
-                        <div className="text-white/30 text-sm italic">No dialog in this shot</div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-white/30 text-sm">Shot {i + 1} - Not generated</span>
+                        </div>
                       )}
                     </div>
-                  )}
 
-                  {shotViewTab === 'voiceover' && (
-                    <div>
-                      {shot.voiceover ? (
-                        <>
-                          <div className="text-cyan-400/70 text-xs mb-1 font-medium">🎙️ VOICEOVER:</div>
-                          <div className="text-cyan-300 text-sm whitespace-pre-wrap bg-cyan-500/10 p-3 rounded italic border border-cyan-500/20">
-                            "{shot.voiceover}"
+                    {/* Shot Info */}
+                    <div className="p-3 space-y-2">
+                      {/* Header */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-white font-medium text-sm">Shot {i + 1}: {shotType}</span>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-white/40">{duration}</span>
+                          {hasDialog && <span className="text-pink-400">🎤</span>}
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <div className="text-white/60 text-xs line-clamp-2">
+                        {shot.description || shot.action || shot.story || (shot.image_prompt || shot.prompt || '').substring(0, 100)}
+                      </div>
+
+                      {/* Model badges */}
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded">📷 Nano</span>
+                        <span className="px-2 py-0.5 bg-orange-500/20 text-orange-300 rounded">🎬 {shotVideoModel}</span>
+                      </div>
+
+                      {/* Refs Used - Show thumbnails */}
+                      {(matchingRefs.length > 0 || allShotRefs.length > 0) && (
+                        <div className="border-t border-white/10 pt-2 mt-2">
+                          <div className="text-xs text-purple-400/70 mb-1.5">Refs used:</div>
+                          <div className="flex gap-2 flex-wrap">
+                            {matchingRefs.map(ref => (
+                              <div key={ref.id} className="flex items-center gap-1.5 px-2 py-1 bg-purple-500/10 rounded-lg">
+                                {ref.url && (
+                                  <img src={ref.url} alt={ref.name} className="w-6 h-6 rounded object-cover" />
+                                )}
+                                <span className="text-purple-300 text-xs">{ref.name}</span>
+                              </div>
+                            ))}
+                            {/* Show ref names if no matching images yet */}
+                            {matchingRefs.length === 0 && allShotRefs.map((refId: string) => (
+                              <span key={refId} className="px-2 py-1 bg-purple-500/10 text-purple-300 rounded-lg text-xs">
+                                {refId}
+                              </span>
+                            ))}
                           </div>
-                          <div className="mt-1 text-xs text-cyan-400/50">TTS • Narration over action</div>
-                        </>
-                      ) : (
-                        <div className="text-white/30 text-sm italic">No voiceover in this shot</div>
+                        </div>
+                      )}
+
+                      {/* Motion prompt preview */}
+                      {(shot.motion_prompt || shot.video_prompt) && (
+                        <div className="text-xs text-orange-400/60 italic line-clamp-1">
+                          🎬 {shot.motion_prompt || shot.video_prompt}
+                        </div>
                       )}
                     </div>
-                  )}
-
-                  {/* Refs needed for this shot */}
-                  {(shot.character_refs || shot.characters_in_shot) && (
-                    <div className="mt-2 flex items-center gap-2 text-xs">
-                      <span className="text-purple-400/50">Refs:</span>
-                      <span className="text-purple-300/70">{Array.isArray(shot.character_refs || shot.characters_in_shot) ? (shot.character_refs || shot.characters_in_shot).join(', ') : shot.character_refs || shot.characters_in_shot}</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          );
-        })()}
+        )}
       </div>
     );
   };
@@ -729,59 +663,55 @@ export default function AI2Studio() {
     setGenerating(true);
 
     try {
-      // ALWAYS add JSON plan instruction - MUST output executable JSON
-      const alwaysIncludeJson = `CRITICAL REQUIREMENT - READ THIS FIRST:
-You MUST end EVERY response with a \`\`\`json code block containing executable shots.
-DO NOT use \`\`\`analysis or any other format. ONLY \`\`\`json works.
+      // Conversational instruction - Claude should talk naturally with CLEAN TEXT
+      const conversationalInstruction = `You are a creative director helping me plan video content. Talk to me like a friend and collaborator.
 
-REQUIRED FORMAT at the END of your response:
+CRITICAL - OUTPUT CLEAN TEXT:
+- NO markdown formatting (no #, **, -, etc)
+- NO bullet points or lists
+- Just write normal paragraphs like a text message or email
+- Keep it short and conversational (2-4 short paragraphs max)
+- Be excited and friendly!
+
+HOW TO RESPOND:
+1. React to my idea with enthusiasm (1-2 sentences)
+2. Share what you're thinking visually (1-2 sentences)
+3. Briefly explain your shot plan (1-2 sentences)
+4. Then ONLY at the very end, include the JSON code block
+
+Example response style:
+"Oh I love this! A parachute bag is such a wild concept - we can make this look absolutely cinematic.
+
+I'm thinking we open with the bag looking totally normal, maybe on someone's shoulder in a city. Then BAM - they jump off something and it deploys. The reveal moment is everything.
+
+Let me set up 4 shots that build the tension and payoff..."
+
+Then end with the JSON block (this is the only code block allowed):
 \`\`\`json
-{
-  "name": "Your Scene Name",
-  "character_references": {
-    "CHAR1": { "name": "Hero", "description": "Detailed character description for ref sheet" }
-  },
-  "scene_references": {
-    "LOC1": { "name": "Forest", "description": "Detailed location description for establishing shot" }
-  },
-  "shots": [
-    {
-      "shot_id": "S01",
-      "photo_prompt": "Detailed image description using CHAR1 and LOC1, cinematic, 8K",
-      "motion_prompt": "Camera and subject motion, then settles",
-      "character_refs": ["CHAR1"],
-      "scene_refs": ["LOC1"]
-    }
-  ]
-}
+{"name":"Scene","shots":[...]}
 \`\`\`
 
-IMPORTANT:
-- character_references and scene_references will be generated as ref images FIRST
-- Each shot can specify which refs to use via character_refs and scene_refs arrays
-- These refs will be sent to nano-banana-pro/edit for visual consistency
-- Without this EXACT \`\`\`json format, the Execute button won't appear
-
-You can be creative and discuss ideas BEFORE the JSON, but you MUST end with the JSON block.
-`;
+Remember: Clean readable text first, JSON code block at the end only.`;
 
       // Build ref context for AI
       let refContext = '';
-      if (characterRefs.length > 0 || productRefs.length > 0 || locationRefs.length > 0) {
-        refContext = '\n\nUSER HAS UPLOADED REFERENCE IMAGES:\n';
+      if (refImages.length > 0 || characterRefs.length > 0 || productRefs.length > 0 || locationRefs.length > 0) {
+        refContext = '\n\n[You have reference images uploaded to work with]';
         if (characterRefs.length > 0) {
-          refContext += `CHARACTER REFS: ${characterRefs.map(r => r.name).join(', ')}\n`;
+          refContext += `\nCharacters: ${characterRefs.map(r => r.name).join(', ')}`;
         }
         if (productRefs.length > 0) {
-          refContext += `PRODUCT REFS: ${productRefs.map(r => r.name).join(', ')}\n`;
+          refContext += `\nProducts: ${productRefs.map(r => r.name).join(', ')}`;
         }
         if (locationRefs.length > 0) {
-          refContext += `LOCATION REFS: ${locationRefs.map(r => r.name).join(', ')}\n`;
+          refContext += `\nLocations: ${locationRefs.map(r => r.name).join(', ')}`;
         }
-        refContext += 'Use these in your photo_prompts. Describe them fully in each prompt (appearance, colors, style, etc). DO NOT just say "the character" - describe them completely each time.\n';
+        if (refImages.length > 0) {
+          refContext += `\nRef images: ${refImages.map(r => r.description || 'uploaded').join(', ')}`;
+        }
       }
 
-      const messageToSend = `${alwaysIncludeJson}${refContext}\nUser's request: ${userMessage}`;
+      const messageToSend = `${conversationalInstruction}${refContext}\n\nUser: ${userMessage}`;
 
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -1369,7 +1299,7 @@ You can be creative and discuss ideas BEFORE the JSON, but you MUST end with the
 
         setGeneratedAssets(prev => {
           const updated = prev.map((a, idx) =>
-            idx === i ? { ...a, status: imageUrl ? 'done' : 'error', url: imageUrl } : a
+            idx === i ? { ...a, status: (imageUrl ? 'done' : 'error') as 'done' | 'error', url: imageUrl } : a
           );
           console.log(`[AI2] Updated assets:`, updated.map(a => ({ id: a.id, status: a.status, hasUrl: !!a.url })));
           return updated;
@@ -1895,45 +1825,79 @@ You can be creative and discuss ideas BEFORE the JSON, but you MUST end with the
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4">
-                  <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/30 to-pink-500/30 flex items-center justify-center mb-4">
+                  <span className="text-2xl">🎬</span>
                 </div>
-                <h3 className="text-lg font-medium text-white mb-1">Start Creating</h3>
-                <p className="text-white/40 text-sm mb-4">Describe your video concept</p>
+                <h3 className="text-lg font-medium text-white mb-2">Hey! What are we making?</h3>
+                <p className="text-white/50 text-sm mb-4 max-w-[280px]">Tell me about your video idea and I'll help plan the shots</p>
                 <div className="flex flex-wrap gap-2 justify-center">
-                  <button onClick={() => handleQuickAction('plan')} className="px-3 py-1.5 text-xs bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30">Plan Video</button>
-                  <button onClick={() => handleQuickAction('image')} className="px-3 py-1.5 text-xs bg-blue-500/20 text-blue-300 rounded-lg hover:bg-blue-500/30">Image Prompt</button>
+                  <button onClick={() => setInput("Let's make a 30 second ad for ")} className="px-3 py-1.5 text-xs bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30">Ad/Commercial</button>
+                  <button onClick={() => setInput("Create a short film scene about ")} className="px-3 py-1.5 text-xs bg-blue-500/20 text-blue-300 rounded-lg hover:bg-blue-500/30">Short Film</button>
+                  <button onClick={() => setInput("Music video sequence for ")} className="px-3 py-1.5 text-xs bg-pink-500/20 text-pink-300 rounded-lg hover:bg-pink-500/30">Music Video</button>
                 </div>
               </div>
             ) : (
-              messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[90%] rounded-xl px-3 py-2 text-sm ${
-                    msg.role === 'user'
-                      ? 'bg-purple-500/20 text-white'
-                      : 'bg-vs-dark text-white/80 border border-vs-border'
-                  }`}>
-                    {msg.role === 'assistant' && extractJsonPlan(msg.content)?.shots ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-green-400">Plan ready</span>
-                        <span className="text-xs text-white/40">({extractJsonPlan(msg.content)?.shots?.length} shots)</span>
-                      </div>
-                    ) : (
-                      <div className="whitespace-pre-wrap leading-relaxed">{msg.content.length > 200 ? msg.content.slice(0, 200) + '...' : msg.content}</div>
-                    )}
+              messages.map((msg) => {
+                // For assistant messages, extract text before JSON (Claude's discussion)
+                const hasPlan = msg.role === 'assistant' && extractJsonPlan(msg.content)?.shots;
+                let displayText = msg.content;
+
+                if (hasPlan) {
+                  // Extract just the discussion part (before the JSON block)
+                  const jsonIndex = msg.content.indexOf('```json');
+                  if (jsonIndex > 0) {
+                    displayText = msg.content.slice(0, jsonIndex).trim();
+                  }
+                }
+
+                // Check if message is expanded
+                const isExpanded = expandedMessages.has(msg.id);
+                const isLong = displayText.length > 500;
+                const showText = isExpanded || !isLong ? displayText : displayText.slice(0, 500) + '...';
+
+                return (
+                  <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[90%] rounded-xl px-3 py-2 text-sm ${
+                      msg.role === 'user'
+                        ? 'bg-purple-500/20 text-white'
+                        : 'bg-vs-dark text-white/80 border border-vs-border'
+                    }`}>
+                      {msg.role === 'assistant' && (
+                        <div className="flex items-center gap-2 mb-1 text-xs text-purple-400">
+                          <span>🤖 Claude</span>
+                          {hasPlan && <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded">Plan ready</span>}
+                        </div>
+                      )}
+                      <div className="whitespace-pre-wrap leading-relaxed">{showText}</div>
+                      {isLong && (
+                        <button
+                          onClick={() => setExpandedMessages(prev => {
+                            const next = new Set(prev);
+                            if (next.has(msg.id)) next.delete(msg.id);
+                            else next.add(msg.id);
+                            return next;
+                          })}
+                          className="mt-2 text-xs text-purple-400 hover:text-purple-300"
+                        >
+                          {isExpanded ? 'Show less' : 'Show more...'}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
             {isGenerating && (
               <div className="flex justify-start">
-                <div className="bg-vs-dark border border-vs-border rounded-xl px-3 py-2">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" />
-                    <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
-                    <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
+                <div className="bg-vs-dark border border-vs-border rounded-xl px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-purple-400 text-xs">🤖</span>
+                    <span className="text-white/70 text-sm">Claude is thinking...</span>
+                    <div className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" />
+                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
+                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
+                    </div>
                   </div>
                 </div>
               </div>
