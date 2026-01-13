@@ -744,7 +744,6 @@ Remember: Clean readable text first, JSON code block at the end only.`;
             messageIndex: messages.length
           };
           setAccumulatedPlans(prev => [...prev, newPlan]);
-          setShowPlanTracker(true); // Show tracker when plans exist
         }
       }
     } catch (error) {
@@ -1735,18 +1734,6 @@ Remember: Clean readable text first, JSON code block at the end only.`;
             History
           </button>
 
-          {/* Plans Tracker */}
-          {accumulatedPlans.length > 0 && (
-            <button
-              onClick={() => setShowPlanTracker(!showPlanTracker)}
-              className={`px-3 py-1.5 text-sm rounded-lg transition flex items-center gap-1.5 ${showPlanTracker ? 'bg-orange-500/30 text-orange-300' : 'bg-orange-500/20 text-orange-300 hover:bg-orange-500/30'}`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
-              Plans ({accumulatedPlans.length})
-            </button>
-          )}
 
 
           {/* Settings */}
@@ -1806,8 +1793,8 @@ Remember: Clean readable text first, JSON code block at the end only.`;
       {/* Main Content - Lovable-style layout */}
       <div className="flex-1 flex overflow-hidden">
 
-        {/* LEFT: Chat Sidebar - Always visible, narrow */}
-        <aside className="w-[380px] min-w-[380px] border-r border-vs-border bg-vs-card/30 flex flex-col">
+        {/* LEFT: Chat Panel - Wider for better readability */}
+        <aside className="w-[480px] min-w-[480px] border-r border-vs-border bg-vs-card/30 flex flex-col">
           {/* Chat Header */}
           <div className="p-3 border-b border-vs-border flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -2009,6 +1996,38 @@ Remember: Clean readable text first, JSON code block at the end only.`;
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
               </button>
             </div>
+
+            {/* Execute Button - Shows when there's a plan ready */}
+            {(() => {
+              const latestPlanMsg = [...messages].reverse().find(m => m.role === 'assistant' && extractJsonPlan(m.content)?.shots);
+              const latestPlan = latestPlanMsg ? extractJsonPlan(latestPlanMsg.content) : null;
+              const hasPlan = latestPlan && latestPlan.shots && latestPlan.shots.length > 0;
+
+              if (hasPlan && !isGenerating && !isGeneratingAssets) {
+                return (
+                  <button
+                    onClick={() => generateFromJsonPlan(latestPlan)}
+                    className="w-full py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition flex items-center justify-center gap-2 font-semibold"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Execute Plan ({latestPlan.shots.length} shots)
+                  </button>
+                );
+              }
+
+              if (isGeneratingAssets) {
+                return (
+                  <div className="w-full py-2.5 bg-purple-500/20 text-purple-300 rounded-lg flex items-center justify-center gap-2 text-sm">
+                    <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                    Generating... {generationProgress.current}/{generationProgress.total}
+                  </div>
+                );
+              }
+
+              return null;
+            })()}
           </div>
         </aside>
 
@@ -2324,70 +2343,6 @@ Remember: Clean readable text first, JSON code block at the end only.`;
           </aside>
         )}
 
-        {/* Plan Tracker Panel */}
-        {showPlanTracker && accumulatedPlans.length > 0 && (
-          <aside className="w-80 border-l border-vs-border bg-vs-card/50 p-4 overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-orange-300">Tracked Plans</h3>
-              <button
-                onClick={() => setShowPlanTracker(false)}
-                className="text-white/40 hover:text-white/60"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Plans List */}
-            <div className="space-y-3 mb-4">
-              {accumulatedPlans.map((plan, idx) => (
-                <div key={plan.id} className="bg-vs-dark rounded-lg p-3 border border-orange-500/20">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-white font-medium">{plan.name}</span>
-                    <button
-                      onClick={() => setAccumulatedPlans(prev => prev.filter(p => p.id !== plan.id))}
-                      className="text-red-400/60 hover:text-red-400 text-xs"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <div className="text-xs text-white/50">
-                    {plan.shots.length} shots
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Total Count */}
-            <div className="bg-orange-500/10 rounded-lg p-3 mb-4">
-              <div className="text-xs text-orange-300 mb-1">Total Shots</div>
-              <div className="text-2xl font-bold text-orange-400">
-                {accumulatedPlans.reduce((sum, p) => sum + p.shots.length, 0)}
-              </div>
-            </div>
-
-            {/* Execute All Button */}
-            <button
-              onClick={executeAllPlans}
-              disabled={isGeneratingAssets || accumulatedPlans.length === 0}
-              className="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold text-lg flex items-center justify-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              EXECUTE ALL
-            </button>
-
-            {/* Clear All */}
-            <button
-              onClick={() => { setAccumulatedPlans([]); setShowPlanTracker(false); }}
-              className="w-full mt-2 py-2 text-sm text-white/40 hover:text-white/60 transition"
-            >
-              Clear All Plans
-            </button>
-          </aside>
-        )}
       </div>
     </div>
   );
