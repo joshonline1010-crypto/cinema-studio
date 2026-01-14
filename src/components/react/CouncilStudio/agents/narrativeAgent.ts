@@ -50,7 +50,8 @@ export const narrativeAgent: CouncilAgent = {
   ],
 
   async evaluate(context: ShotContext): Promise<AgentDecision> {
-    const { shot, previousShots, plan, userPrompt } = context;
+    const { shot, previousShots = [], plan } = context;
+    const userPrompt = context.userPrompt || '';
 
     // Analyze narrative position
     const shotPosition = previousShots.length + 1;

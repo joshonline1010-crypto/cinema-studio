@@ -76,7 +76,7 @@ export const productionAgent: CouncilAgent = {
   ],
 
   async evaluate(context: ShotContext): Promise<AgentDecision> {
-    const { shot, previousShots, refs, plan } = context;
+    const { shot, previousShots = [], refs = [], plan } = context;
 
     // Determine chain strategy
     const chainStrategy = this.determineChainStrategy(shot, previousShots);

@@ -98,7 +98,8 @@ export const technicalAgent: CouncilAgent = {
   ],
 
   async evaluate(context: ShotContext): Promise<AgentDecision> {
-    const { shot, userPrompt, refs, previousShots } = context;
+    const { shot, refs = [], previousShots = [] } = context;
+    const userPrompt = context.userPrompt || '';
 
     // Analyze prompt for model selection
     const hasDialog = this.detectDialog(userPrompt);

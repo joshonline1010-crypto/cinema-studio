@@ -389,7 +389,8 @@ export default function AI2Studio() {
       try {
         console.log('[AI2] 🧠 Council deliberating...');
         const meetingResult = await runMeeting({
-          prompt: userMessage,
+          userPrompt: userMessage,  // API expects userPrompt, not prompt
+          shot: { id: `shot_${Date.now()}`, description: userMessage },  // API requires shot object
           director: null,
           previousShots: generatedAssets.filter(a => a.videoUrl).map(a => ({
             id: a.id,

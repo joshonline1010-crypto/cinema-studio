@@ -130,7 +130,8 @@ export const visualAgent: CouncilAgent = {
   ],
 
   async evaluate(context: ShotContext): Promise<AgentDecision> {
-    const { shot, previousShots, plan, userPrompt, director } = context;
+    const { shot, previousShots = [], plan, director } = context;
+    const userPrompt = context.userPrompt || '';
 
     // Determine director style
     const detectedDirector = director || this.detectDirectorFromPrompt(userPrompt);

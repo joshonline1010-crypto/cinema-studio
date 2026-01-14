@@ -84,7 +84,8 @@ async function callRealAgent(agentName: string, context: ShotContext): Promise<A
 
 // Fallback decisions if Claude call fails
 function getFallbackDecision(agentName: string, context: ShotContext): AgentDecision {
-  const { shot, previousShots, userPrompt, director } = context;
+  const { shot, previousShots = [], director } = context;
+  const userPrompt = context.userPrompt || '';
 
   switch (agentName) {
     case 'narrative':
