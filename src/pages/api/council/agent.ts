@@ -23,7 +23,7 @@ const OPENAI_AVAILABLE = OPENAI_API_KEY.length > 10;
 
 // Use Claude Sonnet for agents (faster, cheaper, still very capable)
 const AGENT_MODEL = 'claude-sonnet-4-20250514';
-const OPENAI_MODEL = 'gpt-4o-2024-11-20';  // Latest GPT-4o
+const OPENAI_MODEL = 'gpt-5.2';  // GPT-5.2 released Dec 2025!
 
 console.log(`[Council Agent] Claude: ${CLAUDE_AVAILABLE ? 'CONFIGURED' : 'MISSING'}, OpenAI: ${OPENAI_AVAILABLE ? 'CONFIGURED' : 'MISSING'}`);
 

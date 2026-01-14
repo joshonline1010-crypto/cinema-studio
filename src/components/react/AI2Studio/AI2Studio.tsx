@@ -168,6 +168,10 @@ export default function AI2Studio() {
   // Default video duration
   const [defaultDuration, setDefaultDuration] = useState<'5' | '10'>('5');
 
+  // Aspect ratio - 16:9 (landscape), 9:16 (TikTok/Reels), 1:1 (Square)
+  type AspectRatio = '16:9' | '9:16' | '1:1';
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('16:9');
+
   // Auto-approve mode - skips approval phases, runs straight through
   // DEFAULT: true - Execute Plan now runs fully automatic (refs→images→videos→stitch)
   const [autoApprove, setAutoApprove] = useState(true);
@@ -989,7 +993,7 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
         const requestBody: any = {
           type: hasBaseImage ? 'edit' : 'image',
           prompt,
-          aspect_ratio: '16:9',
+          aspect_ratio: aspectRatio,
           resolution: '4K' // Use 4K for refs to get best quality
         };
 
@@ -1238,7 +1242,7 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
         const requestBody = {
           type: requestType,
           prompt: finalPrompt,
-          aspect_ratio: '16:9',
+          aspect_ratio: aspectRatio,
           resolution: '2K',
           image_urls: shotRefUrls.length > 0 ? shotRefUrls : undefined
         };
@@ -1374,7 +1378,7 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
         body: JSON.stringify({
           type: refUrls.length > 0 ? 'edit' : 'image',
           prompt: finalPrompt,
-          aspect_ratio: '16:9',
+          aspect_ratio: aspectRatio,
           resolution: '4K',
           image_urls: refUrls.length > 0 ? refUrls : undefined
         })
@@ -1469,7 +1473,7 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
         const requestBody: any = {
           type: apiType,
           prompt: motionPrompt,
-          aspect_ratio: '16:9'
+          aspect_ratio: aspectRatio
         };
 
         // FRAME CHAINING: If we have a chained frame from previous video, use it as start
@@ -1655,7 +1659,7 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
     const combinedPlan = {
       name: 'Combined Execution',
       shots: allShots,
-      aspect_ratio: '16:9'
+      aspect_ratio: aspectRatio
     };
 
     // Run the full pipeline
@@ -1686,7 +1690,7 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
         body: JSON.stringify({
           type: refUrls.length > 0 ? 'edit' : 'image',
           prompt: prompt,
-          aspect_ratio: '16:9',
+          aspect_ratio: aspectRatio,
           resolution: '4K',
           image_urls: refUrls.length > 0 ? refUrls : undefined
         })
@@ -2741,6 +2745,32 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
                   >
                     <span>{info.name}</span>
                     <span className="text-xs text-white/40">{info.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Aspect Ratio Selection */}
+            <div className="mb-6">
+              <label className="text-xs text-white/50 uppercase tracking-wide mb-2 block">Aspect Ratio</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: '16:9', label: '16:9', desc: 'YouTube', icon: '📺' },
+                  { value: '9:16', label: '9:16', desc: 'TikTok/Reels', icon: '📱' },
+                  { value: '1:1', label: '1:1', desc: 'Square', icon: '⬜' }
+                ].map(({ value, label, desc, icon }) => (
+                  <button
+                    key={value}
+                    onClick={() => setAspectRatio(value as AspectRatio)}
+                    className={`flex flex-col items-center p-2 rounded-lg text-xs transition ${
+                      aspectRatio === value
+                        ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
+                        : 'bg-vs-dark text-white/50 hover:bg-white/10 border border-transparent'
+                    }`}
+                  >
+                    <span className="text-lg mb-1">{icon}</span>
+                    <span className="font-medium">{label}</span>
+                    <span className="text-[9px] text-white/40">{desc}</span>
                   </button>
                 ))}
               </div>

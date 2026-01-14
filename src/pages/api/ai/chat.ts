@@ -18,14 +18,15 @@ const OLLAMA_CHAT_URL = 'http://localhost:11434/api/chat';
 const CLAUDE_AVAILABLE = ANTHROPIC_API_KEY.length > 10;
 const OPENAI_AVAILABLE = OPENAI_API_KEY.length > 10;
 
-// Model options
-type ModelOption = 'claude-sonnet' | 'claude-opus' | 'gpt-4o' | 'gpt-4-turbo' | 'qwen' | 'mistral';
+// Model options - GPT-5.2 released Dec 2025!
+type ModelOption = 'claude-sonnet' | 'claude-opus' | 'gpt-5.2' | 'gpt-5.2-thinking' | 'gpt-4o' | 'qwen' | 'mistral';
 
 const MODEL_MAP: Record<ModelOption, { provider: 'anthropic' | 'openai' | 'ollama'; model: string }> = {
   'claude-sonnet': { provider: 'anthropic', model: 'claude-sonnet-4-20250514' },
   'claude-opus': { provider: 'anthropic', model: 'claude-opus-4-5-20251101' },
-  'gpt-4o': { provider: 'openai', model: 'gpt-4o' },
-  'gpt-4-turbo': { provider: 'openai', model: 'gpt-4-turbo' },
+  'gpt-5.2': { provider: 'openai', model: 'gpt-5.2' },           // Best for general tasks
+  'gpt-5.2-thinking': { provider: 'openai', model: 'gpt-5.2-thinking' }, // Best for coding/planning
+  'gpt-4o': { provider: 'openai', model: 'gpt-4o' },             // Legacy fallback
   'qwen': { provider: 'ollama', model: 'qwen3:8b' },
   'mistral': { provider: 'ollama', model: 'mistral' }
 };
@@ -33,7 +34,7 @@ const MODEL_MAP: Record<ModelOption, { provider: 'anthropic' | 'openai' | 'ollam
 // Log API availability at startup
 console.log(`[AI Chat] Claude API key: ${CLAUDE_AVAILABLE ? 'CONFIGURED' : 'MISSING'}`);
 console.log(`[AI Chat] OpenAI API key: ${OPENAI_AVAILABLE ? 'CONFIGURED' : 'MISSING'}`);
-console.log(`[AI Chat] Fallback chain: Claude → OpenAI GPT-4 → Qwen (local)`);
+console.log(`[AI Chat] Fallback chain: Claude → GPT-5.2 → Qwen (local)`);
 
 // Memory storage directory
 const MEMORY_DIR = path.join(process.cwd(), 'ai-memory');
@@ -195,7 +196,7 @@ async function callClaude(
 async function callOpenAI(
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
-  model: string = 'gpt-4o'
+  model: string = 'gpt-5.2'
 ): Promise<string> {
   console.log(`[OpenAI API] Calling ${model}...`);
 
@@ -348,10 +349,10 @@ export const POST: APIRoute = async ({ request }) => {
             assistantMessage = await callOpenAI(
               AI_SYSTEM_PROMPT,
               messages,
-              'gpt-4o'  // GPT-4o is their best model
+              'gpt-5.2'  // GPT-5.2 is their best model (Dec 2025)
             );
             actualProvider = 'openai (fallback)';
-            actualModel = 'gpt-4o';
+            actualModel = 'gpt-5.2';
           } catch (openaiError) {
             // OpenAI also failed - try Qwen as last resort
             console.log(`[AI Chat] OpenAI failed, falling back to Qwen:`, openaiError);
