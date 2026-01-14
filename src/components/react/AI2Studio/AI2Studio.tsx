@@ -125,6 +125,11 @@ export default function AI2Studio() {
   const [showCouncilPanel, setShowCouncilPanel] = useState(false);
   const { councilEnabled, setCouncilEnabled, runMeeting, consensus } = useCouncilStore();
 
+  // Ref Upload Modal state
+  const [showRefUploadModal, setShowRefUploadModal] = useState(false);
+  const [pendingRefFile, setPendingRefFile] = useState<{ file: File; dataUrl: string } | null>(null);
+  const [pendingRefName, setPendingRefName] = useState('');
+
   // Format a nice summary from a JSON plan - SIMPLIFIED: Refs row, then content
   const formatPlanSummary = (plan: any): React.ReactNode => {
     if (!plan) return null;
@@ -1950,7 +1955,28 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
                           {hasPlan && <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded">Plan ready</span>}
                         </div>
                       )}
-                      <div className="whitespace-pre-wrap leading-relaxed">{showText}</div>
+                      {/* Render images if message contains markdown images */}
+                      {showText.includes('![') && showText.includes('](') ? (
+                        <div className="leading-relaxed">
+                          {showText.split(/(\!\[[^\]]*\]\([^)]+\))/).map((part, i) => {
+                            const imgMatch = part.match(/\!\[([^\]]*)\]\(([^)]+)\)/);
+                            if (imgMatch) {
+                              return (
+                                <div key={i} className="my-2">
+                                  <img
+                                    src={imgMatch[2]}
+                                    alt={imgMatch[1]}
+                                    className="max-w-[200px] max-h-[200px] rounded-lg border border-white/20 object-cover"
+                                  />
+                                </div>
+                              );
+                            }
+                            return <span key={i} className="whitespace-pre-wrap">{part}</span>;
+                          })}
+                        </div>
+                      ) : (
+                        <div className="whitespace-pre-wrap leading-relaxed">{showText}</div>
+                      )}
                       {isLong && (
                         <button
                           onClick={() => setExpandedMessages(prev => {
@@ -2033,46 +2059,13 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
               {/* Single image upload button */}
               <input type="file" id="ref-upload" accept="image/*" className="hidden" onChange={async (e) => {
                 const file = e.target.files?.[0]; if (!file) return;
-                const name = prompt('Name this reference (character, location, or prop):') || 'Reference';
+                // Read file and show modal for type selection
                 const reader = new FileReader();
-                reader.onload = async (ev) => {
+                reader.onload = (ev) => {
                   const dataUrl = ev.target?.result as string;
-                  // Create unique ID to track this specific upload
-                  const uploadId = `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-                  setRefImages(prev => [...prev, { url: dataUrl, description: name, _uploadId: uploadId, _uploading: true } as any]);
-                  try {
-                    console.log(`[AI2] Converting data URL to blob...`);
-                    const blob = await fetch(dataUrl).then(r => r.blob());
-                    console.log(`[AI2] Blob created: ${blob.size} bytes, type: ${blob.type}`);
-
-                    const formData = new FormData();
-                    // Use a proper filename with extension based on type
-                    const ext = blob.type.includes('png') ? 'png' : 'jpg';
-                    formData.append('file', blob, `ref-${Date.now()}.${ext}`);
-
-                    // Use server-side proxy to avoid CORS issues
-                    console.log(`[AI2] Uploading ref via /api/cinema/upload...`);
-                    const res = await fetch('/api/cinema/upload', {
-                      method: 'POST',
-                      body: formData
-                    });
-
-                    console.log(`[AI2] Upload response status: ${res.status}`);
-                    const data = await res.json();
-                    console.log(`[AI2] Upload response data:`, data);
-                    // Update by unique ID, not by index (fixes race condition!)
-                    if (data.success && data.url) {
-                      console.log(`[AI2] Ref upload complete: ${name} → ${data.url}`);
-                      setRefImages(prev => prev.map(img => (img as any)._uploadId === uploadId ? { ...img, url: data.url, _uploading: false } : img));
-                    } else {
-                      console.log(`[AI2] Upload failed:`, data.error || data);
-                      setRefImages(prev => prev.map(img => (img as any)._uploadId === uploadId ? { ...img, _uploading: false, _failed: true } : img));
-                    }
-                  } catch (err) {
-                    console.log('Upload failed:', err);
-                    // Mark as failed but keep the data URL - user can still proceed
-                    setRefImages(prev => prev.map(img => (img as any)._uploadId === uploadId ? { ...img, _uploading: false, _failed: true } : img));
-                  }
+                  setPendingRefFile({ file, dataUrl });
+                  setPendingRefName('');
+                  setShowRefUploadModal(true);
                 };
                 reader.readAsDataURL(file);
                 e.target.value = '';
@@ -2869,6 +2862,115 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
         )}
 
       </div>
+
+      {/* Ref Upload Modal - Type Selection */}
+      {showRefUploadModal && pendingRefFile && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowRefUploadModal(false)}>
+          <div className="bg-zinc-900 rounded-2xl p-6 max-w-md w-full mx-4 border border-white/10" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-white mb-4">Add Reference Image</h3>
+
+            {/* Image Preview */}
+            <div className="mb-4 rounded-lg overflow-hidden bg-black/50 flex items-center justify-center" style={{ height: '200px' }}>
+              <img src={pendingRefFile.dataUrl} alt="Preview" className="max-h-full max-w-full object-contain" />
+            </div>
+
+            {/* Name Input */}
+            <input
+              type="text"
+              value={pendingRefName}
+              onChange={e => setPendingRefName(e.target.value)}
+              placeholder="Name this reference..."
+              className="w-full px-4 py-3 bg-black/50 border border-white/20 rounded-lg text-white placeholder-white/40 mb-4 focus:outline-none focus:border-purple-500"
+              autoFocus
+            />
+
+            {/* Type Selection Buttons */}
+            <div className="text-xs text-white/50 mb-2">What type of reference is this?</div>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { type: 'character', label: 'Character', icon: '👤', color: 'cyan' },
+                { type: 'location', label: 'Location', icon: '🏔️', color: 'green' },
+                { type: 'prop', label: 'Prop', icon: '📦', color: 'orange' }
+              ].map(({ type, label, icon, color }) => (
+                <button
+                  key={type}
+                  onClick={async () => {
+                    const name = pendingRefName.trim() || label;
+                    const dataUrl = pendingRefFile.dataUrl;
+                    const uploadId = `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+                    // Close modal
+                    setShowRefUploadModal(false);
+
+                    // Add to appropriate ref list based on type
+                    if (type === 'character') {
+                      setCharacterRefs(prev => [...prev, { name, url: dataUrl, _uploadId: uploadId, _uploading: true } as any]);
+                    } else if (type === 'location') {
+                      setLocationRefs(prev => [...prev, { name, url: dataUrl, _uploadId: uploadId, _uploading: true } as any]);
+                    } else {
+                      setProductRefs(prev => [...prev, { name, url: dataUrl, _uploadId: uploadId, _uploading: true } as any]);
+                    }
+
+                    // Upload file
+                    try {
+                      const blob = await fetch(dataUrl).then(r => r.blob());
+                      const formData = new FormData();
+                      const ext = blob.type.includes('png') ? 'png' : 'jpg';
+                      formData.append('file', blob, `ref-${Date.now()}.${ext}`);
+
+                      const res = await fetch('/api/cinema/upload', { method: 'POST', body: formData });
+                      const data = await res.json();
+
+                      if (data.success && data.url) {
+                        console.log(`[AI2] Ref upload complete: ${name} (${type}) → ${data.url}`);
+                        const updateFn = (prev: any[]) => prev.map(r => (r as any)._uploadId === uploadId ? { ...r, url: data.url, _uploading: false } : r);
+                        if (type === 'character') setCharacterRefs(updateFn);
+                        else if (type === 'location') setLocationRefs(updateFn);
+                        else setProductRefs(updateFn);
+
+                        // Add message to chat showing the uploaded ref
+                        const typeLabel = type === 'character' ? '👤 Character' : type === 'location' ? '🏔️ Location' : '📦 Prop';
+                        addMessage('assistant', `**${typeLabel} ref added:** ${name}\n\n![${name}](${data.url})`);
+                      } else {
+                        console.log(`[AI2] Upload failed:`, data.error);
+                        const updateFn = (prev: any[]) => prev.map(r => (r as any)._uploadId === uploadId ? { ...r, _uploading: false, _failed: true } : r);
+                        if (type === 'character') setCharacterRefs(updateFn);
+                        else if (type === 'location') setLocationRefs(updateFn);
+                        else setProductRefs(updateFn);
+                      }
+                    } catch (err) {
+                      console.log('Upload failed:', err);
+                      const updateFn = (prev: any[]) => prev.map(r => (r as any)._uploadId === uploadId ? { ...r, _uploading: false, _failed: true } : r);
+                      if (type === 'character') setCharacterRefs(updateFn);
+                      else if (type === 'location') setLocationRefs(updateFn);
+                      else setProductRefs(updateFn);
+                    }
+
+                    setPendingRefFile(null);
+                  }}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition hover:scale-105 ${
+                    color === 'cyan' ? 'border-cyan-500/50 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300' :
+                    color === 'green' ? 'border-green-500/50 bg-green-500/10 hover:bg-green-500/20 text-green-300' :
+                    'border-orange-500/50 bg-orange-500/10 hover:bg-orange-500/20 text-orange-300'
+                  }`}
+                >
+                  <span className="text-2xl">{icon}</span>
+                  <span className="font-medium">{label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Cancel */}
+            <button
+              onClick={() => { setShowRefUploadModal(false); setPendingRefFile(null); }}
+              className="w-full mt-4 py-2 text-white/50 hover:text-white/70 text-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

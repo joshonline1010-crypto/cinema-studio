@@ -9,24 +9,31 @@ config();
 
 // API Configuration - Use environment variable or fallback
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OLLAMA_CHAT_URL = 'http://localhost:11434/api/chat';
 
-// Check if Claude API is available
+// Check if APIs are available
 const CLAUDE_AVAILABLE = ANTHROPIC_API_KEY.length > 10;
+const OPENAI_AVAILABLE = OPENAI_API_KEY.length > 10;
 
 // Model options
-type ModelOption = 'claude-sonnet' | 'claude-opus' | 'qwen' | 'mistral';
+type ModelOption = 'claude-sonnet' | 'claude-opus' | 'gpt-4o' | 'gpt-4-turbo' | 'qwen' | 'mistral';
 
-const MODEL_MAP: Record<ModelOption, { provider: 'anthropic' | 'ollama'; model: string }> = {
+const MODEL_MAP: Record<ModelOption, { provider: 'anthropic' | 'openai' | 'ollama'; model: string }> = {
   'claude-sonnet': { provider: 'anthropic', model: 'claude-sonnet-4-20250514' },
   'claude-opus': { provider: 'anthropic', model: 'claude-opus-4-5-20251101' },
+  'gpt-4o': { provider: 'openai', model: 'gpt-4o' },
+  'gpt-4-turbo': { provider: 'openai', model: 'gpt-4-turbo' },
   'qwen': { provider: 'ollama', model: 'qwen3:8b' },
   'mistral': { provider: 'ollama', model: 'mistral' }
 };
 
 // Log API availability at startup
-console.log(`[AI Chat] Claude API key: ${CLAUDE_AVAILABLE ? 'CONFIGURED' : 'MISSING - will use Ollama fallback'}`);
+console.log(`[AI Chat] Claude API key: ${CLAUDE_AVAILABLE ? 'CONFIGURED' : 'MISSING'}`);
+console.log(`[AI Chat] OpenAI API key: ${OPENAI_AVAILABLE ? 'CONFIGURED' : 'MISSING'}`);
+console.log(`[AI Chat] Fallback chain: Claude → OpenAI GPT-4 → Qwen (local)`);
 
 // Memory storage directory
 const MEMORY_DIR = path.join(process.cwd(), 'ai-memory');
@@ -184,6 +191,49 @@ async function callClaude(
   return responseText;
 }
 
+// Call OpenAI API (GPT-4o - fallback when Claude fails)
+async function callOpenAI(
+  systemPrompt: string,
+  messages: Array<{ role: string; content: string }>,
+  model: string = 'gpt-4o'
+): Promise<string> {
+  console.log(`[OpenAI API] Calling ${model}...`);
+
+  const openaiMessages = [
+    { role: 'system', content: systemPrompt },
+    ...messages.map(msg => ({
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content
+    }))
+  ];
+
+  const response = await fetch(OPENAI_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: openaiMessages,
+      max_tokens: 16000,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[OpenAI API] Error:', response.status, errorText);
+    throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.choices?.[0]?.message?.content || '';
+
+  console.log(`[OpenAI API] Response length: ${responseText.length}`);
+  return responseText;
+}
+
 // Call Ollama API (fallback)
 async function callOllama(
   systemPrompt: string,
@@ -280,7 +330,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     if (modelConfig.provider === 'anthropic') {
-      // Use Claude
+      // Use Claude with fallback chain: Claude → OpenAI GPT-4 → Qwen
       try {
         assistantMessage = await callClaude(
           AI_SYSTEM_PROMPT,
@@ -290,8 +340,61 @@ export const POST: APIRoute = async ({ request }) => {
         );
         actualProvider = 'anthropic';
       } catch (claudeError) {
-        // Claude failed - try Ollama as fallback
-        console.log(`[AI Chat] Claude failed, falling back to Ollama:`, claudeError);
+        // Claude failed - try OpenAI GPT-4 as first fallback
+        console.log(`[AI Chat] Claude failed, trying OpenAI GPT-4...`, claudeError);
+
+        if (OPENAI_AVAILABLE) {
+          try {
+            assistantMessage = await callOpenAI(
+              AI_SYSTEM_PROMPT,
+              messages,
+              'gpt-4o'  // GPT-4o is their best model
+            );
+            actualProvider = 'openai (fallback)';
+            actualModel = 'gpt-4o';
+          } catch (openaiError) {
+            // OpenAI also failed - try Qwen as last resort
+            console.log(`[AI Chat] OpenAI failed, falling back to Qwen:`, openaiError);
+            try {
+              assistantMessage = await callOllama(
+                AI_SYSTEM_PROMPT,
+                messages,
+                'qwen3:8b'
+              );
+              actualProvider = 'ollama (fallback)';
+              actualModel = 'qwen';
+            } catch (ollamaError) {
+              throw new Error(`All providers failed. Claude: ${claudeError}. OpenAI: ${openaiError}. Qwen: ${ollamaError}`);
+            }
+          }
+        } else {
+          // OpenAI not configured - go straight to Qwen
+          console.log(`[AI Chat] OpenAI not configured, falling back to Qwen`);
+          try {
+            assistantMessage = await callOllama(
+              AI_SYSTEM_PROMPT,
+              messages,
+              'qwen3:8b'
+            );
+            actualProvider = 'ollama (fallback)';
+            actualModel = 'qwen';
+          } catch (ollamaError) {
+            throw new Error(`Claude and Qwen both failed. Claude: ${claudeError}. Qwen: ${ollamaError}`);
+          }
+        }
+      }
+    } else if (modelConfig.provider === 'openai') {
+      // Use OpenAI directly (GPT-4o, etc.)
+      try {
+        assistantMessage = await callOpenAI(
+          AI_SYSTEM_PROMPT,
+          messages,
+          modelConfig.model
+        );
+        actualProvider = 'openai';
+      } catch (openaiError) {
+        // OpenAI failed - try Qwen
+        console.log(`[AI Chat] OpenAI failed, falling back to Qwen:`, openaiError);
         try {
           assistantMessage = await callOllama(
             AI_SYSTEM_PROMPT,
@@ -301,11 +404,11 @@ export const POST: APIRoute = async ({ request }) => {
           actualProvider = 'ollama (fallback)';
           actualModel = 'qwen';
         } catch (ollamaError) {
-          throw new Error(`Both Claude and Ollama failed. Claude: ${claudeError}. Ollama: ${ollamaError}`);
+          throw new Error(`OpenAI and Qwen both failed. OpenAI: ${openaiError}. Qwen: ${ollamaError}`);
         }
       }
     } else {
-      // Use Ollama
+      // Use Ollama directly
       assistantMessage = await callOllama(
         AI_SYSTEM_PROMPT,
         messages,

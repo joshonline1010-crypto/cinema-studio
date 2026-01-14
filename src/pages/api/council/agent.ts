@@ -1,4 +1,4 @@
-// API Endpoint: Call individual AI agent with Claude
+// API Endpoint: Call individual AI agent with Claude or OpenAI fallback
 import type { APIRoute } from 'astro';
 import { config } from 'dotenv';
 
@@ -6,10 +6,19 @@ import { config } from 'dotenv';
 config();
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+
+// Check API availability
+const CLAUDE_AVAILABLE = ANTHROPIC_API_KEY.length > 10;
+const OPENAI_AVAILABLE = OPENAI_API_KEY.length > 10;
 
 // Use Claude Sonnet for agents (faster, cheaper, still very capable)
 const AGENT_MODEL = 'claude-sonnet-4-20250514';
+const OPENAI_MODEL = 'gpt-4o';
+
+console.log(`[Council Agent] Claude: ${CLAUDE_AVAILABLE ? 'CONFIGURED' : 'MISSING'}, OpenAI: ${OPENAI_AVAILABLE ? 'CONFIGURED' : 'MISSING'}`);
 
 // ============================================
 // AGENT SYSTEM PROMPTS - Rich domain knowledge
@@ -260,7 +269,7 @@ const AGENT_PROMPTS: Record<string, string> = {
 };
 
 // ============================================
-// CLAUDE API CALL
+// AI API CALLS (Claude + OpenAI fallback)
 // ============================================
 
 async function callClaudeAgent(
@@ -289,7 +298,7 @@ async function callClaudeAgent(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`[${agentName.toUpperCase()} AGENT] Error:`, response.status, errorText);
+    console.error(`[${agentName.toUpperCase()} AGENT] Claude Error:`, response.status, errorText);
     throw new Error(`Claude API error: ${response.status}`);
   }
 
@@ -305,8 +314,48 @@ async function callClaudeAgent(
     }
   }
 
-  console.log(`[${agentName.toUpperCase()} AGENT] Response received (${responseText.length} chars)`);
+  console.log(`[${agentName.toUpperCase()} AGENT] Claude response (${responseText.length} chars)`);
+  return parseAgentResponse(agentName, responseText);
+}
 
+async function callOpenAIAgent(
+  agentName: string,
+  systemPrompt: string,
+  userMessage: string
+): Promise<any> {
+  console.log(`[${agentName.toUpperCase()} AGENT] Calling OpenAI GPT-4o...`);
+
+  const response = await fetch(OPENAI_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ],
+      max_tokens: 4000,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[${agentName.toUpperCase()} AGENT] OpenAI Error:`, response.status, errorText);
+    throw new Error(`OpenAI API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.choices?.[0]?.message?.content || '';
+
+  console.log(`[${agentName.toUpperCase()} AGENT] OpenAI response (${responseText.length} chars)`);
+  return parseAgentResponse(agentName, responseText);
+}
+
+function parseAgentResponse(agentName: string, responseText: string): any {
   // Parse JSON from response
   try {
     // Try to extract JSON from the response
@@ -328,17 +377,47 @@ async function callClaudeAgent(
   }
 }
 
+// Call agent with fallback: Claude → OpenAI
+async function callAgentWithFallback(
+  agentName: string,
+  systemPrompt: string,
+  userMessage: string
+): Promise<{ result: any; provider: string }> {
+  // Try Claude first
+  if (CLAUDE_AVAILABLE) {
+    try {
+      const result = await callClaudeAgent(agentName, systemPrompt, userMessage);
+      return { result, provider: 'claude' };
+    } catch (claudeError) {
+      console.log(`[${agentName.toUpperCase()} AGENT] Claude failed, trying OpenAI...`, claudeError);
+    }
+  }
+
+  // Try OpenAI as fallback
+  if (OPENAI_AVAILABLE) {
+    try {
+      const result = await callOpenAIAgent(agentName, systemPrompt, userMessage);
+      return { result, provider: 'openai' };
+    } catch (openaiError) {
+      console.error(`[${agentName.toUpperCase()} AGENT] OpenAI also failed:`, openaiError);
+      throw new Error(`Both Claude and OpenAI failed for ${agentName} agent`);
+    }
+  }
+
+  throw new Error('No AI provider configured (need ANTHROPIC_API_KEY or OPENAI_API_KEY)');
+}
+
 // ============================================
 // API ROUTE
 // ============================================
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    // Check API key
-    if (!ANTHROPIC_API_KEY || ANTHROPIC_API_KEY.length < 10) {
+    // Check for at least one API key
+    if (!CLAUDE_AVAILABLE && !OPENAI_AVAILABLE) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'ANTHROPIC_API_KEY not configured'
+        error: 'No AI provider configured. Need ANTHROPIC_API_KEY or OPENAI_API_KEY in .env'
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
@@ -376,8 +455,8 @@ SELECTED DIRECTOR STYLE: ${context.director || 'Not specified - you choose'}
 
 Analyze this and provide your expert recommendation as the ${agent.toUpperCase()} AGENT.`;
 
-    // Call Claude
-    const result = await callClaudeAgent(
+    // Call agent with fallback (Claude → OpenAI)
+    const { result, provider } = await callAgentWithFallback(
       agent,
       AGENT_PROMPTS[agent],
       userMessage
@@ -386,7 +465,8 @@ Analyze this and provide your expert recommendation as the ${agent.toUpperCase()
     return new Response(JSON.stringify({
       success: true,
       agent,
-      decision: result
+      decision: result,
+      provider  // Let caller know which provider was used
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
