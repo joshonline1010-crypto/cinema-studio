@@ -1,6 +1,9 @@
 // API Endpoint: Call individual AI agent with Claude or OpenAI fallback
+// NOW WITH MOVIE SHOTS DATABASE INTEGRATION
 import type { APIRoute } from 'astro';
 import { config } from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 
 // Load .env file
 config();
@@ -10,15 +13,124 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
+// Database paths
+const MOVIE_SHOTS_INDEX = 'C:\\Users\\yodes\\Documents\\Production-System\\MOVIE SHOTS\\index.json';
+const TAGGING_SCHEMA = 'C:\\Users\\yodes\\Documents\\Production-System\\MOVIE SHOTS\\TAGGING_SCHEMA_V2.json';
+
 // Check API availability
 const CLAUDE_AVAILABLE = ANTHROPIC_API_KEY.length > 10;
 const OPENAI_AVAILABLE = OPENAI_API_KEY.length > 10;
 
 // Use Claude Sonnet for agents (faster, cheaper, still very capable)
 const AGENT_MODEL = 'claude-sonnet-4-20250514';
-const OPENAI_MODEL = 'gpt-4o';
+const OPENAI_MODEL = 'gpt-4o-2024-11-20';  // Latest GPT-4o
 
 console.log(`[Council Agent] Claude: ${CLAUDE_AVAILABLE ? 'CONFIGURED' : 'MISSING'}, OpenAI: ${OPENAI_AVAILABLE ? 'CONFIGURED' : 'MISSING'}`);
+
+// ============================================
+// DATABASE QUERY FUNCTIONS
+// ============================================
+
+let cachedIndex: any = null;
+let cachedSchema: any = null;
+
+function loadMovieShotsIndex(): any {
+  if (cachedIndex) return cachedIndex;
+  try {
+    const data = fs.readFileSync(MOVIE_SHOTS_INDEX, 'utf-8');
+    cachedIndex = JSON.parse(data);
+    console.log(`[Database] Loaded ${cachedIndex.count} shots from MOVIE SHOTS index`);
+    return cachedIndex;
+  } catch (err) {
+    console.error('[Database] Failed to load index:', err);
+    return { shots: [], count: 0 };
+  }
+}
+
+function loadTaggingSchema(): any {
+  if (cachedSchema) return cachedSchema;
+  try {
+    const data = fs.readFileSync(TAGGING_SCHEMA, 'utf-8');
+    cachedSchema = JSON.parse(data);
+    console.log('[Database] Loaded tagging schema');
+    return cachedSchema;
+  } catch (err) {
+    console.error('[Database] Failed to load schema:', err);
+    return {};
+  }
+}
+
+// Query relevant shots based on context
+function queryRelevantShots(context: any, limit: number = 5): any[] {
+  const index = loadMovieShotsIndex();
+  if (!index.shots || index.shots.length === 0) return [];
+
+  const userPrompt = (context.userPrompt || '').toLowerCase();
+  const director = context.director?.toLowerCase();
+
+  // Score each shot based on relevance
+  const scoredShots = index.shots.map((shot: any) => {
+    let score = 0;
+
+    // Director match (high priority)
+    if (director && shot.director?.toLowerCase().includes(director)) {
+      score += 10;
+    }
+
+    // Keyword matching in prompt
+    const keywords = userPrompt.split(/\s+/);
+    for (const keyword of keywords) {
+      if (keyword.length < 3) continue;
+      if (shot.prompt?.toLowerCase().includes(keyword)) score += 2;
+      if (shot.tags?.some((t: string) => t.toLowerCase().includes(keyword))) score += 3;
+      if (shot.emotion?.toLowerCase().includes(keyword)) score += 4;
+      if (shot.movement?.toLowerCase().includes(keyword)) score += 3;
+      if (shot.shot?.toLowerCase().includes(keyword)) score += 2;
+    }
+
+    // Emotion matching
+    const emotions = ['fear', 'anger', 'joy', 'sad', 'tense', 'awe', 'love', 'menacing'];
+    for (const emotion of emotions) {
+      if (userPrompt.includes(emotion) && shot.emotion?.toLowerCase().includes(emotion)) {
+        score += 5;
+      }
+    }
+
+    // Camera movement matching
+    const movements = ['dolly', 'pan', 'orbit', 'static', 'handheld', 'steadicam', 'zoom', 'crane'];
+    for (const movement of movements) {
+      if (userPrompt.includes(movement) && shot.movement?.toLowerCase().includes(movement)) {
+        score += 4;
+      }
+    }
+
+    return { ...shot, relevanceScore: score };
+  });
+
+  // Sort by score and return top matches
+  return scoredShots
+    .filter((s: any) => s.relevanceScore > 0)
+    .sort((a: any, b: any) => b.relevanceScore - a.relevanceScore)
+    .slice(0, limit);
+}
+
+// Format shots for agent context
+function formatShotsForContext(shots: any[]): string {
+  if (shots.length === 0) return 'No matching shots found in database.';
+
+  return shots.map((s: any, i: number) => `
+REFERENCE SHOT ${i + 1} (Score: ${s.relevanceScore}):
+- Film: ${s.film || 'Unknown'} (${s.year || 'N/A'})
+- Director: ${s.director || 'Unknown'}
+- Shot Type: ${s.shot || 'N/A'}
+- Movement: ${s.movement || 'static'}
+- Emotion: ${s.emotion || 'neutral'} (${s.emotionIntensity || 'medium'})
+- Lighting: ${s.lighting || 'natural'}
+- Lens: ${s.lens || '50mm'}
+- Prompt: ${s.prompt || 'N/A'}
+- Tags: ${s.tags?.join(', ') || 'none'}
+`).join('\n');
+}
 
 // ============================================
 // AGENT SYSTEM PROMPTS - Rich domain knowledge
@@ -438,7 +550,13 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Build user message with context
+    // Query database for relevant reference shots
+    console.log(`[${agent.toUpperCase()} AGENT] Querying MOVIE SHOTS database...`);
+    const relevantShots = queryRelevantShots(context, 5);
+    const databaseContext = formatShotsForContext(relevantShots);
+    console.log(`[${agent.toUpperCase()} AGENT] Found ${relevantShots.length} relevant reference shots`);
+
+    // Build user message with context + database knowledge
     const userMessage = `Evaluate this shot for video production:
 
 USER PROMPT: ${context.userPrompt || 'No prompt provided'}
@@ -453,6 +571,13 @@ REFERENCE IMAGES: ${context.refs?.length || 0} refs available
 
 SELECTED DIRECTOR STYLE: ${context.director || 'Not specified - you choose'}
 
+============================================
+DATABASE REFERENCE SHOTS (similar shots from real films):
+============================================
+${databaseContext}
+
+Use these reference shots to inform your recommendations. Match the style, movement, and emotion patterns from successful films.
+
 Analyze this and provide your expert recommendation as the ${agent.toUpperCase()} AGENT.`;
 
     // Call agent with fallback (Claude → OpenAI)
@@ -466,7 +591,8 @@ Analyze this and provide your expert recommendation as the ${agent.toUpperCase()
       success: true,
       agent,
       decision: result,
-      provider  // Let caller know which provider was used
+      provider,
+      databaseHits: relevantShots.length  // Show how many reference shots were used
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

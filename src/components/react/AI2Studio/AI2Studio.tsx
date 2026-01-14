@@ -2171,10 +2171,11 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
               // User uploaded refs first
               refImages.forEach((r, i) => {
                 const isChar = r.description?.startsWith('👤');
-                const isLoc = r.description?.startsWith('📍');
+                const isLoc = r.description?.startsWith('📍') || r.description?.startsWith('🏔️');
+                const isProp = r.description?.startsWith('📦');
                 allRefs.push({
                   id: `upload-${i}`,
-                  name: r.description?.replace(/^(👤|📍|📦)\s*/, '') || 'Ref',
+                  name: r.description?.replace(/^(👤|📍|🏔️|📦)\s*/, '') || 'Ref',
                   type: isChar ? 'char' : isLoc ? 'loc' : 'item',
                   url: r.url,
                   generated: false
@@ -2902,7 +2903,11 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
                     // Close modal
                     setShowRefUploadModal(false);
 
-                    // Add to appropriate ref list based on type
+                    // Add to refImages for visual display (loading thumbnail)
+                    const refDescription = `${icon} ${name}`;
+                    setRefImages(prev => [...prev, { url: dataUrl, description: refDescription, _uploadId: uploadId, _uploading: true, _type: type } as any]);
+
+                    // Add to appropriate typed ref list
                     if (type === 'character') {
                       setCharacterRefs(prev => [...prev, { name, url: dataUrl, _uploadId: uploadId, _uploading: true } as any]);
                     } else if (type === 'location') {
@@ -2924,6 +2929,8 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
                       if (data.success && data.url) {
                         console.log(`[AI2] Ref upload complete: ${name} (${type}) → ${data.url}`);
                         const updateFn = (prev: any[]) => prev.map(r => (r as any)._uploadId === uploadId ? { ...r, url: data.url, _uploading: false } : r);
+                        // Update all ref arrays
+                        setRefImages(updateFn);
                         if (type === 'character') setCharacterRefs(updateFn);
                         else if (type === 'location') setLocationRefs(updateFn);
                         else setProductRefs(updateFn);
@@ -2934,6 +2941,7 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
                       } else {
                         console.log(`[AI2] Upload failed:`, data.error);
                         const updateFn = (prev: any[]) => prev.map(r => (r as any)._uploadId === uploadId ? { ...r, _uploading: false, _failed: true } : r);
+                        setRefImages(updateFn);
                         if (type === 'character') setCharacterRefs(updateFn);
                         else if (type === 'location') setLocationRefs(updateFn);
                         else setProductRefs(updateFn);
@@ -2941,6 +2949,7 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
                     } catch (err) {
                       console.log('Upload failed:', err);
                       const updateFn = (prev: any[]) => prev.map(r => (r as any)._uploadId === uploadId ? { ...r, _uploading: false, _failed: true } : r);
+                      setRefImages(updateFn);
                       if (type === 'character') setCharacterRefs(updateFn);
                       else if (type === 'location') setLocationRefs(updateFn);
                       else setProductRefs(updateFn);
