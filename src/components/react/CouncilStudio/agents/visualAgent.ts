@@ -243,7 +243,8 @@ export const visualAgent: CouncilAgent = {
   },
 
   applyFiveQuestions(context: ShotContext, directorPreset: any): { reasoning: string[], decisions: any } {
-    const { shot, userPrompt } = context;
+    const { shot } = context;
+    const userPrompt = context.userPrompt || '';
     const reasoning: string[] = [];
     const decisions: any = {};
 
@@ -284,7 +285,8 @@ export const visualAgent: CouncilAgent = {
   },
 
   determineShotType(context: ShotContext): string {
-    const { userPrompt, previousShots } = context;
+    const { previousShots = [] } = context;
+    const userPrompt = context.userPrompt || '';
     const promptLower = userPrompt.toLowerCase();
 
     // Keyword detection
@@ -309,7 +311,7 @@ export const visualAgent: CouncilAgent = {
   },
 
   determineCameraMovement(context: ShotContext, directorPreset: any): string {
-    const { userPrompt } = context;
+    const userPrompt = context.userPrompt || '';
     const promptLower = userPrompt.toLowerCase();
 
     // Keyword detection
@@ -340,7 +342,7 @@ export const visualAgent: CouncilAgent = {
   },
 
   determineLighting(context: ShotContext): string {
-    const { userPrompt } = context;
+    const userPrompt = context.userPrompt || '';
     const promptLower = userPrompt.toLowerCase();
 
     if (promptLower.includes('noir') || promptLower.includes('shadow')) return 'film_noir';
@@ -403,7 +405,7 @@ export const visualAgent: CouncilAgent = {
   },
 
   checkViolation(context: ShotContext, neverDo: string): boolean {
-    const { userPrompt } = context;
+    const userPrompt = context.userPrompt || '';
     const promptLower = userPrompt.toLowerCase();
     const neverDoLower = neverDo.toLowerCase();
 

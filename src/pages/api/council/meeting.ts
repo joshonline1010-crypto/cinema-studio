@@ -36,7 +36,7 @@ interface ConsensusResult {
 const AGENT_NAMES = ['narrative', 'visual', 'technical', 'production'];
 
 async function callRealAgent(agentName: string, context: ShotContext): Promise<AgentDecision> {
-  const baseUrl = process.env.SITE_URL || 'http://localhost:3002';
+  const baseUrl = process.env.SITE_URL || 'http://localhost:3001';
 
   try {
     console.log(`[COUNCIL] Calling ${agentName.toUpperCase()} agent via Claude...`);
