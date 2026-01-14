@@ -1,0 +1,37 @@
+# NEXT SESSION TODO - AI2 Studio
+# Updated: 2026-01-14
+
+## CURRENT STATUS
+Frame chaining IMPLEMENTED - needs testing!
+
+## WHAT WAS DONE THIS SESSION
+1. Added frame chaining state variables (enableChaining, lastExtractedFrame)
+2. Added UI toggle in Settings Panel (green=enabled, red=disabled)
+3. Modified generateVideosWithAssets() for sequential generation
+4. Wired up extract-frame.ts API calls
+5. When enabled: Video 1 → extract last frame → Video 2 uses it → repeat
+
+## TO TEST NOW
+1. Start dev server: npm run dev (port 4321)
+2. Open http://localhost:4321/cinema
+3. Generate a simple 2-shot sequence
+4. Check Settings Panel - Frame Chaining should be ON (green)
+5. Generate videos and watch console for:
+   - "🔗 Starting SEQUENTIAL video generation"
+   - "🎞️ Extracting last frame"
+   - "🔗 CHAIN: Using previous video's last frame"
+6. Verify colors match between shots in final video
+
+## PRIORITY TODO (after testing)
+1. [ ] TEST Frame Chaining - verify it works end-to-end
+2. [ ] Build Shot Database - JSON storage at C:\Users\yodes\Documents\n8n\db\shots\
+3. [ ] Create 3x3 Grid System - generate, cut, 8K upscale
+4. [ ] Build Planning UI - segment planner with continuity checker
+
+## FILES MODIFIED
+- AI2Studio.tsx (lines 169-172, 1368-1577, 2690-2718)
+
+## REFERENCE FILES
+- Plan: C:\Users\yodes\.claude\plans\floating-wobbling-lecun.md
+- THE_STACK doc: C:\Users\yodes\Documents\Production-System\THE_STACK_COUNCIL_PLAN.md
+- extract-frame API: C:\Users\yodes\Documents\n8n\video-studio\src\pages\api\cinema\extract-frame.ts

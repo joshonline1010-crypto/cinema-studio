@@ -1,0 +1,10 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CouncilStudio from '../components/react/CouncilStudio/CouncilStudio';
+
+const user = Astro.locals.user;
+---
+
+<BaseLayout title="Council Studio - Multi-Agent Film Production">
+  <CouncilStudio client:load />
+</BaseLayout>

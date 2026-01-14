@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAI2Store } from './ai2Store';
 import { buildAI2Prompt } from './ai2PromptSystem';
 import CameraControl, { buildFullCameraPrompt } from './CameraControl';
+import CouncilPanel from './components/CouncilPanel';
+import { useCouncilStore } from '../CouncilStudio/councilStore';
 
 // Mode descriptions
 const MODE_INFO = {
@@ -119,6 +121,10 @@ export default function AI2Studio() {
   const [cameraPrompt, setCameraPrompt] = useState<string>('');
   const [showCameraControl, setShowCameraControl] = useState(false);
 
+  // Council Panel state
+  const [showCouncilPanel, setShowCouncilPanel] = useState(false);
+  const { councilEnabled, setCouncilEnabled, runMeeting, consensus } = useCouncilStore();
+
   // Format a nice summary from a JSON plan - SIMPLIFIED: Refs row, then content
   const formatPlanSummary = (plan: any): React.ReactNode => {
     if (!plan) return null;
@@ -165,6 +171,11 @@ export default function AI2Studio() {
   type VideoModel = 'kling-2.6' | 'kling-o1' | 'seedance';
   const [videoModel, setVideoModel] = useState<VideoModel>('kling-2.6');
   const [autoDetectDialogue, setAutoDetectDialogue] = useState(true); // Auto-switch to Seedance for dialogue
+
+  // Frame Chaining - extract last frame of each video, use as input for next
+  // Prevents color drift between shots, maintains continuity
+  const [enableChaining, setEnableChaining] = useState(true); // ON by default
+  const [lastExtractedFrame, setLastExtractedFrame] = useState<string | null>(null);
 
   // TTS / Voiceover state
   const [voiceoverText, setVoiceoverText] = useState('');
@@ -372,6 +383,49 @@ export default function AI2Studio() {
     addMessage('user', userMessage);
     setGenerating(true);
 
+    // COUNCIL DELIBERATION (runs when panel is open)
+    let councilContext = '';
+    if (showCouncilPanel) {
+      try {
+        console.log('[AI2] 🧠 Council deliberating...');
+        const meetingResult = await runMeeting({
+          prompt: userMessage,
+          director: null,
+          previousShots: generatedAssets.filter(a => a.videoUrl).map(a => ({
+            id: a.id,
+            videoUrl: a.videoUrl,
+            prompt: a.prompt
+          })),
+          refs: [...characterRefs, ...locationRefs, ...productRefs].map(r => ({
+            id: r.name,
+            type: r.name.includes('char') ? 'character' : 'location',
+            url: r.url
+          }))
+        });
+
+        // Format council recommendations for Claude
+        if (meetingResult) {
+          const techRec = meetingResult.agentDecisions?.find((d: any) => d.agent === 'technical')?.recommendation;
+          const prodRec = meetingResult.agentDecisions?.find((d: any) => d.agent === 'production')?.recommendation;
+          const visRec = meetingResult.agentDecisions?.find((d: any) => d.agent === 'visual')?.recommendation;
+
+          councilContext = `
+## COUNCIL RECOMMENDATIONS (Follow These)
+- **Model:** ${meetingResult.finalDecision?.model || 'kling-2.6'}
+- **Duration:** ${meetingResult.finalDecision?.duration || '5'}s
+- **Motion Prompt:** ${techRec?.suggestedMotionPrompt || 'Smooth cinematic movement, then settles'}
+- **Color Lock:** ${prodRec?.colorLockPhrase || 'THIS EXACT CHARACTER, THIS EXACT LIGHTING'}
+- **Chain Strategy:** ${prodRec?.chainStrategy || 'new_sequence'}
+${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
+
+`;
+          console.log('[AI2] ✅ Council consensus received:', meetingResult.finalDecision);
+        }
+      } catch (error) {
+        console.log('[AI2] ⚠️ Council meeting failed, proceeding without:', error);
+      }
+    }
+
     try {
       // Build comprehensive system prompt with all cinematography knowledge
       const hasUploadedRefs = refImages.length > 0 || characterRefs.length > 0 || productRefs.length > 0 || locationRefs.length > 0;
@@ -384,7 +438,8 @@ export default function AI2Studio() {
         generalRefs: refImages.map(r => r.description || 'uploaded image')
       });
 
-      const messageToSend = `${systemPrompt}\n\n---\n\nUser: ${userMessage}`;
+      // Inject council recommendations into message
+      const messageToSend = `${systemPrompt}\n\n${councilContext}---\n\nUser: ${userMessage}`;
 
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -1362,6 +1417,7 @@ export default function AI2Studio() {
 
   // STEP 2: Generate videos for APPROVED shots only
   // Can receive assets directly to avoid stale closure issues
+  // FRAME CHAINING: When enabled, generates sequentially and uses last frame of each video as input for next
   const generateVideosWithAssets = async (passedAssets?: GeneratedAsset[]) => {
     const approvedAssets = passedAssets || generatedAssets.filter(a => a.approved === true && a.status === 'done' && a.url);
     if (approvedAssets.length === 0) {
@@ -1369,13 +1425,15 @@ export default function AI2Studio() {
       return;
     }
     console.log(`[AI2] generateVideosWithAssets called with ${approvedAssets.length} assets (passed directly: ${!!passedAssets})`);
+    console.log(`[AI2] Frame chaining: ${enableChaining ? 'ENABLED (sequential)' : 'DISABLED (parallel)'}`);
 
     setIsGeneratingAssets(true);
     setPipelinePhase('videos');
     setGenerationProgress({ current: 0, total: approvedAssets.length });
     console.log(`[AI2] Generating ${approvedAssets.length} videos for approved shots using model: ${videoModel}...`);
 
-    const videoPromises = approvedAssets.map(async (asset, approvedIndex) => {
+    // Helper function to generate a single video
+    const generateSingleVideo = async (asset: GeneratedAsset, approvedIndex: number, chainedFrameUrl?: string) => {
       const index = generatedAssets.findIndex(a => a.id === asset.id);
 
       setGeneratedAssets(prev => prev.map((a, idx) =>
@@ -1391,7 +1449,6 @@ export default function AI2Studio() {
           body: JSON.stringify({ image_url: asset.url })
         });
         const compressData = await compressRes.json();
-        // API returns image_url (not compressed_url)
         const compressedUrl = compressData.image_url || compressData.compressed_url || asset.url;
         console.log(`[AI2] Compressed: ${compressedUrl?.substring(0, 50)}... (${compressData.compressed_size ? Math.round(compressData.compressed_size/1024) + 'KB' : 'unknown size'})`);
 
@@ -1409,17 +1466,21 @@ export default function AI2Studio() {
           aspect_ratio: '16:9'
         };
 
+        // FRAME CHAINING: If we have a chained frame from previous video, use it as start
+        const startImageUrl = chainedFrameUrl || compressedUrl;
+        if (chainedFrameUrl) {
+          console.log(`[AI2] 🔗 CHAIN: Using previous video's last frame as start`);
+        }
+
         // Model-specific parameters
         if (apiType === 'video-kling-o1') {
-          // Kling O1 uses start_image_url (and optionally end_image_url for transitions)
-          requestBody.start_image_url = compressedUrl;
+          requestBody.start_image_url = startImageUrl;
           requestBody.duration = duration;
 
           // If there's a next approved asset, use it as end frame for smooth transition
           if (approvedIndex < approvedAssets.length - 1) {
             const nextAsset = approvedAssets[approvedIndex + 1];
             if (nextAsset?.url) {
-              // Compress next asset for end frame
               const nextCompressRes = await fetch('/api/cinema/compress', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1432,12 +1493,9 @@ export default function AI2Studio() {
             }
           }
         } else if (apiType === 'video-seedance') {
-          // Seedance uses image_url
-          requestBody.image_url = compressedUrl;
-          // Seedance doesn't use duration parameter the same way
+          requestBody.image_url = startImageUrl;
         } else {
-          // Kling 2.6 uses image_url
-          requestBody.image_url = compressedUrl;
+          requestBody.image_url = startImageUrl;
           requestBody.duration = duration;
         }
 
@@ -1462,9 +1520,64 @@ export default function AI2Studio() {
         ));
         return { index, success: false };
       }
-    });
+    };
 
-    const videoResults = await Promise.all(videoPromises);
+    // Helper function to extract last frame from video
+    const extractLastFrame = async (videoUrl: string): Promise<string | null> => {
+      try {
+        console.log(`[AI2] 🎞️ Extracting last frame from: ${videoUrl.substring(0, 50)}...`);
+        const response = await fetch('/api/cinema/extract-frame', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ video_url: videoUrl, position: 'last' })
+        });
+
+        if (!response.ok) {
+          console.error('[AI2] Frame extraction failed:', response.status);
+          return null;
+        }
+
+        const data = await response.json();
+        const frameUrl = data.frame_url;
+        console.log(`[AI2] ✅ Frame extracted: ${frameUrl?.substring(0, 50)}...`);
+        setLastExtractedFrame(frameUrl);
+        return frameUrl;
+      } catch (error) {
+        console.error('[AI2] Frame extraction error:', error);
+        return null;
+      }
+    };
+
+    let videoResults: Array<{ index: number; success: boolean; url?: string }> = [];
+
+    if (enableChaining && approvedAssets.length > 1) {
+      // SEQUENTIAL GENERATION with frame chaining
+      console.log('[AI2] 🔗 Starting SEQUENTIAL video generation with frame chaining...');
+      let chainedFrame: string | null = null;
+
+      for (let i = 0; i < approvedAssets.length; i++) {
+        const asset = approvedAssets[i];
+        console.log(`[AI2] Processing video ${i + 1}/${approvedAssets.length}${chainedFrame ? ' (with chained frame)' : ''}`);
+
+        // Generate video (using chained frame if available)
+        const result = await generateSingleVideo(asset, i, chainedFrame || undefined);
+        videoResults.push(result);
+
+        // Extract last frame for next video (if not the last one)
+        if (result.success && result.url && i < approvedAssets.length - 1) {
+          chainedFrame = await extractLastFrame(result.url);
+          if (!chainedFrame) {
+            console.warn('[AI2] ⚠️ Frame extraction failed, next video will use its own image');
+          }
+        }
+      }
+    } else {
+      // PARALLEL GENERATION (original behavior, faster but no chaining)
+      console.log('[AI2] ⚡ Starting PARALLEL video generation (no chaining)...');
+      const videoPromises = approvedAssets.map((asset, i) => generateSingleVideo(asset, i));
+      videoResults = await Promise.all(videoPromises);
+    }
+
     const successfulVideos = videoResults.filter(r => r.success);
     console.log(`[AI2] Videos done: ${successfulVideos.length}/${approvedAssets.length}`);
 
@@ -1724,6 +1837,20 @@ export default function AI2Studio() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
             3D
+          </button>
+
+          {/* Council Panel toggle */}
+          <button
+            onClick={() => setShowCouncilPanel(!showCouncilPanel)}
+            className={`px-3 py-1.5 text-sm rounded-lg transition flex items-center gap-1.5 ${
+              showCouncilPanel
+                ? 'bg-violet-500/30 text-violet-300 border border-violet-500/50'
+                : 'bg-white/10 text-white/50 hover:bg-white/20'
+            }`}
+            title="Council: 4 AI agents deliberate on model, motion, continuity before generation"
+          >
+            <span className="text-base">🧠</span>
+            Council
           </button>
 
           {/* Reset button - shows when generating is stuck */}
@@ -2624,6 +2751,37 @@ export default function AI2Studio() {
               </div>
             </div>
 
+            {/* Frame Chaining Toggle */}
+            <div className="mb-6">
+              <label className="text-xs text-white/50 uppercase tracking-wide mb-2 block">Frame Chaining</label>
+              <div className="bg-vs-dark rounded-lg p-3">
+                <button
+                  onClick={() => setEnableChaining(!enableChaining)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition ${
+                    enableChaining
+                      ? 'bg-green-500/20 text-green-300 border border-green-500/50'
+                      : 'bg-red-500/10 text-red-300/70 border border-red-500/30'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${enableChaining ? 'bg-green-400' : 'bg-red-400'}`}></span>
+                    {enableChaining ? 'Enabled' : 'Disabled'}
+                  </span>
+                  <span className="text-xs text-white/40">{enableChaining ? 'Sequential' : 'Parallel'}</span>
+                </button>
+                <p className="text-[10px] text-white/40 mt-2 leading-relaxed">
+                  When enabled, extracts last frame of each video and uses it as input for the next.
+                  Prevents color drift between shots. Videos generate sequentially.
+                </p>
+                {lastExtractedFrame && (
+                  <div className="mt-2 text-[10px] text-cyan-400/70 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></span>
+                    Last frame ready for chaining
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* System Prompt Info */}
             <div className="mb-6">
               <label className="text-xs text-white/50 uppercase tracking-wide mb-2 block">System Prompt</label>
@@ -2699,6 +2857,13 @@ export default function AI2Studio() {
                 <div>Extended Thinking: <span className="text-green-400">Enabled</span></div>
               </div>
             </div>
+          </aside>
+        )}
+
+        {/* Council Panel - AI Agent Deliberation */}
+        {showCouncilPanel && (
+          <aside className="w-96 border-l border-vs-border bg-zinc-950 overflow-y-auto">
+            <CouncilPanel />
           </aside>
         )}
 
