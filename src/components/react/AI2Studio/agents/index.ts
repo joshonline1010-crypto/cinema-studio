@@ -70,6 +70,9 @@ export { specOrchestrator, specAgents } from './specAgents';
 export { worldStatePersistence } from './worldStatePersistence';
 export type { ProjectSession, GeneratedAssetRecord, WorldStateSnapshot } from './worldStatePersistence';
 
+// GAME ENGINE DOCTRINE - 3-Layer Control System
+export * from './gameEngineDoctrine';
+
 // THE_STACK - Reference Image Stack System
 export {
   TheStack,

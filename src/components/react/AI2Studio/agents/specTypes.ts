@@ -263,6 +263,7 @@ export interface ContinuityViolation {
 }
 
 export type ViolationType =
+  // Legacy violations
   | 'direction_lock_violation'
   | 'mirroring_detected'
   | 'identity_drift'
@@ -271,7 +272,26 @@ export type ViolationType =
   | 'camera_rig_mismatch'
   | 'cockpit_plane_drift'
   | 'lighting_direction_change'
-  | 'teleport_detected';
+  | 'teleport_detected'
+  // LAYER 1: World Space violations
+  | 'world_space_teleport'         // Actor moved > 1m without movement delta
+  | 'object_spawn_violation'       // Object appeared from nowhere
+  | 'debris_persistence_violation' // Debris/damage disappeared
+  // LAYER 2: Camera Space violations (SACRED)
+  | 'lens_change_violation'        // CRITICAL - lens changed
+  | '180_degree_violation'         // Camera crossed axis
+  | 'camera_move_not_switch'       // Cut via move, not switch
+  // LAYER 3: Screen Space violations
+  | 'ndc_drift_violation'          // Actor drifted beyond tolerance
+  | 'screen_flip_violation'        // Left-right swap detected
+  | 'screen_scale_drift'           // Character scale changed > 10%
+  // Time violations
+  | 'time_rewind_violation'        // Time went backwards
+  | 'time_jump_violation'          // Time skipped without transition
+  | 'time_delta_mismatch'          // Motion doesn't match delta
+  // Compass violations
+  | 'compass_light_flip'           // Key light direction changed
+  | 'shadow_direction_flip';       // Shadow direction flipped
 
 export interface RepairInstruction {
   shot_id: string;
@@ -281,11 +301,19 @@ export interface RepairInstruction {
 }
 
 export type RepairAction =
+  // Legacy repair actions
   | 'regenerate_with_stronger_continuity_locks'
   | 'force_continue_from_last_frame'
   | 'force_same_camera_rig_and_lens'
   | 'reassert_scale_anchors'
-  | 'add_direction_lock_phrases';
+  | 'add_direction_lock_phrases'
+  // 3-Layer repair actions
+  | 'reassert_world_coordinates'   // Add explicit XYZ positions
+  | 'reassert_time_continuity'     // Add time delta assertions
+  | 'reassert_compass_lighting'    // Add compass light direction
+  | 'reassert_ndc_anchors'         // Add screen-space anchor constraints
+  | 'force_lens_lock'              // Force 35mm lens assertion
+  | 'force_debris_persistence';    // Add debris persistence phrases
 
 // ============================================
 // CWS LAWS (Non-Negotiable Rules)
