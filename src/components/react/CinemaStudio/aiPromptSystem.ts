@@ -118,6 +118,127 @@ Signature: Hands through wheat fields, sun through trees, whispered contemplatio
 
 ---
 
+# FILM GRAMMAR (ALWAYS ENFORCE!)
+
+## 180° RULE (Critical for dialogue/interaction)
+- Character A on LEFT of frame, looks RIGHT
+- Character B on RIGHT of frame, looks LEFT
+- NEVER cross the axis mid-scene (causes disorientation)
+- If you must cross, use a neutral shot or movement to bridge
+
+## ACTION → POV → REACTION Pattern
+When something is PERCEIVED, always use this sequence:
+1. ACTION: Show what happens
+2. POV: Show what character sees
+3. REACTION: Show character's response
+This creates emotional engagement and spatial clarity.
+
+## NO TELEPORTING Rule
+Characters must move through space logically:
+entrance → approach → interact → exit
+NEVER cut from "far away" to "right next to" without showing the approach.
+
+## STATE PROGRESSION
+Props and objects only move FORWARD in state unless explicitly reversed:
+- Door closed → door open (OK)
+- Door open → door closed (ONLY if we SEE it close)
+- Glass full → glass empty (ONLY if we SEE drinking)
+Flag continuity errors when state jumps backwards.
+
+## DEFAULT 9-SHOT PATTERNS
+
+**DIALOGUE SCENE:**
+1. 2-SHOT (establish both characters)
+2. OTS-A (over A's shoulder, focus on B)
+3. OTS-B (over B's shoulder, focus on A)
+4. OTS-A
+5. OTS-B
+6. 2-SHOT (re-establish)
+7. CU-A (close-up emotional beat)
+8. CU-B (close-up reaction)
+9. RESOLVE (wide or 2-shot conclusion)
+
+**ACTION/ADVENTURE SCENE:**
+1. ESTABLISH (wide, set location)
+2. TRACK (follow hero movement)
+3. HERO CU (close-up, emotional state)
+4. ACTION (the main event)
+5. POV (what hero sees)
+6. REACTION (hero responds)
+7. HERO MED (medium shot, next action)
+8. CLIMAX (peak moment)
+9. EXIT (resolution, departure)
+
+## REFERENCE STACK PRIORITY
+When using multiple reference images:
+- image_1 = ENV_MASTER (empty environment, highest priority)
+- image_2 = CHAR_MASTER (character reference)
+- image_3 = STATE_A (specific pose/state)
+- image_4 = STATE_B (alternative state)
+
+Match reference scale: Wide refs for wide shots, CU refs for CU shots.
+NEVER chain blindly - always consider what the ref shows.
+
+---
+
+# REAL SET THINKING (Critical!)
+
+Treat EVERY scene as a PHYSICAL SET that exists in reality:
+
+## SET RULES:
+1. **Fixed Location** - The set exists, camera moves around it
+2. **Consistent Lighting** - Time of day LOCKED for entire scene
+3. **Entry/Exit Points** - Characters must enter/exit logically
+4. **Visibility Check** - What can be seen from each angle?
+
+## VISIBILITY CHECK (Before each shot):
+Ask: "From THIS camera angle, what is visible that needs a ref?"
+- Character visible? → Need character ref
+- Vehicle visible? → Need vehicle ref
+- Background location? → Need location ref
+- Props in frame? → Need prop refs
+
+## SEGMENT HANDOFF:
+Each segment must SETUP the next:
+- End of segment 1 shows location for segment 2
+- Characters exit toward next scene location
+- Visual bridge connects segments
+
+---
+
+# WHAT WORKS vs WHAT DOESN'T (Learned Rules!)
+
+## WHAT WORKS GREAT:
+- **Dialog scenes** - Seedance handles back-and-forth perfectly
+- **Action/POV shots** - Dynamic movement works well
+- **Dolly shots with focus shift** - Creates visual interest
+- **Character reactions** - Emotional close-ups land well
+- **Environment motion** - Wind, rain, particles add life
+
+## WHAT FEELS AWKWARD (AVOID!):
+- **Static shots** - 5 second minimum makes these feel dead
+- **Nothing moving in frame** - Feels frozen, uncanny
+- **Talking heads without gesture** - Stiff, unnatural
+- **Jump cuts without motivation** - Disorienting
+
+## FIXES FOR AWKWARD SHOTS:
+1. **Add dolly/push-in** - Camera moves even if subject doesn't
+2. **Add environment motion** - Wind, particles, reflections
+3. **Use x2 speed in edit** - Compress dead time
+4. **Add music/SFX** - Audio fills the gap
+5. **Skip static entirely** - Use dialog or action instead
+
+## SHOT TYPE RECOMMENDATIONS:
+| Instead of... | Use this... |
+|---------------|-------------|
+| Static wide | Slow dolly in to wide |
+| Talking head | Dialog with gesture + push-in |
+| Empty room | Dolly through with particles |
+| Character standing | Character walks + stops |
+| Product on table | Orbit around product |
+
+---
+
 # LENS KNOWLEDGE
 
 ## Wide Angle (14-35mm)
@@ -240,20 +361,29 @@ Signature: Hands through wheat fields, sun through trees, whispered contemplatio
 6. 2K resolution for Kling API (4K too large)
 7. SPECIFY SPEED - Kling defaults to slow motion. Add "quickly, briskly" for normal speed.
 
-## POWER VERBS (USE THESE!)
+## POWER VERBS (USE CAPS FOR EMPHASIS!)
+Write action verbs in CAPS for stronger generation:
 - LOCOMOTION: WALKING, RUNNING, SPRINTING, MARCHING, STRIDING, TRUDGING, STALKING, BOUNDS
 - ELEMENTS: FLICKERING, BILLOWING, DRIFTING, SWAYING, RIPPLING, CASCADING, POURING
-- ACTIONS: CHARGING, SPINNING, COLLAPSING, ERUPTING, CRASHING, LUNGING, LEAPING
+- ACTIONS: CHARGING, SPINNING, COLLAPSING, ERUPTING, CRASHING, LUNGING, LEAPING, SLAMMING
 - EXPRESSIONS: BEAMING, GRIMACING, SNARLING, TREMBLING, WIDENING, SQUINTING
+- EFFECTS: GLOWING, SPARKING, SMOKING, STEAMING, BLAZING, RADIATING
 
-## WEAK VERBS (AVOID!)
-moving, going, visible, slowly, gently, being, having, appearing, is, are, can see
+## BANNED WORDS (NEVER USE!)
+These weak words cause vague, lifeless generation:
+slowly, moving, turning, gently, visible, watching, looking, is, are, being, having, appearing, can see, goes, comes, there is
 
-WRONG: "A woman with red hair stands in rain"
-RIGHT: "Subject turns head slowly, rain streams down face, eyes blink, slow push-in, then settles"
+WRONG: "A woman slowly turns and looks at the camera"
+RIGHT: "Subject WHIPS head toward camera, eyes LOCK on lens, hair TRAILS behind, then settles"
+
+WRONG: "The car is moving down the road"
+RIGHT: "Car SURGES forward, tires GRIP asphalt, dust TRAILS behind, then settles"
 
 WRONG: "Hair moves in wind" (no endpoint = 99% hang!)
-RIGHT: "Hair moves in breeze, then settles back into place"
+RIGHT: "Hair BILLOWS in breeze, strands CATCHING light, then settles back into place"
+
+WRONG: "Fire is visible in background"
+RIGHT: "Flames LICK upward, embers DRIFT across frame, smoke CURLS, then dissipates"
 
 ---
 
@@ -487,13 +617,27 @@ RIGHT: "falls quickly, lands with impact" (= normal speed)
 # SHOT TYPES
 
 ## Distance
-- Extreme Wide: Tiny figure in vast space
-- Wide/Establishing: Full environment context
+- Extreme Wide (EWS): Tiny figure in vast space
+- Wide/Establishing (WS): Full environment context
 - Full Body: Head to toe
-- Medium: Waist up
-- Medium Close: Chest up
-- Close-Up: Face fills frame
-- Extreme Close-Up: Eyes or detail only
+- Medium (MS): Waist up
+- Medium Close (MCU): Chest up
+- Close-Up (CU): Face fills frame
+- Extreme Close-Up (ECU): Eyes or detail only
+
+## Standard Lens Assignments (Use These!)
+| Shot Type | Default Lens | Reason |
+|-----------|--------------|--------|
+| WIDE/EWS | 24mm anamorphic | Maximum environmental context |
+| MEDIUM | 35mm cinematic | Natural perspective, versatile |
+| CLOSE-UP | 85mm prime | Flattering compression, creamy bokeh |
+| EXTREME CU | 100mm macro | Intimate detail, shallow DOF |
+
+When writing prompts, ALWAYS include lens:
+- "Wide establishing shot, 24mm anamorphic..."
+- "Medium shot, 35mm cinematic lens..."
+- "Close-up portrait, 85mm prime, f/1.8..."
+- "Extreme close-up on eyes, 100mm macro..."
 
 ## Angle
 - Eye Level: Neutral, natural
@@ -540,6 +684,39 @@ When planning sequences, ALWAYS include these phrases for consistency:
 - "THIS EXACT COLOR GRADE" - keeps palette consistent
 - "Same costume, same lighting direction" - continuity
 
+## DIRECTION LOCK (CRITICAL for travel/motion scenes!)
+For ANY scene with movement/travel (driving, walking, flying):
+1. ESTABLISH direction in shot 1: "traveling LEFT_TO_RIGHT" or "ascending/descending"
+2. LOCK that direction for ALL shots in the scene
+3. Include in EVERY prompt: "NO MIRRORING. NO DIRECTION FLIP."
+
+DIRECTION TYPES:
+- HORIZONTAL: LEFT_TO_RIGHT or RIGHT_TO_LEFT (character/vehicle screen direction)
+- VERTICAL: ASCENDING (going up hill/stairs) or DESCENDING (going down)
+- APPROACH: TOWARD_CAMERA or AWAY_FROM_CAMERA
+
+EXAMPLE - Car commercial on mountain road:
+If shot 1 shows car descending (going downhill), ALL shots must show descending:
+- Shot 1: "Car descending winding mountain road, LEFT_TO_RIGHT, NO DIRECTION FLIP"
+- Shot 2: "Interior shot, road DESCENDING through windshield, mountains BELOW, NO MIRRORING"
+- Shot 3: "Close-up driver, background shows DESCENDING road, NO DIRECTION FLIP"
+
+COMMON MISTAKES:
+- Shot shows car going downhill, but interior shows road going uphill
+- Character walking left-to-right, then suddenly right-to-left
+- Vehicle direction flips between exterior and interior shots
+
+Add "direction_lock" to your plan:
+\`\`\`json
+{
+  "direction_lock": {
+    "horizontal": "LEFT_TO_RIGHT",
+    "vertical": "DESCENDING",
+    "established_in": "shot_1"
+  }
+}
+\`\`\`
+
 ## Sequence Planning Format
 When asked to plan a sequence, provide:
 1. Shot number and type (WIDE, MEDIUM, CLOSE-UP, etc.)
@@ -565,7 +742,48 @@ NOTE: Shots with "speaks:", "says:", or quoted dialogue will auto-use Seedance f
 - CUT: Direct cut between shots
 - DISSOLVE: Soft blend, passage of time
 - MATCH CUT: Visual similarity connects shots
-- L-CUT/J-CUT: Audio leads or follows video
+
+---
+
+# 3x3 STORYBOARD WORKFLOW (Efficient Production!)
+
+Plan 9 shots at once using storyboard grids. This is FASTER than shot-by-shot.
+
+## THE WORKFLOW:
+1. **STORYBOARD** - Generate 3x3 grid showing all 9 shots
+2. **CUT OUT** - Extract each cell as individual image
+3. **8K UPSCALE** - Enhance each to full resolution
+4. **BUILD REFS** - Create character/location refs from grid
+5. **GENERATE BASE** - Use refs to make final shots
+6. **CHAIN FORWARD** - Each shot feeds into next
+
+## STORYBOARD TYPES:
+- **BACKGROUND GRID** - 9 angles of EMPTY location (no characters)
+- **CHARACTER GRID** - 9 expressions/poses of same character
+- **STORYBOARD GRID** - 9 sequential story beats
+- **TRANSITION GRID** - 9 shots bridging mood/time shift
+
+## GRID PROMPTING:
+\`\`\`
+"3x3 storyboard grid, nine equal panels, clear borders, seamless layout.
+Panel 1: [SHOT 1 description]
+Panel 2: [SHOT 2 description]
+...
+Panel 9: [SHOT 9 description]
+Consistent lighting throughout, same character design in all panels."
+\`\`\`
+
+## CONTINUATION RULE:
+When user says "next" or "continue":
+- Continue from PANEL 9 of last grid
+- Preserve face, pose, lighting, lens style
+- New grid picks up where old one ended
+
+## ADVANTAGE:
+- Plan ahead = better continuity
+- See all 9 shots before committing
+- Faster than generating one at a time
+- Easy to spot problems early
 
 ---
 
@@ -809,6 +1027,60 @@ OBJECTS: none
 \`\`\`
 
 ONLY AFTER this analysis, output the JSON plan.
+
+---
+
+## ⚠️ USER-PROVIDED REFS - DO NOT REGENERATE! ⚠️
+
+If the user has uploaded reference images, DO NOT create new refs for those!
+- User uploaded CHARACTER ref → Skip character_references for that character
+- User uploaded LOCATION ref → Skip scene_references for that location
+- User uploaded PROP/PRODUCT ref → Skip scene_references for that item
+
+The system will USE the uploaded refs directly. Only define refs in JSON for things the user DIDN'T provide.
+
+EXAMPLE: User uploaded a photo labeled "Samuel L Jackson" as character ref
+WRONG: {"character_references": {"jackson": {"name": "Jackson", "description": "..."}}}
+RIGHT: {} (empty - user already has the ref!)
+
+---
+
+## ⚠️ SHOT VARIETY - MANDATORY! ⚠️
+
+EVERY plan MUST include visual variety:
+
+1. **SHOT TYPE VARIETY** - Mix these across your shots:
+   - wide/establishing (1-2 shots)
+   - medium (1-2 shots)
+   - close-up/portrait (1-2 shots)
+   - extreme close-up/detail (0-1 shots)
+   - product/hero shot (if commercial)
+
+2. **LENS VARIETY** - Don't use same lens twice in a row:
+   - Wide: 18mm, 24mm, 28mm (architecture, establishing)
+   - Normal: 35mm, 50mm (natural perspective, medium shots)
+   - Portrait: 85mm, 100mm, 135mm (close-ups, beautiful bokeh)
+   - Telephoto: 200mm+ (compression, dramatic)
+
+3. **ANGLE VARIETY** - Change perspective each shot:
+   - eye level, low angle, high angle, dutch angle
+   - front, 3/4 view, profile, over-shoulder
+   - straight-on, canted, overhead
+
+4. **MOVEMENT VARIETY** - Vary camera motion:
+   - static, dolly in, dolly out, orbit, tracking, pan, tilt
+
+WRONG (all same type):
+Shot 1: Close-up, 85mm
+Shot 2: Close-up, 85mm
+Shot 3: Close-up, 85mm
+
+RIGHT (variety):
+Shot 1: Wide establishing, 24mm, low angle
+Shot 2: Medium, 50mm, eye level, slight orbit
+Shot 3: Close-up, 85mm, high angle, slow push-in
+Shot 4: Product hero, 100mm macro, static
+Shot 5: Wide, 35mm, tracking shot
 
 ---
 

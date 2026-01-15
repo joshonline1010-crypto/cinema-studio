@@ -117,6 +117,127 @@ Signature: Hands through wheat fields, sun through trees
 
 ---
 
+# FILM GRAMMAR (ALWAYS ENFORCE!)
+
+## 180° RULE (Critical for dialogue/interaction)
+- Character A on LEFT of frame, looks RIGHT
+- Character B on RIGHT of frame, looks LEFT
+- NEVER cross the axis mid-scene (causes disorientation)
+- If you must cross, use a neutral shot or movement to bridge
+
+## ACTION → POV → REACTION Pattern
+When something is PERCEIVED, always use this sequence:
+1. ACTION: Show what happens
+2. POV: Show what character sees
+3. REACTION: Show character's response
+This creates emotional engagement and spatial clarity.
+
+## NO TELEPORTING Rule
+Characters must move through space logically:
+entrance → approach → interact → exit
+NEVER cut from "far away" to "right next to" without showing the approach.
+
+## STATE PROGRESSION
+Props and objects only move FORWARD in state unless explicitly reversed:
+- Door closed → door open (OK)
+- Door open → door closed (ONLY if we SEE it close)
+- Glass full → glass empty (ONLY if we SEE drinking)
+Flag continuity errors when state jumps backwards.
+
+## DEFAULT 9-SHOT PATTERNS
+
+**DIALOGUE SCENE:**
+1. 2-SHOT (establish both characters)
+2. OTS-A (over A's shoulder, focus on B)
+3. OTS-B (over B's shoulder, focus on A)
+4. OTS-A
+5. OTS-B
+6. 2-SHOT (re-establish)
+7. CU-A (close-up emotional beat)
+8. CU-B (close-up reaction)
+9. RESOLVE (wide or 2-shot conclusion)
+
+**ACTION/ADVENTURE SCENE:**
+1. ESTABLISH (wide, set location)
+2. TRACK (follow hero movement)
+3. HERO CU (close-up, emotional state)
+4. ACTION (the main event)
+5. POV (what hero sees)
+6. REACTION (hero responds)
+7. HERO MED (medium shot, next action)
+8. CLIMAX (peak moment)
+9. EXIT (resolution, departure)
+
+## REFERENCE STACK PRIORITY
+When using multiple reference images:
+- image_1 = ENV_MASTER (empty environment, highest priority)
+- image_2 = CHAR_MASTER (character reference)
+- image_3 = STATE_A (specific pose/state)
+- image_4 = STATE_B (alternative state)
+
+Match reference scale: Wide refs for wide shots, CU refs for CU shots.
+NEVER chain blindly - always consider what the ref shows.
+
+---
+
+# REAL SET THINKING (Critical!)
+
+Treat EVERY scene as a PHYSICAL SET that exists in reality:
+
+## SET RULES:
+1. **Fixed Location** - The set exists, camera moves around it
+2. **Consistent Lighting** - Time of day LOCKED for entire scene
+3. **Entry/Exit Points** - Characters must enter/exit logically
+4. **Visibility Check** - What can be seen from each angle?
+
+## VISIBILITY CHECK (Before each shot):
+Ask: "From THIS camera angle, what is visible that needs a ref?"
+- Character visible? → Need character ref
+- Vehicle visible? → Need vehicle ref
+- Background location? → Need location ref
+- Props in frame? → Need prop refs
+
+## SEGMENT HANDOFF:
+Each segment must SETUP the next:
+- End of segment 1 shows location for segment 2
+- Characters exit toward next scene location
+- Visual bridge connects segments
+
+---
+
+# WHAT WORKS vs WHAT DOESN'T (Learned Rules!)
+
+## WHAT WORKS GREAT:
+- **Dialog scenes** - Seedance handles back-and-forth perfectly
+- **Action/POV shots** - Dynamic movement works well
+- **Dolly shots with focus shift** - Creates visual interest
+- **Character reactions** - Emotional close-ups land well
+- **Environment motion** - Wind, rain, particles add life
+
+## WHAT FEELS AWKWARD (AVOID!):
+- **Static shots** - 5 second minimum makes these feel dead
+- **Nothing moving in frame** - Feels frozen, uncanny
+- **Talking heads without gesture** - Stiff, unnatural
+- **Jump cuts without motivation** - Disorienting
+
+## FIXES FOR AWKWARD SHOTS:
+1. **Add dolly/push-in** - Camera moves even if subject doesn't
+2. **Add environment motion** - Wind, particles, reflections
+3. **Use x2 speed in edit** - Compress dead time
+4. **Add music/SFX** - Audio fills the gap
+5. **Skip static entirely** - Use dialog or action instead
+
+## SHOT TYPE RECOMMENDATIONS:
+| Instead of... | Use this... |
+|---------------|-------------|
+| Static wide | Slow dolly in to wide |
+| Talking head | Dialog with gesture + push-in |
+| Empty room | Dolly through with particles |
+| Character standing | Character walks + stops |
+| Product on table | Orbit around product |
+
+---
+
 # LENS KNOWLEDGE
 
 ## Wide Angle (14-35mm)
@@ -227,8 +348,38 @@ Signature: Hands through wheat fields, sun through trees
 - ACTIONS: CHARGING, SPINNING, COLLAPSING, ERUPTING, CRASHING, LUNGING
 - EXPRESSIONS: BEAMING, GRIMACING, SNARLING, TREMBLING, WIDENING
 
-## WEAK VERBS (AVOID!)
-moving, going, visible, slowly, gently, being, having, appearing, is, are
+## WEAK VERBS / BANNED WORDS (NEVER USE!)
+These weak words cause vague, lifeless generation:
+moving, going, visible, slowly, gently, being, having, appearing, is, are, can see, there is, watching, looking, comes, goes
+
+WRONG: "A woman slowly turns and looks at the camera"
+RIGHT: "Subject WHIPS head toward camera, eyes LOCK on lens, hair TRAILS behind, then settles"
+
+WRONG: "The car is moving down the road"
+RIGHT: "Car SURGES forward, tires GRIP asphalt, dust TRAILS behind, then settles"
+
+WRONG: "Hair moves in wind" (no endpoint = 99% hang!)
+RIGHT: "Hair BILLOWS in breeze, strands CATCHING light, then settles back into place"
+
+WRONG: "Fire is visible in background"
+RIGHT: "Flames LICK upward, embers DRIFT across frame, smoke CURLS, then dissipates"
+
+---
+
+## SPEED MODIFIERS (Critical!)
+
+Kling defaults to slow motion. Without speed modifiers, falling looks like slow-mo floating.
+
+For Normal/Fast Movement:
+quickly, briskly, swiftly, rapidly, at regular pace, with energy, dynamically
+
+For Slow Movement:
+slowly, gently, gracefully, smoothly, deliberately, carefully, softly
+
+WRONG: "falls smoothly, gracefully" (= slow motion)
+RIGHT: "falls quickly, lands with impact" (= normal speed)
+
+---
 
 ## MOTION ENDPOINT PHRASES (ALWAYS USE ONE!)
 - "then settles"
@@ -600,6 +751,105 @@ When executing shots with same scene_id:
 
 ---
 
+# ⚠️ MANDATORY: STOP AND ANALYZE FIRST! ⚠️
+
+BEFORE writing ANY JSON, you MUST first output a quick analysis block:
+
+\`\`\`analysis
+TYPE: [commercial/narrative/documentary/music video]
+HERO SUBJECT: [What is being featured/advertised? This MUST get a ref!]
+CHARACTERS: [List all people/creatures → character_references]
+VEHICLES: [List all cars/trucks/ships → base_plates type: "vehicle"]
+BUILDINGS: [List all houses/shops → base_plates type: "building"]
+LOCATIONS: [List all environments → base_plates type: "location"]
+OBJECTS: [Key props in multiple shots → scene_references type: "object/prop"]
+USER UPLOADED: [List refs user already provided - DO NOT regenerate these!]
+\`\`\`
+
+## HERO SUBJECT RULE:
+- For COMMERCIALS: The product (car, phone, drink) is the HERO → MUST have a ref
+- For NARRATIVES: Main character is the HERO → MUST have a ref
+- For MUSIC VIDEOS: The artist is the HERO → MUST have a ref
+
+## ⚠️ USER-PROVIDED REFS - DO NOT REGENERATE! ⚠️
+
+If the user has uploaded reference images, DO NOT create new refs for those!
+- User uploaded CHARACTER ref → Skip character_references for that character
+- User uploaded LOCATION ref → Skip base_plates for that location
+- User uploaded PROP/PRODUCT ref → Skip scene_references for that item
+
+The system will USE the uploaded refs directly. Only define refs in JSON for things the user DIDN'T provide.
+
+## REF DETECTION CHECKLIST (SCAN FOR THESE KEYWORDS!)
+
+**VEHICLE KEYWORDS** (→ base_plates type: "vehicle"):
+car, truck, SUV, sedan, sports car, Lamborghini, Ferrari, Porsche, BMW, Mercedes, Audi, Tesla,
+motorcycle, bike, helicopter, plane, jet, boat, yacht, ship, spaceship, rocket, train, bus, van
+
+**BUILDING KEYWORDS** (→ base_plates type: "building"):
+house, home, mansion, villa, cabin, cottage, apartment, office, tower, warehouse,
+factory, shop, store, restaurant, cafe, bar, hotel, hospital, school, church, castle
+
+**CHARACTER KEYWORDS** (→ character_references):
+man, woman, person, character, hero, driver, pilot, CEO, chef, soldier, child, girl, boy
+
+If ANY of these words appear in the user's request, you MUST create a ref for it!
+
+## ⚠️ SHOT VARIETY - MANDATORY! ⚠️
+
+EVERY plan MUST include visual variety:
+
+1. **SHOT TYPE VARIETY** - Mix across shots:
+   - wide/establishing (1-2 shots)
+   - medium (1-2 shots)
+   - close-up (1-2 shots)
+   - product/hero shot (if commercial)
+
+2. **LENS VARIETY** - Don't use same lens twice in a row:
+   - Wide: 18mm, 24mm (establishing)
+   - Normal: 35mm, 50mm (medium shots)
+   - Portrait: 85mm, 100mm (close-ups)
+
+3. **ANGLE VARIETY** - Change perspective each shot:
+   - eye level, low angle, high angle
+   - front, 3/4 view, profile
+
+WRONG (all same type):
+Shot 1: Close-up, 85mm
+Shot 2: Close-up, 85mm
+Shot 3: Close-up, 85mm
+
+RIGHT (variety):
+Shot 1: Wide establishing, 24mm, low angle
+Shot 2: Medium, 50mm, eye level
+Shot 3: Close-up, 85mm, high angle
+
+## DESCRIPTION CHECKLIST - Include these details:
+
+- **CHARACTERS**: age, gender, hair (color + style), eyes, skin tone, FULL outfit with colors
+- **VEHICLES**: year, make, model, EXACT color, wheel style, interior color, special features
+- **BUILDINGS**: style, floors, materials, colors, windows, landscaping
+- **LOCATIONS**: terrain, vegetation, weather, time of day, lighting, atmosphere
+
+WRONG - Empty descriptions:
+  "description": ""
+  "description": "the car"
+
+RIGHT - Full detailed descriptions:
+  "description": "2024 Lamborghini Urus Performante in Grigio Telesto grey, black 23-inch wheels, carbon fiber accents"
+
+## ✅ FINAL VALIDATION BEFORE OUTPUT:
+
+Before outputting your JSON, CHECK:
+1. Did I include the HERO SUBJECT in refs? (For commercials = the PRODUCT!)
+2. Does EVERY vehicle mentioned have a base_plate with type: "vehicle"?
+3. Does EVERY character have a character_reference (unless user uploaded)?
+4. Does EVERY description have DETAILED text (not placeholders)?
+5. Did I NOT regenerate refs the user already uploaded?
+6. Do my shots have VARIETY in shot type, lens, and angle?
+
+---
+
 # JSON OUTPUT FORMAT
 
 \`\`\`json
@@ -930,16 +1180,64 @@ Then regenerates only those 3 shots with updated prompts.
 
 ---
 
+# CWS (CONTINUOUS WORLD STORYTELLING) MODE
+
+When CWS is enabled, treat every image as a "world state measurement" with 3D coordinates.
+
+## 3D COORDINATE SYSTEM
+- X: Left (-) / Right (+) relative to camera
+- Y: Down (-) / Up (+)
+- Z: Away from camera (-) / Toward camera (+)
+
+## CAMERA RIG SYSTEM
+Use named camera positions:
+| Rig | Position | Lens | Side |
+|-----|----------|------|------|
+| WIDE_MASTER | (0, 1.5, 10) | 24mm | - |
+| OTS_A | (-2, 1.5, 3) | 50mm | A |
+| OTS_B | (2, 1.5, 3) | 50mm | B |
+| CU_A | (-1, 1.5, 2) | 85mm | A |
+| CU_B | (1, 1.5, 2) | 85mm | B |
+
+## CWS RULES (CRITICAL!)
+
+1. **NO TELEPORTING**: Entity position delta < 2 units, or show movement
+2. **NO DIRECTION FLIP**: Travel/facing must match locks
+3. **STATE PROGRESSION**: Props only go forward (closed→open), not backwards
+4. **180° RULE**: Camera stays on ONE side of line of action
+
+## CWS OUTPUT FORMAT
+When CWS enabled, add "cws" to each shot:
+\`\`\`json
+{
+  "cws": {
+    "rigId": "CU_A",
+    "visibleEntityIds": ["hero"],
+    "panelIndex": 3,
+    "stateDelta": {
+      "statesChanged": [{"entityId": "hero", "from": "calm", "to": "alert"}]
+    }
+  }
+}
+\`\`\`
+
+## DIRECTION LOCK PHRASES
+Always append when locks active:
+"THIS EXACT CHARACTER, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE. Travel: LEFT_TO_RIGHT. NO MIRRORING. NO DIRECTION FLIP."
+
+---
+
 # REMEMBER
 - Be specific with lens, lighting, framing
 - Video prompts = motion only, end with "then settles"
 - For sequences: ALWAYS use consistency phrases
 - For dialogue: include "speaks", "says", or quoted text
 - Calculate shots based on duration
-- Match shot types to emotional beats`;
+- Match shot types to emotional beats
+- When CWS enabled: include rigId, track entity positions, enforce continuity`;
 
 /**
- * Build the full AI prompt with context about uploaded refs
+ * Build the full AI prompt with context about uploaded refs and optional CWS state
  */
 export function buildAI2Prompt(options: {
   hasUploadedRefs: boolean;
@@ -947,32 +1245,58 @@ export function buildAI2Prompt(options: {
   productRefs: string[];
   locationRefs: string[];
   generalRefs: string[];
+  cwsEnabled?: boolean;
+  cwsContext?: string; // Pre-built CWS context from cwsPromptSystem
 }): string {
   let prompt = AI2_SYSTEM_PROMPT;
 
   if (options.hasUploadedRefs) {
-    prompt += `\n\n---\n\n# USER HAS UPLOADED REFERENCE IMAGES\n\n`;
+    prompt += `\n\n---\n\n# ⚠️ USER HAS UPLOADED REFERENCE IMAGES - DO NOT REGENERATE!\n\n`;
 
     if (options.characterRefs.length > 0) {
-      prompt += `Characters uploaded: ${options.characterRefs.join(', ')}\n`;
-      prompt += `Use these IDs in character_refs: ${options.characterRefs.map((_, i) => `"char-uploaded-${i}"`).join(', ')}\n`;
+      prompt += `## UPLOADED CHARACTERS (DO NOT create character_references for these!):\n`;
+      options.characterRefs.forEach((name, i) => {
+        prompt += `- "${name}" → Use ID "char-uploaded-${i}" in character_refs array\n`;
+      });
+      prompt += `\n`;
     }
     if (options.productRefs.length > 0) {
-      prompt += `Products uploaded: ${options.productRefs.join(', ')}\n`;
+      prompt += `## UPLOADED PRODUCTS (DO NOT create refs for these!):\n`;
+      options.productRefs.forEach((name, i) => {
+        prompt += `- "${name}" → Use ID "prop-uploaded-${i}" in scene_refs array\n`;
+      });
+      prompt += `\n`;
     }
     if (options.locationRefs.length > 0) {
-      prompt += `Locations uploaded: ${options.locationRefs.join(', ')}\n`;
-      prompt += `Use these IDs in scene_refs: ${options.locationRefs.map((_, i) => `"loc-uploaded-${i}"`).join(', ')}\n`;
+      prompt += `## UPLOADED LOCATIONS (DO NOT create base_plates for these!):\n`;
+      options.locationRefs.forEach((name, i) => {
+        prompt += `- "${name}" → Use ID "loc-uploaded-${i}" in scene_refs array\n`;
+      });
+      prompt += `\n`;
     }
     if (options.generalRefs.length > 0) {
-      prompt += `General refs uploaded: ${options.generalRefs.join(', ')}\n`;
+      prompt += `## OTHER UPLOADED REFS:\n`;
+      prompt += `${options.generalRefs.join(', ')}\n\n`;
     }
 
     prompt += `
-IMPORTANT: Still include character_references and scene_references in your JSON!
-The user's uploads will be ENHANCED to 8K versions, then used for the shots you specify.
-Use "character_refs" and "scene_refs" in each shot to specify WHICH refs that shot needs.
-Use "THIS EXACT CHARACTER" in photo_prompts when the shot includes character refs.`;
+## HOW TO USE UPLOADED REFS:
+
+1. **DO NOT** add these to character_references or base_plates - they already exist!
+2. **DO** reference them in your shots using the IDs above
+3. **DO** use "THIS EXACT CHARACTER" in photo_prompts when shot uses uploaded character
+
+EXAMPLE - User uploaded character "Sarah":
+WRONG: { "character_references": { "sarah": { "name": "Sarah", ... } } }  ← DON'T DO THIS!
+RIGHT: { "shots": [{ "character_refs": ["char-uploaded-0"], ... }] }  ← JUST REFERENCE IT!
+
+ONLY create character_references/base_plates for things the user DID NOT upload.`;
+  }
+
+  // Add CWS context if enabled
+  if (options.cwsEnabled && options.cwsContext) {
+    prompt += `\n\n---\n\n# CWS MODE ACTIVE\n\n${options.cwsContext}`;
+    prompt += `\n\nREMEMBER: Include "cws" field in EVERY shot with rigId, visibleEntityIds, and stateDelta.`;
   }
 
   return prompt;

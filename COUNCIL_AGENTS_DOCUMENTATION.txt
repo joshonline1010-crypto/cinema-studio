@@ -1,0 +1,583 @@
+================================================================================
+                    COUNCIL AGENTS SYSTEM - FULL DOCUMENTATION
+                         AI2 Studio Video Production Pipeline
+================================================================================
+
+Last Updated: January 2026
+Location: C:\Users\yodes\Documents\n8n\video-studio\
+
+================================================================================
+                              SYSTEM OVERVIEW
+================================================================================
+
+The Council is a multi-agent AI system that deliberates on video production
+decisions BEFORE any generation happens. Think of it like a film production
+meeting where 4 department heads each give their expert opinion, then vote
+on the best approach.
+
+WHY USE MULTIPLE AGENTS?
+- Single AI makes mistakes (wrong model, bad prompts, continuity errors)
+- Multiple specialists catch each other's blind spots
+- Weighted voting produces more reliable decisions
+- Database of real film shots informs recommendations
+
+================================================================================
+                              THE 4 AGENTS
+================================================================================
+
+Each agent is a Claude Sonnet instance with a specialized system prompt.
+They ALL run in PARALLEL (simultaneously) for speed, then vote.
+
+------------------------------------------------------------------------------
+1. NARRATIVE AGENT (Weight: 20%)
+------------------------------------------------------------------------------
+
+ICON: 📖
+ROLE: Story structure, pacing, emotional arcs
+COLOR: Violet
+
+WHAT IT ANALYZES:
+- Where is this shot in the story? (opening, midpoint, climax, finale)
+- What's the emotional intensity? (subtle → medium → strong → extreme)
+- How many shots should we use for this duration?
+- What's the narrative function of this shot?
+
+KEY KNOWLEDGE:
+
+Save-the-Cat Beat Structure:
+  Opening Image → Theme Stated → Setup → Catalyst → Debate →
+  Break Into Two → B Story → Fun and Games → Midpoint →
+  Bad Guys Close In → All Is Lost → Dark Night of Soul →
+  Break Into Three → Finale → Final Image
+
+Duration to Shot Count Rules:
+  - 10-15 seconds = 2-3 shots @ 5s each
+  - 30 seconds = 5-6 shots @ 5s each
+  - 60 seconds = 10-12 shots @ 5s each
+  - 90 seconds = 15-18 shots
+
+Emotional Arc Patterns:
+  - ESCALATING: subtle → medium → strong → extreme (building tension)
+  - CONTRAST: strong → calm → explosive (surprise impact)
+  - WAVE: medium → strong → medium → extreme (sustained engagement)
+
+Commercial Structure:
+  Hook (2-3s) → Story (8-15s) → Hero Shot (3-4s) → Tagline (2-3s)
+
+OUTPUT EXAMPLE:
+{
+  "agent": "narrative",
+  "recommendation": {
+    "beat": "catalyst",
+    "emotionalIntensity": "strong",
+    "pacingNote": "Building toward midpoint revelation",
+    "shotCountSuggestion": 3,
+    "narrativeFunction": "Establishes stakes before confrontation"
+  },
+  "confidence": 0.85,
+  "reasoning": ["Shot occurs at 30% mark - catalyst beat", "Tension needs to escalate"],
+  "warnings": []
+}
+
+------------------------------------------------------------------------------
+2. VISUAL AGENT (Weight: 30%)
+------------------------------------------------------------------------------
+
+ICON: 🎬
+ROLE: Director styles, cinematography, framing
+COLOR: Cyan
+
+WHAT IT ANALYZES:
+- Which director's style fits this shot?
+- What shot type? (ECU, CU, MS, WS, EWS)
+- What camera movement? (dolly, orbit, push-in, handheld)
+- What lighting and color palette?
+
+KEY KNOWLEDGE:
+
+The 5 Questions (Director Decision Framework):
+  1. POWER: "Who has the power in this moment?" → Determines framing
+  2. AUDIENCE EXPECT: "What does audience think will happen?" → Subvert or fulfill
+  3. INFORMATION HOLD: "What am I not showing — and how long?" → Creates tension
+  4. TIME MANIP: "Can I make this moment last longer/shorter?" → Pacing control
+  5. SIMPLICITY: "Simple or complex setup?" → Visual clarity
+
+Director Styles Database:
+
+  KUBRICK:
+    - Centered symmetrical framing
+    - Sterile geometric sets
+    - Desaturated cold colors
+    - Holds shots 5-10s LONGER than expected
+    - Architecture dominates humans
+
+  SPIELBERG:
+    - Rule of thirds
+    - Teal-orange color grade
+    - Dynamic camera follows emotion
+    - Retro americana aesthetic
+    - Emotional crescendos
+
+  FINCHER:
+    - Gritty decay sets
+    - Desaturated cold palette
+    - Methodical controlled movement
+    - Overhead shots
+    - Obsessive detail
+
+  NOLAN:
+    - Wide negative space
+    - IMAX scale
+    - Practical effects
+    - Time manipulation themes
+    - Epic scope
+
+  VILLENEUVE:
+    - Vast landscapes dwarf humans
+    - Desaturated cold
+    - Slow deliberate pacing
+    - Silence as tension
+
+  WES ANDERSON:
+    - Perfect centered symmetry
+    - Pastel colors
+    - Dollhouse whimsy
+    - Flat staging
+    - Quirky precision
+
+  TARANTINO:
+    - Low angle power shots
+    - Long dialogue takes
+    - Sudden violence
+    - Pop culture references
+    - Chapter structure
+
+  EDGAR WRIGHT:
+    - Quick cuts on action
+    - Whip pans
+    - Visual comedy
+    - Match cuts
+    - Mundane object inserts
+
+Shot Types:
+  - ECU (Extreme Close-Up): Eyes, details, intimate emotion
+  - CU (Close-Up): Face, strong emotional connection
+  - MCU (Medium Close-Up): Head and shoulders, dialogue
+  - MS (Medium Shot): Waist up, body language visible
+  - WS (Wide Shot): Full body + environment
+  - EWS (Extreme Wide): Epic scale, character dwarfed
+
+Camera Movements:
+  - DOLLY IN: Building intensity
+  - DOLLY OUT: Revealing context
+  - ORBIT: 360° around subject
+  - PUSH-IN: Approaching revelation
+  - STEADICAM: Smooth following (Kubrick corridors)
+  - HANDHELD: Documentary urgency
+  - STATIC: Tension through stillness
+
+OUTPUT EXAMPLE:
+{
+  "agent": "visual",
+  "recommendation": {
+    "directorApproach": "kubrick",
+    "shotType": "MS",
+    "framing": "centered_symmetrical",
+    "cameraMovement": "steadicam",
+    "lighting": "practical",
+    "colorPalette": "desaturated_cold",
+    "fiveQuestionsAnalysis": {
+      "power": "Environment dominates character",
+      "audienceExpect": "Something lurks ahead",
+      "informationHold": "End of corridor hidden",
+      "timeManip": "Extended duration builds dread",
+      "simplicity": "Single long take"
+    }
+  },
+  "confidence": 0.9
+}
+
+------------------------------------------------------------------------------
+3. TECHNICAL AGENT (Weight: 35%) - HIGHEST WEIGHT
+------------------------------------------------------------------------------
+
+ICON: ⚙️
+ROLE: Model selection, motion prompts, cost calculation
+COLOR: Emerald
+
+WHAT IT DECIDES:
+- Which video model? (Seedance 1.5, Kling O1, Kling 2.6)
+- What duration? (5s or 10s)
+- Is the motion prompt valid?
+- What will this cost?
+
+KEY KNOWLEDGE:
+
+Video Model Decision Tree (FOLLOW STRICTLY):
+
+  Does character SPEAK on screen?
+    YES → SEEDANCE 1.5
+    NO  → Continue...
+
+  Is there camera movement WITH explicit end frame needed?
+    YES → KLING O1
+    NO  → Continue...
+
+  Is it a START → END state transition (zoom, morph, transform)?
+    YES → KLING O1
+    NO  → Continue...
+
+  Is it action/environment motion without dialogue?
+    YES → KLING 2.6
+    NO  → KLING 2.6 (default)
+
+Model Specifications:
+
+  SEEDANCE 1.5:
+    Endpoint: fal-ai/bytedance/seedance/v1.5/pro/image-to-video
+    Parameters: image_url, end_image_url (optional)
+    MAX DURATION: 5 seconds ONLY
+    Best for: Talking characters, lipsync, dialogue, avatar animation
+
+  KLING O1:
+    Endpoint: fal-ai/kling-video/o1/image-to-video
+    Parameters: start_image_url, tail_image_url (for end frame)
+    MAX DURATION: 10 seconds
+    Best for: Camera moves with specific end point, zoom/orbit, state transitions
+
+  KLING 2.6:
+    Endpoint: fal-ai/kling-video/v2.6/pro/image-to-video
+    Parameters: image_url (NO end frame support)
+    MAX DURATION: 10 seconds
+    Best for: General action, environment motion, effects, most versatile
+
+Motion Prompt Rules (CRITICAL):
+  1. VIDEO PROMPTS = MOTION ONLY - image has all visual info
+  2. ONE camera movement at a time - multiple = geometry warping
+  3. ALWAYS end with: "then settles", "then holds", "comes to rest"
+  4. Use POWER VERBS: STRIDE, BILLOW, CHARGE, SURGE, GLIDE, SOAR
+  5. Keep under 50 words
+  6. NO scene description - only what MOVES and HOW
+
+Motion Endpoint Examples (prevents 99% of generation hangs):
+  WRONG: "Hair blows in wind" → hangs forever
+  RIGHT: "Hair billows in breeze, then settles back into place"
+
+  WRONG: "Camera pushes in"
+  RIGHT: "Slow push-in on face, then holds steady"
+
+Cost Breakdown:
+  - Image generation (nano-banana): $0.03
+  - 4K Upscale: $0.05
+  - Compression: $0 (local)
+  - Video 5s: $0.35
+  - Video 10s: $0.70
+  - TYPICAL SHOT COST: $0.43 (image + 5s video)
+
+OUTPUT EXAMPLE:
+{
+  "agent": "technical",
+  "recommendation": {
+    "model": "kling-2.6",
+    "modelReason": "No dialogue detected, general action shot",
+    "duration": "5",
+    "endpoint": "fal-ai/kling-video/v2.6/pro/image-to-video",
+    "needsCompression": true,
+    "motionPromptValid": true,
+    "suggestedMotionPrompt": "Character strides forward, coat billows, then settles",
+    "estimatedCost": 0.43
+  },
+  "confidence": 0.92
+}
+
+------------------------------------------------------------------------------
+4. PRODUCTION AGENT (Weight: 15%)
+------------------------------------------------------------------------------
+
+ICON: 🎞️
+ROLE: Visual continuity, shot chaining, consistency enforcement
+COLOR: Orange
+
+WHAT IT ENSURES:
+- Color consistency between shots
+- Character direction continuity (facing left/right)
+- Travel direction locks (uphill/downhill, left-to-right)
+- Environment consistency
+- Proper frame chaining workflow
+
+KEY KNOWLEDGE:
+
+Frame Chaining Workflow:
+  1. Generate video for Shot N
+  2. Extract last frame: ffmpeg -sseof -0.1 -i video.mp4 -frames:v 1 last_frame.jpg
+  3. Compress to <10MB for Kling (ImageMagick)
+  4. Upload to Catbox for public URL
+  5. Use as start_image_url for Shot N+1
+  6. Apply color lock phrases to maintain consistency
+
+Color Lock Phrases (add to prompts when chaining):
+  - "THIS EXACT CHARACTER, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE"
+  - "maintain exact color grading, same lighting direction"
+  - "Same character, same costume, same lighting, different angle"
+
+Direction Locks (CRITICAL for travel/motion):
+  - Track which way character is facing (LEFT/RIGHT)
+  - Maintain screen direction across cuts
+  - Flag if direction would flip unexpectedly
+
+Travel Direction Lock (for driving/walking/flying):
+  - HORIZONTAL: LEFT_TO_RIGHT or RIGHT_TO_LEFT
+  - VERTICAL: ASCENDING (uphill) or DESCENDING (downhill)
+  - Include "NO MIRRORING. NO DIRECTION FLIP." in EVERY prompt
+
+Common Mistake to Flag:
+  - Exterior: car descending mountain
+  - Interior: windshield shows road going UPHILL
+  This is a continuity ERROR!
+
+Continuity Checklist:
+  □ Color grade matches previous shot
+  □ Character direction consistent
+  □ Travel direction consistent
+  □ Costume/appearance unchanged
+  □ Lighting direction same
+  □ Background elements present
+  □ Time of day consistent
+  □ Props in correct state
+  □ Weather/atmosphere consistent
+  □ Interior/exterior direction match
+
+Chain Strategies:
+  - NEW_SEQUENCE: First shot of scene, no chaining needed
+  - CHAIN_FROM_PREVIOUS: Use last frame of previous shot as reference
+  - INDEPENDENT: Standalone shot (cutaway, insert)
+
+OUTPUT EXAMPLE:
+{
+  "agent": "production",
+  "recommendation": {
+    "chainStrategy": "chain_from_previous",
+    "colorLockPhrase": "THIS EXACT CHARACTER, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE",
+    "directionLock": "Character facing RIGHT - maintain direction",
+    "environmentLock": "Maintain: corridor on left, light source from right",
+    "continuityChecklist": [
+      {"item": "Color grade", "status": "ok"},
+      {"item": "Character direction", "status": "ok"},
+      {"item": "Travel direction", "status": "warning", "note": "Verify interior matches exterior"}
+    ],
+    "compressionRequired": true,
+    "frameExtractionNeeded": true
+  },
+  "confidence": 0.88
+}
+
+================================================================================
+                         HOW DECISIONS ARE MADE
+================================================================================
+
+STEP 1: USER INPUT
+------------------
+User types: "A character walks through a dark corridor, tension building"
+
+STEP 2: CONTEXT BUILDING
+------------------------
+System packages context:
+- User prompt
+- Previous shots (for continuity)
+- Reference images (character refs, location refs)
+- Selected director style (if any)
+
+STEP 3: DATABASE QUERY
+----------------------
+System queries MOVIE SHOTS database for similar real film shots:
+- Matches by director, emotion, movement, keywords
+- Returns top 5 relevant reference shots
+- These inform agent recommendations
+
+STEP 4: PARALLEL AGENT CALLS
+----------------------------
+All 4 agents receive the same context simultaneously:
+
+  ┌─────────────────┐
+  │   USER INPUT    │
+  └────────┬────────┘
+           │
+           ▼
+  ┌────────────────────────────────────────────┐
+  │           CONTEXT PACKAGE                  │
+  │  - prompt, refs, previous shots, director  │
+  │  - database reference shots                │
+  └────────┬───────────┬───────────┬──────────┘
+           │           │           │
+     ┌─────┴─────┐ ┌───┴───┐ ┌────┴────┐ ┌─────────┐
+     │ NARRATIVE │ │VISUAL │ │TECHNICAL│ │PRODUCTION│
+     │   📖      │ │  🎬   │ │   ⚙️    │ │   🎞️    │
+     └─────┬─────┘ └───┬───┘ └────┬────┘ └────┬────┘
+           │           │          │           │
+           └───────────┴──────────┴───────────┘
+                       │
+                       ▼
+              ┌─────────────────┐
+              │ CONSENSUS ENGINE│
+              └────────┬────────┘
+                       │
+                       ▼
+              ┌─────────────────┐
+              │ FINAL DECISION  │
+              └─────────────────┘
+
+STEP 5: CONSENSUS BUILDING
+--------------------------
+Weights applied to each agent's vote:
+  - Narrative: 20%
+  - Visual: 30%
+  - Technical: 35% (highest - most critical for generation)
+  - Production: 15%
+
+Consensus score = weighted average of all confidence scores
+
+STEP 6: DISSENT DETECTION
+-------------------------
+System checks for disagreements:
+- High severity dissent (confidence < 0.3) → REQUIRES HUMAN REVIEW
+- Multiple dissents (2+) → REQUIRES HUMAN REVIEW
+- Low overall confidence (< 0.6) → REQUIRES HUMAN REVIEW
+
+Examples of dissents:
+- Visual agent warns director style conflicts with shot type
+- Technical agent warns motion prompt missing endpoint
+- Production agent warns continuity break detected
+
+STEP 7: FINAL DECISION OUTPUT
+-----------------------------
+{
+  "finalDecision": {
+    "model": "kling-2.6",
+    "modelReason": "No dialogue, general action shot",
+    "photoPrompt": "THIS EXACT CHARACTER... character walks through dark corridor...",
+    "motionPrompt": "Character strides forward through corridor, then pauses",
+    "duration": "5",
+    "chainStrategy": {
+      "chainFromPrevious": true,
+      "colorLockPhrase": "THIS EXACT CHARACTER, THIS EXACT LIGHTING"
+    },
+    "estimatedCost": 0.43,
+    "warnings": ["Consider adding environment motion for tension"]
+  },
+  "consensusScore": 0.87,
+  "requiresReview": false,
+  "dissents": []
+}
+
+================================================================================
+                         STORY THINKING PROCESS
+================================================================================
+
+When planning a full video (not just single shot), the AI thinks about story:
+
+1. DURATION ANALYSIS
+   - How long is the video?
+   - How many shots do we need?
+   - What's the pacing structure?
+
+2. BEAT MAPPING
+   - Opening Image (establish)
+   - Setup (introduce elements)
+   - Catalyst (something changes)
+   - Midpoint (stakes raised)
+   - Climax (peak moment)
+   - Resolution (conclusion)
+
+3. EMOTIONAL ARC
+   - Where does tension build?
+   - Where are release moments?
+   - What's the emotional journey?
+
+4. SHOT PROGRESSION
+   - Vary shot types (don't repeat same framing)
+   - Alternate between wide and close
+   - Build toward key moments with tighter shots
+
+5. CONTINUITY PLANNING
+   - Which shots need to chain?
+   - Where are the scene breaks?
+   - What refs need to persist?
+
+Example 30-second commercial breakdown:
+  Shot 1 (0-5s): WS establishing - "opening image"
+  Shot 2 (5-10s): MS character intro - "setup"
+  Shot 3 (10-15s): CU reaction - "catalyst"
+  Shot 4 (15-20s): MS action - "midpoint"
+  Shot 5 (20-25s): ECU hero product - "climax"
+  Shot 6 (25-30s): WS resolution + tagline - "finale"
+
+================================================================================
+                              FILE LOCATIONS
+================================================================================
+
+Agent System Prompts:
+  src/pages/api/council/agent.ts (lines 139-391)
+
+Council Orchestrator (consensus logic):
+  src/components/react/CouncilStudio/agents/councilOrchestrator.ts
+
+Agent API Endpoint:
+  src/pages/api/council/agent.ts
+
+Council Meeting Endpoint:
+  src/pages/api/council/meeting.ts
+
+Individual Agent Files (local fallbacks):
+  src/components/react/CouncilStudio/agents/narrativeAgent.ts
+  src/components/react/CouncilStudio/agents/visualAgent.ts
+  src/components/react/CouncilStudio/agents/technicalAgent.ts
+  src/components/react/CouncilStudio/agents/productionAgent.ts
+
+Debug Panel (view prompts in UI):
+  src/components/react/AI2Studio/components/AgentDebugPanel.tsx
+
+Movie Shots Database:
+  C:\Users\yodes\Documents\Production-System\MOVIE SHOTS\index.json
+  C:\Users\yodes\Documents\Production-System\MOVIE SHOTS\TAGGING_SCHEMA_V2.json
+
+================================================================================
+                              API ENDPOINTS
+================================================================================
+
+Test single agent:
+  POST /api/council/agent
+  Body: { "agent": "technical", "context": { "userPrompt": "...", "shot": {...} } }
+
+Run full council meeting:
+  POST /api/council/meeting
+  Body: { "context": { "userPrompt": "...", "shot": {...}, "previousShots": [...] } }
+
+================================================================================
+                              QUICK REFERENCE
+================================================================================
+
+Model Selection Cheat Sheet:
+  - Character TALKS → Seedance 1.5
+  - Need END FRAME → Kling O1
+  - Everything else → Kling 2.6
+
+Motion Prompt Cheat Sheet:
+  - Always add "then settles" or "then holds"
+  - ONE camera move only
+  - Power verbs: STRIDE, BILLOW, CHARGE, SURGE
+  - 50 words max
+
+Continuity Cheat Sheet:
+  - Always use color lock phrases when chaining
+  - Track character facing direction
+  - Match interior/exterior travel direction
+  - Extract last frame, compress, re-upload
+
+Cost Cheat Sheet:
+  - Single shot: ~$0.43
+  - 9-shot storyboard: ~$3.87
+  - 30-second video (6 shots): ~$2.58
+
+================================================================================
+                              END OF DOCUMENTATION
+================================================================================

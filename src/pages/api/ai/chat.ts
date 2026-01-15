@@ -36,8 +36,8 @@ console.log(`[AI Chat] Claude API key: ${CLAUDE_AVAILABLE ? 'CONFIGURED' : 'MISS
 console.log(`[AI Chat] OpenAI API key: ${OPENAI_AVAILABLE ? 'CONFIGURED' : 'MISSING'}`);
 console.log(`[AI Chat] Fallback chain: Claude → GPT-5.2 → Qwen (local)`);
 
-// Memory storage directory
-const MEMORY_DIR = path.join(process.cwd(), 'ai-memory');
+// Memory storage directory - user's COUNCIL folder for easy access
+const MEMORY_DIR = 'C:\\Users\\yodes\\Documents\\Production-System\\COUNCIL\\chats';
 
 // Ensure memory directory exists
 function ensureMemoryDir() {
@@ -208,18 +208,29 @@ async function callOpenAI(
     }))
   ];
 
+  // Newer models (gpt-5.x, o1, etc.) use max_completion_tokens, older use max_tokens
+  const isNewerModel = model.startsWith('gpt-5') || model.startsWith('o1') || model.includes('thinking');
+
+  const requestBody: any = {
+    model: model,
+    messages: openaiMessages,
+    temperature: 0.7
+  };
+
+  // Use correct token limit parameter based on model
+  if (isNewerModel) {
+    requestBody.max_completion_tokens = 16000;
+  } else {
+    requestBody.max_tokens = 16000;
+  }
+
   const response = await fetch(OPENAI_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${OPENAI_API_KEY}`
     },
-    body: JSON.stringify({
-      model: model,
-      messages: openaiMessages,
-      max_tokens: 16000,
-      temperature: 0.7
-    })
+    body: JSON.stringify(requestBody)
   });
 
   if (!response.ok) {
@@ -277,14 +288,19 @@ export const POST: APIRoute = async ({ request }) => {
       sessionId = 'default',
       model = 'claude-opus',  // Default to Claude Opus 4.5 - BEST model!
       clearHistory = false,
-      extendedThinking = true   // Enable by default
+      extendedThinking = true,   // Enable by default
+      systemPrompt: customSystemPrompt  // Allow custom system prompt override
     } = body as {
       message: string;
       sessionId?: string;
       model?: string;
       clearHistory?: boolean;
       extendedThinking?: boolean;
+      systemPrompt?: string;
     };
+
+    // Use custom system prompt if provided, otherwise default
+    const activeSystemPrompt = customSystemPrompt || AI_SYSTEM_PROMPT;
 
     if (!message) {
       return new Response(JSON.stringify({ error: 'message is required' }), {
@@ -334,7 +350,7 @@ export const POST: APIRoute = async ({ request }) => {
       // Use Claude with fallback chain: Claude → OpenAI GPT-4 → Qwen
       try {
         assistantMessage = await callClaude(
-          AI_SYSTEM_PROMPT,
+          activeSystemPrompt,
           messages,
           modelConfig.model,
           extendedThinking
@@ -345,17 +361,29 @@ export const POST: APIRoute = async ({ request }) => {
         console.log(`[AI Chat] Claude failed, trying OpenAI GPT-4...`, claudeError);
 
         if (OPENAI_AVAILABLE) {
-          try {
-            assistantMessage = await callOpenAI(
-              AI_SYSTEM_PROMPT,
-              messages,
-              'gpt-5.2'  // GPT-5.2 is their best model (Dec 2025)
-            );
-            actualProvider = 'openai (fallback)';
-            actualModel = 'gpt-5.2';
-          } catch (openaiError) {
-            // OpenAI also failed - try Qwen as last resort
-            console.log(`[AI Chat] OpenAI failed, falling back to Qwen:`, openaiError);
+          // Try GPT-5.2 first, fall back to GPT-4o if not available
+          let openaiSuccess = false;
+          for (const openaiModel of ['gpt-5.2', 'gpt-5.1', 'gpt-4o', 'gpt-4-turbo']) {
+            try {
+              console.log(`[AI Chat] Trying OpenAI model: ${openaiModel}`);
+              assistantMessage = await callOpenAI(
+                AI_SYSTEM_PROMPT,
+                messages,
+                openaiModel
+              );
+              actualProvider = 'openai (fallback)';
+              actualModel = openaiModel;
+              openaiSuccess = true;
+              break;
+            } catch (err: any) {
+              console.log(`[AI Chat] ${openaiModel} failed:`, err.message?.substring(0, 100));
+              // Continue to next model
+            }
+          }
+
+          if (!openaiSuccess) {
+            // All OpenAI models failed - try Qwen as last resort
+            console.log(`[AI Chat] All OpenAI models failed, falling back to Qwen`);
             try {
               assistantMessage = await callOllama(
                 AI_SYSTEM_PROMPT,
@@ -365,7 +393,7 @@ export const POST: APIRoute = async ({ request }) => {
               actualProvider = 'ollama (fallback)';
               actualModel = 'qwen';
             } catch (ollamaError) {
-              throw new Error(`All providers failed. Claude: ${claudeError}. OpenAI: ${openaiError}. Qwen: ${ollamaError}`);
+              throw new Error(`All providers failed. Claude and OpenAI failed. Qwen: ${ollamaError}`);
             }
           }
         } else {
@@ -388,7 +416,7 @@ export const POST: APIRoute = async ({ request }) => {
       // Use OpenAI directly (GPT-4o, etc.)
       try {
         assistantMessage = await callOpenAI(
-          AI_SYSTEM_PROMPT,
+          activeSystemPrompt,
           messages,
           modelConfig.model
         );

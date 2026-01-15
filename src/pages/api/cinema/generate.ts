@@ -10,6 +10,8 @@ const FAL_ENDPOINTS = {
   'video-kling': 'https://queue.fal.run/fal-ai/kling-video/v2.6/pro/image-to-video',
   'video-kling-o1': 'https://queue.fal.run/fal-ai/kling-video/o1/image-to-video',
   'video-seedance': 'https://queue.fal.run/fal-ai/bytedance/seedance/v1.5/pro/image-to-video', // Seedance 1.5 Pro
+  'video-kling-lipsync': 'https://queue.fal.run/fal-ai/kling-video/lipsync/audio-to-video', // Kling LipSync - audio + image to talking video
+  'video-kling-avatar': 'https://queue.fal.run/fal-ai/kling-video/ai-avatar/v2/pro', // Kling Avatar - audio + image to avatar
   'image': 'https://fal.run/fal-ai/nano-banana-pro',           // Text-to-image
   'image-edit': 'https://fal.run/fal-ai/nano-banana-pro/edit', // Image-to-image (with reference)
   'face-adapter': 'https://fal.run/fal-ai/ip-adapter-face-id'
@@ -53,6 +55,10 @@ async function pollFalResult(requestId: string, endpoint: string, maxAttempts = 
     basePath = 'fal-ai/bytedance/seedance/v1.5/pro'; // Seedance 1.5 Pro polling path
   } else if (endpoint.includes('nano-banana')) {
     basePath = 'fal-ai/nano-banana-pro';
+  } else if (endpoint.includes('lipsync')) {
+    basePath = 'fal-ai/kling-video/lipsync'; // Kling LipSync polling path
+  } else if (endpoint.includes('ai-avatar')) {
+    basePath = 'fal-ai/kling-video/ai-avatar/v2/pro'; // Kling Avatar polling path
   }
 
   const statusUrl = `https://queue.fal.run/${basePath}/requests/${requestId}/status`;

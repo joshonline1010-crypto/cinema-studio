@@ -3,6 +3,7 @@ import { useAI2Store } from './ai2Store';
 import { buildAI2Prompt } from './ai2PromptSystem';
 import CameraControl, { buildFullCameraPrompt } from './CameraControl';
 import CouncilPanel from './components/CouncilPanel';
+import AgentDebugPanel from './components/AgentDebugPanel';
 import { useCouncilStore } from '../CouncilStudio/councilStore';
 
 // Mode descriptions
@@ -14,9 +15,11 @@ const MODE_INFO = {
 };
 
 // Model info
-const MODEL_INFO = {
+const MODEL_INFO: Record<string, { name: string; desc: string }> = {
   'claude-opus': { name: 'Claude Opus 4.5', desc: 'Best reasoning' },
   'claude-sonnet': { name: 'Claude Sonnet', desc: 'Fast & capable' },
+  'gpt-5.2': { name: 'GPT-5.2', desc: 'OpenAI latest' },
+  'gpt-4o': { name: 'GPT-4o', desc: 'OpenAI reliable' },
   'qwen': { name: 'Qwen 3 8B', desc: 'Local (Ollama)' },
   'mistral': { name: 'Mistral', desc: 'Local (Ollama)' }
 };
@@ -108,8 +111,8 @@ export default function AI2Studio() {
   // Shot view tab - no longer used (replaced with card grid), keeping for backward compat
   const [shotViewTab, setShotViewTab] = useState<'photo' | 'video' | 'dialog' | 'voiceover'>('photo');
 
-  // Ref view tab - story, characters, locations, or items
-  const [refViewTab, setRefViewTab] = useState<'story' | 'characters' | 'locations' | 'items'>('story');
+  // Ref view tab - story, characters, locations, items, or uploaded (user refs only)
+  const [refViewTab, setRefViewTab] = useState<'story' | 'characters' | 'locations' | 'items' | 'baseplates' | 'uploaded'>('story');
 
   // Segment filter tab - filter shots by segment (intro, buildup, climax, etc.)
   const [segmentTab, setSegmentTab] = useState<string>('all');
@@ -123,12 +126,16 @@ export default function AI2Studio() {
 
   // Council Panel state
   const [showCouncilPanel, setShowCouncilPanel] = useState(false);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
   const { councilEnabled, setCouncilEnabled, runMeeting, consensus } = useCouncilStore();
 
   // Ref Upload Modal state
   const [showRefUploadModal, setShowRefUploadModal] = useState(false);
   const [pendingRefFile, setPendingRefFile] = useState<{ file: File; dataUrl: string } | null>(null);
   const [pendingRefName, setPendingRefName] = useState('');
+
+  // Model dropdown in chat header
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
 
   // Format a nice summary from a JSON plan - SIMPLIFIED: Refs row, then content
   const formatPlanSummary = (plan: any): React.ReactNode => {
@@ -853,20 +860,20 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
     // Build refs list - combining user uploads with plan refs
     const refs: GeneratedRef[] = [];
 
-    // CHARACTER REFS: Use user uploads as base, or plan descriptions
+    // CHARACTER REFS: User uploads are used DIRECTLY (no regeneration!)
     if (hasUploadedCharRefs) {
-      // User uploaded character refs - create enhanced versions from them
+      // User uploaded character refs - USE AS-IS, no regeneration!
       characterRefs.forEach((ref, i) => {
         refs.push({
           id: `char-uploaded-${i}`,
           name: ref.name || `Character ${i + 1}`,
           type: 'character',
           description: ref.name || 'uploaded character',
-          url: ref.url, // Keep original URL as base
-          status: 'pending'
+          url: ref.url,
+          status: 'done' // DONE - use as-is, don't regenerate!
         });
       });
-      // Also include general refs as potential character refs
+      // Also include general refs tagged as character
       refImages.forEach((ref, i) => {
         if (ref.description?.toLowerCase().includes('character') || ref.description?.startsWith('👤')) {
           refs.push({
@@ -875,11 +882,11 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
             type: 'character',
             description: ref.description || 'uploaded character',
             url: ref.url,
-            status: 'pending'
+            status: 'done' // DONE - use as-is!
           });
         }
       });
-      console.log(`[AI2] Using ${refs.filter(r => r.type === 'character').length} uploaded character refs as base for 8K generation`);
+      console.log(`[AI2] ✅ Using ${refs.filter(r => r.type === 'character').length} uploaded character refs DIRECTLY (no regeneration)`);
     } else {
       // No user uploads - use plan's character descriptions
       Object.entries(charRefsFromPlan).forEach(([id, char]: [string, any]) => {
@@ -917,7 +924,38 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
           status: 'done' // Already done - use as-is
         });
       });
-      console.log(`[AI2] Using ${locationRefs.length} uploaded location refs directly`);
+      console.log(`[AI2] ✅ Using ${locationRefs.length} uploaded location refs directly`);
+    }
+
+    // PROP/PRODUCT REFS: User uploads are used DIRECTLY (no regeneration!)
+    const hasUploadedPropRefs = productRefs.length > 0;
+    if (hasUploadedPropRefs) {
+      productRefs.forEach((ref, i) => {
+        refs.push({
+          id: `prop-uploaded-${i}`,
+          name: ref.name || `Prop ${i + 1}`,
+          type: 'item',
+          description: ref.name || 'uploaded prop',
+          url: ref.url,
+          status: 'done' // DONE - use as-is, don't regenerate!
+        });
+      });
+      // Also include general refs tagged as prop/item
+      refImages.forEach((ref, i) => {
+        if (ref.description?.toLowerCase().includes('prop') ||
+            ref.description?.toLowerCase().includes('item') ||
+            ref.description?.startsWith('📦')) {
+          refs.push({
+            id: `prop-general-${i}`,
+            name: ref.description?.replace(/^📦\s*/, '') || `Prop`,
+            type: 'item',
+            description: ref.description || 'uploaded prop',
+            url: ref.url,
+            status: 'done' // DONE - use as-is!
+          });
+        }
+      });
+      console.log(`[AI2] ✅ Using ${refs.filter(r => r.type === 'item').length} uploaded prop refs DIRECTLY (no regeneration)`);
     }
 
     // BASE PLATES: Generate environment base plates from plan (cockpit, exterior, etc.)
@@ -976,7 +1014,8 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
         // Different prompt templates for different ref types
         let prompt: string;
         if (ref.type === 'character') {
-          prompt = `THIS EXACT CHARACTER, single character portrait, clear full body view${directorStyle}, 8K detailed, maintain exact likeness`;
+          // INCLUDE THE ACTUAL CHARACTER DESCRIPTION!
+          prompt = `${ref.description}, THIS EXACT CHARACTER, single character portrait, clear full body view${directorStyle}, 8K detailed, maintain exact likeness`;
         } else if (ref.type === 'baseplate') {
           // Base plates are wide establishing shots that define the environment
           prompt = `${ref.description}, wide establishing shot, empty environment, no people, clean background plate${directorStyle}, 8K detailed, cinematic`;
@@ -1032,14 +1071,20 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
 
     const refResults = await Promise.all(refPromises);
 
-    // Collect successfully generated refs
-    const successfulRefs = refResults.filter(r => r.success).map(r => ({
-      url: r.url!,
-      name: r.name,
-      id: r.id
-    }));
+    // Collect successfully generated refs WITH FULL DATA (need type for categorization!)
+    const successfulRefs = refResults.filter(r => r.success).map(r => {
+      // Find the full ref object from our local refs array to get the type
+      const fullRef = refs.find(ref => ref.id === r.id);
+      return {
+        url: r.url!,
+        name: r.name,
+        id: r.id,
+        type: fullRef?.type || 'character' // Include type for categorization!
+      };
+    });
 
     console.log(`[AI2] Refs complete: ${successfulRefs.length}/${refResults.length} successful`);
+    console.log(`[AI2] Successful refs with types:`, successfulRefs.map(r => `${r.name} (${r.type})`));
 
     // If auto-approve is ON, skip approval and continue
     if (autoApprove) {
@@ -1048,10 +1093,9 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
       setGeneratedRefs(prev => prev.map(r => ({ ...r, approved: true })));
       // Store refs for image generation (for display)
       setRefImages(prev => [...prev, ...successfulRefs.map(r => ({ url: r.url, description: r.name }))]);
-      // Continue to images immediately - PASS REFS DIRECTLY to avoid stale closure!
+      // Continue to images immediately - PASS FULL REFS to avoid stale closure!
       if (plan) {
-        const generatedRefUrls = successfulRefs.map(r => r.url);
-        await generateImages(plan, generatedRefUrls);
+        await generateImages(plan, successfulRefs);
       }
     } else {
       setPipelinePhase('refs-approval');
@@ -1063,20 +1107,28 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
   // Approve refs and continue to images
   const approveRefsAndContinue = async () => {
     const approvedRefs = generatedRefs.filter(r => r.approved !== false && r.url);
-    const refUrls = approvedRefs.map(r => r.url!);
+
+    // Build full ref objects with type info
+    const fullRefs = approvedRefs.map(r => ({
+      url: r.url!,
+      name: r.name,
+      id: r.id,
+      type: r.type || 'character'
+    }));
 
     // Store approved ref URLs for image generation (for display)
     setRefImages(approvedRefs.map(r => ({ url: r.url!, description: r.name })));
 
-    // Continue to image generation - PASS REFS DIRECTLY to avoid stale closure!
+    // Continue to image generation - PASS FULL REFS to ensure proper categorization!
     if (currentPlan) {
-      await generateImages(currentPlan, refUrls);
+      console.log(`[AI2] approveRefsAndContinue: Passing ${fullRefs.length} full refs to generateImages`);
+      await generateImages(currentPlan, fullRefs);
     }
   };
 
   // STEP 1: Generate images only (stops at approval)
-  // directRefUrls: Pass refs directly to avoid stale closure (from generateRefs)
-  const generateImages = async (plan: any, directRefUrls?: string[]) => {
+  // directRefs: Pass FULL refs directly to avoid stale closure (from generateRefs)
+  const generateImages = async (plan: any, directRefs?: Array<{url: string; name: string; id: string; type: string}>) => {
     const shots = plan.shots || [];
     if (shots.length === 0) return;
 
@@ -1085,50 +1137,142 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
     setFinalVideoUrl(null);
     setGenerationProgress({ current: 0, total: shots.length });
 
-    // Build ref ID -> URL map from approved generated refs
+    // Build ref ID -> URL map from ALL refs (uploaded + generated)
+    // This map lets us lookup refs by ID when AI specifies character_refs/scene_refs
     const refUrlMap: Record<string, string> = {};
+
+    // ============ ADD UPLOADED REFS TO MAP (CRITICAL!) ============
+    // These are the refs the user uploaded - AI references them as "char-uploaded-0", etc.
+    characterRefs.forEach((r, i) => {
+      if (r.url?.startsWith('http')) {
+        refUrlMap[`char-uploaded-${i}`] = r.url;
+        refUrlMap[r.name] = r.url; // Also map by name for flexibility
+        console.log(`[AI2] refUrlMap: char-uploaded-${i} = ${r.url.substring(0, 50)}...`);
+      }
+    });
+    locationRefs.forEach((r, i) => {
+      if (r.url?.startsWith('http')) {
+        refUrlMap[`loc-uploaded-${i}`] = r.url;
+        refUrlMap[r.name] = r.url;
+        console.log(`[AI2] refUrlMap: loc-uploaded-${i} = ${r.url.substring(0, 50)}...`);
+      }
+    });
+    productRefs.forEach((r, i) => {
+      if (r.url?.startsWith('http')) {
+        refUrlMap[`prop-uploaded-${i}`] = r.url;
+        refUrlMap[r.name] = r.url;
+        console.log(`[AI2] refUrlMap: prop-uploaded-${i} = ${r.url.substring(0, 50)}...`);
+      }
+    });
+
+    // Also add general refImages with guessed IDs based on description
+    refImages.forEach((r, i) => {
+      if (r.url?.startsWith('http')) {
+        const desc = r.description || '';
+        if (desc.startsWith('👤') || desc.toLowerCase().includes('character')) {
+          refUrlMap[`char-general-${i}`] = r.url;
+        } else if (desc.startsWith('📍') || desc.toLowerCase().includes('location')) {
+          refUrlMap[`loc-general-${i}`] = r.url;
+        } else if (desc.startsWith('📦') || desc.toLowerCase().includes('prop')) {
+          refUrlMap[`prop-general-${i}`] = r.url;
+        }
+        // Always add by description name too
+        if (desc) {
+          refUrlMap[desc.replace(/^(👤|📍|📦)\s*/, '')] = r.url;
+        }
+      }
+    });
+
+    // Add directRefs (from generateRefs, fresh data)
+    if (directRefs && directRefs.length > 0) {
+      console.log(`[AI2] Adding ${directRefs.length} DIRECT refs to map`);
+      directRefs.forEach(r => {
+        refUrlMap[r.id] = r.url;
+        const shortId = r.id.replace(/^(char-|loc-|baseplate-)/, '');
+        refUrlMap[shortId] = r.url;
+      });
+    }
+
+    // Add from generatedRefs state (for manual approval flow)
     generatedRefs.filter(r => r.approved !== false && r.url).forEach(r => {
-      // Map both formats: "char-CHAR1" and "CHAR1"
       refUrlMap[r.id] = r.url!;
-      const shortId = r.id.replace(/^(char-|loc-)/, '');
+      const shortId = r.id.replace(/^(char-|loc-|baseplate-)/, '');
       refUrlMap[shortId] = r.url!;
     });
 
-    // Also include manually added ref images (from upload) AND labeled refs
-    // IMPORTANT: Include ALL refs, even data URLs - let API handle conversion
-    const uploadedRefUrls = refImages
+    console.log(`[AI2] refUrlMap has ${Object.keys(refUrlMap).length} entries:`, Object.keys(refUrlMap));
+
+    // ============ SMART REF MATCHING ============
+    // Separate refs by TYPE so we can send only relevant refs to each shot
+
+    // User-uploaded refs by type (from labeled categories)
+    const uploadedCharacterUrls = characterRefs
       .map(r => r.url)
-      .filter(url => url && url.startsWith('http')); // Only catbox URLs work with FAL
+      .filter(url => url?.startsWith('http'));
+    const uploadedLocationUrls = locationRefs
+      .map(r => r.url)
+      .filter(url => url?.startsWith('http'));
+    const uploadedPropUrls = productRefs
+      .map(r => r.url)
+      .filter(url => url?.startsWith('http'));
 
-    const labeledRefUrls = [
-      ...characterRefs.map(r => r.url),
-      ...productRefs.map(r => r.url),
-      ...locationRefs.map(r => r.url)
-    ].filter(url => url && url.startsWith('http'));
+    // General refImages - parse type from description emoji
+    refImages.forEach(r => {
+      if (!r.url?.startsWith('http')) return;
+      const desc = r.description || '';
+      if (desc.startsWith('👤') || desc.toLowerCase().includes('character')) {
+        uploadedCharacterUrls.push(r.url);
+      } else if (desc.startsWith('📍') || desc.startsWith('🏔️') || desc.toLowerCase().includes('location')) {
+        uploadedLocationUrls.push(r.url);
+      } else if (desc.startsWith('📦') || desc.toLowerCase().includes('prop') || desc.toLowerCase().includes('item')) {
+        uploadedPropUrls.push(r.url);
+      }
+    });
 
-    // Use directly-passed refs if available (avoids stale closure!), otherwise read from state
-    const generatedRefUrls = directRefUrls && directRefUrls.length > 0
-      ? directRefUrls
-      : generatedRefs.filter(r => r.approved !== false && r.url).map(r => r.url!);
+    // Generated refs by type - USE directRefs FIRST (fresh), then fall back to state
+    let generatedCharUrls: string[] = [];
+    let generatedLocUrls: string[] = [];
+    let generatedBaseplateUrls: string[] = [];
+    let generatedItemUrls: string[] = [];
 
-    const allApprovedRefUrls = [
-      ...generatedRefUrls,
-      ...uploadedRefUrls,
-      ...labeledRefUrls
-    ];
+    if (directRefs && directRefs.length > 0) {
+      // Use directRefs (fresh data, not stale!)
+      generatedCharUrls = directRefs.filter(r => r.type === 'character').map(r => r.url);
+      generatedLocUrls = directRefs.filter(r => r.type === 'location').map(r => r.url);
+      generatedBaseplateUrls = directRefs.filter(r => r.type === 'baseplate').map(r => r.url);
+      generatedItemUrls = directRefs.filter(r => r.type === 'item').map(r => r.url);
+      console.log(`[AI2] From directRefs: ${generatedCharUrls.length} chars, ${generatedLocUrls.length} locs, ${generatedBaseplateUrls.length} baseplates, ${generatedItemUrls.length} items`);
+    } else {
+      // Fall back to state (for manual approval flow)
+      generatedCharUrls = generatedRefs
+        .filter(r => r.type === 'character' && r.approved !== false && r.url)
+        .map(r => r.url!);
+      generatedLocUrls = generatedRefs
+        .filter(r => r.type === 'location' && r.approved !== false && r.url)
+        .map(r => r.url!);
+      generatedBaseplateUrls = generatedRefs
+        .filter(r => r.type === 'baseplate' && r.approved !== false && r.url)
+        .map(r => r.url!);
+      generatedItemUrls = generatedRefs
+        .filter(r => r.type === 'item' && r.approved !== false && r.url)
+        .map(r => r.url!);
+      console.log(`[AI2] From state: ${generatedCharUrls.length} chars, ${generatedLocUrls.length} locs, ${generatedBaseplateUrls.length} baseplates, ${generatedItemUrls.length} items`);
+    }
 
-    console.log(`[AI2] Using ${directRefUrls ? 'DIRECT' : 'STATE'} refs: ${generatedRefUrls.length} generated`);
+    // Combined by type
+    const allCharacterRefs = [...uploadedCharacterUrls, ...generatedCharUrls];
+    const allLocationRefs = [...uploadedLocationUrls, ...generatedLocUrls, ...generatedBaseplateUrls];
+    const allPropRefs = [...uploadedPropUrls, ...generatedItemUrls];
+
+    // Legacy: all refs combined (for fallback)
+    const allApprovedRefUrls = [...allCharacterRefs, ...allLocationRefs, ...allPropRefs];
+
+    console.log(`[AI2] ============ SMART REF MATCHING ============`);
+    console.log(`[AI2] Character refs: ${allCharacterRefs.length} (${uploadedCharacterUrls.length} uploaded + ${generatedCharUrls.length} generated)`);
+    console.log(`[AI2] Location refs: ${allLocationRefs.length} (${uploadedLocationUrls.length} uploaded + ${generatedLocUrls.length + generatedBaseplateUrls.length} generated)`);
+    console.log(`[AI2] Prop refs: ${allPropRefs.length} (${uploadedPropUrls.length} uploaded + ${generatedItemUrls.length} generated)`);
 
     const useColorLock = allApprovedRefUrls.length > 0;
-    console.log(`[AI2] ============ REF DEBUG ============`);
-    console.log(`[AI2] refImages RAW:`, JSON.stringify(refImages.map(r => ({
-      desc: r.description,
-      url: r.url?.substring(0, 60),
-      uploading: (r as any)._uploading,
-      failed: (r as any)._failed
-    })), null, 2));
-    console.log(`[AI2] uploadedRefUrls (http only):`, uploadedRefUrls.length, uploadedRefUrls.map(u => u.substring(0, 60)));
-    console.log(`[AI2] generatedRefUrls:`, generatedRefUrls.length);
     console.log(`[AI2] allApprovedRefUrls TOTAL:`, allApprovedRefUrls.length);
     console.log(`[AI2] =====================================`);
 
@@ -1204,32 +1348,134 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
         const shotSpecificRefs = [...basePlateRefIds, ...charRefs, ...sceneRefIds]; // Base plates FIRST for priority
 
         if (shotSpecificRefs.length > 0) {
+          // SMART MATCHING: Shot has specific refs defined - USE THEM
           shotRefUrls = shotSpecificRefs
-            .map((refId: string) => refUrlMap[refId] || refUrlMap[`char-${refId}`] || refUrlMap[`loc-${refId}`] || refUrlMap[`baseplate-${refId}`])
+            .map((refId: string) => {
+              // Try multiple lookup patterns to find the ref
+              const url = refUrlMap[refId] ||
+                         refUrlMap[`char-${refId}`] ||
+                         refUrlMap[`loc-${refId}`] ||
+                         refUrlMap[`baseplate-${refId}`] ||
+                         refUrlMap[`prop-${refId}`] ||
+                         refUrlMap[`char-uploaded-${refId}`] ||
+                         refUrlMap[`loc-uploaded-${refId}`] ||
+                         refUrlMap[`prop-uploaded-${refId}`];
+              if (!url) {
+                console.warn(`[AI2] Shot ${i + 1}: Could not find ref "${refId}" in refUrlMap. Available keys:`, Object.keys(refUrlMap));
+              }
+              return url;
+            })
             .filter(Boolean);
-          console.log(`[AI2] Shot ${i + 1}: Using ${shotRefUrls.length} specific refs:`, shotSpecificRefs);
+          console.log(`[AI2] Shot ${i + 1}: Using ${shotRefUrls.length}/${shotSpecificRefs.length} SPECIFIC refs:`, shotSpecificRefs);
           if (basePlateRefIds.length > 0) {
             console.log(`[AI2] Shot ${i + 1}: Includes ${basePlateRefIds.length} BASE PLATE refs for environment consistency`);
           }
+        } else {
+          // NO specific refs defined - use SMART TYPE MATCHING
+          // Analyze shot prompt to determine what refs are needed
+          const shotPromptLower = (shot.photo_prompt || shot.prompt || '').toLowerCase();
+          const hasCharacterInShot = shotPromptLower.includes('character') ||
+                                     shotPromptLower.includes('person') ||
+                                     shotPromptLower.includes('man') ||
+                                     shotPromptLower.includes('woman') ||
+                                     shot.subject;
+          const hasLocationInShot = shotPromptLower.includes('location') ||
+                                    shotPromptLower.includes('background') ||
+                                    shotPromptLower.includes('environment') ||
+                                    shotPromptLower.includes('scene');
+
+          // Build refs based on what's in the shot
+          if (hasCharacterInShot && allCharacterRefs.length > 0) {
+            shotRefUrls.push(...allCharacterRefs);
+            console.log(`[AI2] Shot ${i + 1}: Added ${allCharacterRefs.length} character refs (detected character in prompt)`);
+          }
+          if (hasLocationInShot && allLocationRefs.length > 0) {
+            shotRefUrls.push(...allLocationRefs);
+            console.log(`[AI2] Shot ${i + 1}: Added ${allLocationRefs.length} location refs (detected location in prompt)`);
+          }
+
+          // If no smart match found, fall back to all refs
+          if (shotRefUrls.length === 0 && allApprovedRefUrls.length > 0) {
+            shotRefUrls = [...allApprovedRefUrls];
+            console.log(`[AI2] Shot ${i + 1}: Using ALL ${shotRefUrls.length} refs (no specific match found)`);
+          } else if (shotRefUrls.length > 0) {
+            console.log(`[AI2] Shot ${i + 1}: SMART matched ${shotRefUrls.length} refs`);
+          }
         }
 
-        // Add user-uploaded refs
-        if (uploadedRefUrls.length > 0) {
-          shotRefUrls = [...shotRefUrls, ...uploadedRefUrls];
-        }
-
-        // Add extra refs (base shot URL for non-base shots)
+        // Add extra refs (base shot URL for non-base shots) at the FRONT for priority
         if (extraRefs.length > 0) {
-          shotRefUrls = [...extraRefs, ...shotRefUrls]; // Base shot FIRST for priority
+          shotRefUrls = [...extraRefs, ...shotRefUrls];
           console.log(`[AI2] Shot ${i + 1}: Added BASE shot ref for scene consistency`);
         }
 
-        // Fallback to all refs if none specified
-        if (shotRefUrls.length === 0 && allApprovedRefUrls.length > 0) {
-          shotRefUrls = allApprovedRefUrls;
+        let prompt = shot.photo_prompt || shot.prompt || `Shot ${i + 1}`;
+
+        // ============ INJECT CHARACTER DETAILS INTO PROMPT ============
+        // Look up character from plan.character_references and add description/costume
+        const characterRefs = plan.character_references || {};
+        const shotSubject = shot.subject?.toLowerCase();
+
+        if (shotSubject && Object.keys(characterRefs).length > 0) {
+          // Find matching character (case-insensitive)
+          const charKey = Object.keys(characterRefs).find(k =>
+            k.toLowerCase() === shotSubject ||
+            characterRefs[k]?.name?.toLowerCase() === shotSubject
+          );
+
+          if (charKey && characterRefs[charKey]) {
+            const char = characterRefs[charKey];
+            const charDesc = char.description || '';
+            const charCostume = char.costume || '';
+
+            // Build character details string
+            let charDetails = '';
+            if (charDesc && !prompt.toLowerCase().includes(charDesc.toLowerCase().substring(0, 20))) {
+              charDetails += charDesc;
+            }
+            if (charCostume && !prompt.toLowerCase().includes(charCostume.toLowerCase().substring(0, 20))) {
+              charDetails += (charDetails ? '. ' : '') + charCostume;
+            }
+
+            // Inject BEFORE "THIS EXACT CHARACTER" if present, or at start
+            if (charDetails) {
+              if (prompt.includes('THIS EXACT CHARACTER')) {
+                // Insert character details after "THIS EXACT CHARACTER"
+                prompt = prompt.replace(
+                  'THIS EXACT CHARACTER',
+                  `THIS EXACT CHARACTER (${charDetails})`
+                );
+              } else {
+                // Prepend character details
+                prompt = `${charDetails}. ${prompt}`;
+              }
+              console.log(`[AI2] Shot ${i + 1}: Injected character details for "${char.name || charKey}"`);
+            }
+          }
         }
 
-        let prompt = shot.photo_prompt || shot.prompt || `Shot ${i + 1}`;
+        // ============ DIRECTION LOCK ============
+        // For travel/motion scenes, lock direction to prevent continuity breaks
+        const directionLock = plan.direction_lock;
+        if (directionLock && !prompt.includes('NO DIRECTION FLIP') && !prompt.includes('NO MIRRORING')) {
+          let directionPhrase = 'NO MIRRORING. NO DIRECTION FLIP.';
+
+          // Add specific direction cues
+          if (directionLock.vertical === 'DESCENDING') {
+            directionPhrase = `road DESCENDING, mountains BELOW, ${directionPhrase}`;
+          } else if (directionLock.vertical === 'ASCENDING') {
+            directionPhrase = `road ASCENDING, mountains ABOVE, ${directionPhrase}`;
+          }
+
+          if (directionLock.horizontal === 'LEFT_TO_RIGHT') {
+            directionPhrase = `traveling LEFT_TO_RIGHT, ${directionPhrase}`;
+          } else if (directionLock.horizontal === 'RIGHT_TO_LEFT') {
+            directionPhrase = `traveling RIGHT_TO_LEFT, ${directionPhrase}`;
+          }
+
+          prompt = `${prompt}. ${directionPhrase}`;
+          console.log(`[AI2] Shot ${i + 1}: Applied DIRECTION LOCK (${directionLock.horizontal || ''} ${directionLock.vertical || ''})`);
+        }
 
         // For non-base shots, add "THIS EXACT BACKGROUND" to lock environment
         if (extraRefs.length > 0 && !prompt.includes('THIS EXACT BACKGROUND')) {
@@ -1863,6 +2109,20 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
             Council
           </button>
 
+          {/* Agent Debug Panel toggle */}
+          <button
+            onClick={() => setShowDebugPanel(!showDebugPanel)}
+            className={`px-3 py-1.5 text-sm rounded-lg transition flex items-center gap-1.5 ${
+              showDebugPanel
+                ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50'
+                : 'bg-white/10 text-white/50 hover:bg-white/20'
+            }`}
+            title="Debug: View all agent prompts, test agents, see data flow"
+          >
+            <span className="text-base">🔧</span>
+            Debug
+          </button>
+
           {/* Reset button - shows when generating is stuck */}
           {(isGeneratingAssets || pipelinePhase !== 'idle') && (
             <button
@@ -1905,7 +2165,43 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
               </div>
               <span className="text-sm font-medium text-white/70">Chat</span>
             </div>
-            <span className="text-xs text-white/30">{MODEL_INFO[model]?.name || model}</span>
+            {/* Model Selector Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowModelDropdown(!showModelDropdown)}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-purple-300 hover:bg-purple-500/20 transition"
+              >
+                <span>{MODEL_INFO[model]?.name || model}</span>
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {showModelDropdown && (
+                <div className="absolute right-0 top-full mt-1 bg-zinc-900 border border-white/10 rounded-lg shadow-xl z-50 min-w-[180px] py-1">
+                  {[
+                    { id: 'claude-opus', name: 'Claude Opus 4.5', desc: 'Best reasoning', color: 'purple' },
+                    { id: 'claude-sonnet', name: 'Claude Sonnet', desc: 'Fast & capable', color: 'purple' },
+                    { id: 'gpt-5.2', name: 'GPT-5.2', desc: 'OpenAI latest', color: 'green' },
+                    { id: 'gpt-4o', name: 'GPT-4o', desc: 'OpenAI reliable', color: 'green' },
+                    { id: 'qwen', name: 'Qwen 3 8B', desc: 'Local (Ollama)', color: 'orange' },
+                  ].map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => { setModel(m.id); setShowModelDropdown(false); }}
+                      className={`w-full px-3 py-2 text-left hover:bg-white/5 flex items-center justify-between ${
+                        model === m.id ? 'bg-white/10' : ''
+                      }`}
+                    >
+                      <div>
+                        <div className={`text-sm ${m.color === 'purple' ? 'text-purple-300' : m.color === 'green' ? 'text-green-300' : 'text-orange-300'}`}>{m.name}</div>
+                        <div className="text-[10px] text-white/40">{m.desc}</div>
+                      </div>
+                      {model === m.id && <span className="text-green-400">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Chat Messages - Scrollable, content pushed to bottom like Claude web */}
@@ -2084,6 +2380,24 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
                 </svg>
               </button>
 
+              {/* Aspect Ratio Toggle */}
+              <button
+                onClick={() => {
+                  const ratios: AspectRatio[] = ['16:9', '9:16', '1:1'];
+                  const currentIdx = ratios.indexOf(aspectRatio);
+                  setAspectRatio(ratios[(currentIdx + 1) % ratios.length]);
+                }}
+                className={`h-11 px-3 flex items-center justify-center gap-1.5 rounded-xl transition flex-shrink-0 ${
+                  aspectRatio === '16:9' ? 'bg-blue-500/20 text-blue-300' :
+                  aspectRatio === '9:16' ? 'bg-pink-500/20 text-pink-300' :
+                  'bg-orange-500/20 text-orange-300'
+                }`}
+                title={`Aspect Ratio: ${aspectRatio} (click to change)`}
+              >
+                <span className="text-sm">{aspectRatio === '16:9' ? '📺' : aspectRatio === '9:16' ? '📱' : '⬜'}</span>
+                <span className="text-xs font-medium">{aspectRatio}</span>
+              </button>
+
               <textarea
                 ref={inputRef}
                 value={input}
@@ -2255,6 +2569,10 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
                             className={`px-2 py-0.5 text-[10px] rounded ${refViewTab === 'story' ? 'bg-teal-500 text-white' : 'text-white/50 hover:text-white'}`}
                           >All ({allRefs.length})</button>
                           <button
+                            onClick={() => setRefViewTab('uploaded')}
+                            className={`px-2 py-0.5 text-[10px] rounded ${refViewTab === 'uploaded' ? 'bg-pink-500 text-white' : 'text-white/50 hover:text-white'}`}
+                          >📤 Uploaded ({allRefs.filter(r => !r.generated).length})</button>
+                          <button
                             onClick={() => setRefViewTab('characters')}
                             className={`px-2 py-0.5 text-[10px] rounded ${refViewTab === 'characters' ? 'bg-purple-500 text-white' : 'text-white/50 hover:text-white'}`}
                           >Characters ({allRefs.filter(r => r.type === 'char').length})</button>
@@ -2276,6 +2594,7 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
                         {allRefs
                           .filter(ref => {
                             if (refViewTab === 'story') return true;
+                            if (refViewTab === 'uploaded') return !ref.generated; // Only user-uploaded refs
                             if (refViewTab === 'characters') return ref.type === 'char';
                             if (refViewTab === 'locations') return ref.type === 'loc';
                             if (refViewTab === 'baseplates') return ref.type === 'baseplate';
@@ -2359,6 +2678,13 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
                                 onClick={() => setShotViewTab('video')}
                                 className={`px-3 py-1 text-xs rounded ${shotViewTab === 'video' ? 'bg-purple-500 text-white' : 'text-white/50 hover:text-white'}`}
                               >🎬 Videos ({generatedAssets.filter(a => a.videoStatus === 'done').length}/{generatedAssets.filter(a => a.approved).length || 0})</button>
+                              {/* Rendered tab - shows when videos are complete */}
+                              {generatedAssets.filter(a => a.videoStatus === 'done' && a.videoUrl).length > 0 && (
+                                <button
+                                  onClick={() => setShotViewTab('video')}
+                                  className="px-3 py-1 text-xs rounded bg-green-500 text-white"
+                                >✓ Rendered ({generatedAssets.filter(a => a.videoStatus === 'done' && a.videoUrl).length})</button>
+                              )}
                             </div>
                             {/* Pipeline Progress - Show ALL phases */}
                             {pipelinePhase !== 'idle' && pipelinePhase !== 'done' && (
@@ -2382,7 +2708,7 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
                                   {pipelinePhase === 'refs-approval' && '2/5 Review refs...'}
                                   {pipelinePhase === 'images' && `3/5 Generating photos (${generatedAssets.filter(a => a.status === 'done').length}/${latestPlan?.shots?.length || 0})...`}
                                   {pipelinePhase === 'approval' && '4/5 Approve photos...'}
-                                  {pipelinePhase === 'videos' && `5/5 Rendering videos (${generatedAssets.filter(a => a.videoStatus === 'done').length}/${generatedAssets.filter(a => a.approved).length || 0})...`}
+                                  {pipelinePhase === 'videos' && `5/5 Generating videos (${generatedAssets.filter(a => a.videoStatus === 'done').length}/${generatedAssets.filter(a => a.approved).length || 0})...`}
                                   {pipelinePhase === 'stitching' && 'Stitching final video...'}
                                 </span>
                               </div>
@@ -2889,6 +3215,13 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
         {showCouncilPanel && (
           <aside className="w-96 border-l border-vs-border bg-zinc-950 overflow-y-auto">
             <CouncilPanel />
+          </aside>
+        )}
+
+        {/* Agent Debug Panel - View prompts, test agents */}
+        {showDebugPanel && (
+          <aside className="w-[450px] border-l border-vs-border bg-zinc-950 overflow-hidden">
+            <AgentDebugPanel onClose={() => setShowDebugPanel(false)} />
           </aside>
         )}
 

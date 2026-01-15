@@ -158,6 +158,25 @@ EMOTIONAL ARC PATTERNS:
 - CONTRAST: strong → calm → explosive (for surprise impact)
 - WAVE: medium → strong → medium → extreme (for sustained engagement)
 
+## CWS BEAT MAPPING (when CWS enabled)
+
+Map each beat to world state transitions:
+- SETUP: Entities at rest positions, establish spatial relationships
+- CATALYST: Entity state change triggers action (position or state)
+- DEBATE: Character facing changes, positions shift
+- MIDPOINT: Major state change (door opens, object breaks)
+- CRISIS: High movement delta, rapid state changes
+- CLIMAX: Peak state changes, entity positions converge
+- RESOLUTION: Entities return to rest, new equilibrium state
+
+Output beat-to-state mapping when CWS enabled:
+\`\`\`
+BEAT: [name]
+  ENTITIES_AFFECTED: [which entities change]
+  STATE_TRANSITIONS: [what states change]
+  SUGGESTED_RIGS: [camera sequence for beat]
+\`\`\`
+
 When evaluating a shot, you MUST respond with valid JSON:
 {
   "agent": "narrative",
@@ -210,6 +229,28 @@ CAMERA MOVEMENTS:
 - STEADICAM: Smooth following, Kubrick corridors
 - HANDHELD: Documentary urgency, chaos
 - STATIC: Tension through stillness, tableaux
+
+## CWS CAMERA RIG SYSTEM (when CWS enabled)
+
+Named camera positions with 3D coordinates:
+| Rig ID | Position (x,y,z) | Look At | Lens | Side |
+|--------|------------------|---------|------|------|
+| WIDE_MASTER | (0, 1.5, 10) | (0, 1, 0) | 24mm | - |
+| OTS_A | (-2, 1.5, 3) | (2, 1.5, 0) | 50mm | A |
+| OTS_B | (2, 1.5, 3) | (-2, 1.5, 0) | 50mm | B |
+| CU_A | (-1, 1.5, 2) | (0, 1.5, 0) | 85mm | A |
+| CU_B | (1, 1.5, 2) | (0, 1.5, 0) | 85mm | B |
+| REACTION_INSERT | (0, 1.5, 1.5) | (0, 1.5, 0) | 100mm | - |
+| LOW_ANGLE_HERO | (0, 0.5, 3) | (0, 1.5, 0) | 24mm | - |
+| HIGH_ANGLE_VULNERABLE | (0, 3, 3) | (0, 1, 0) | 35mm | - |
+
+180° RULE ENFORCEMENT:
+- Once line of action is established, stay on same side
+- Side A rigs: OTS_A, CU_A (camera left of line)
+- Side B rigs: OTS_B, CU_B (camera right of line)
+- To cross: use neutral rig (WIDE_MASTER) as bridge
+
+When CWS enabled, include "rigId" in recommendation
 
 When evaluating a shot, you MUST respond with valid JSON:
 {
@@ -280,6 +321,26 @@ MOTION ENDPOINT EXAMPLES (prevents 99% of generation hangs):
 - WRONG: "Camera pushes in"
 - RIGHT: "Slow push-in on face, then holds steady"
 
+## CWS MOTION VALIDATION (when CWS enabled)
+
+When validating motion prompts against world state:
+1. Check if entity movement respects direction locks
+2. Verify camera transition matches rig positions
+3. Auto-add lock phrases when needed
+
+Direction Lock Check:
+- If entity has TRAVEL lock → verify motion respects direction
+- If entity has FACING lock → verify no unexpected turns
+- Add "NO MIRRORING. NO DIRECTION FLIP." automatically
+
+Motion Validation Output:
+\`\`\`
+CWS_MOTION_CHECK:
+  DIRECTION_LOCKS_RESPECTED: true|false
+  CAMERA_RIG_VALID: true|false
+  AUTO_LOCK_PHRASE: "[generated phrase]"
+\`\`\`
+
 COST BREAKDOWN:
 - Image generation (nano-banana): $0.03
 - 4K Upscale: $0.05
@@ -326,10 +387,26 @@ COLOR LOCK PHRASES (add to prompts when chaining):
 - "maintain exact color grading, same lighting direction"
 - "Same character, same costume, same lighting, different angle"
 
-DIRECTION LOCKS:
+DIRECTION LOCKS (CRITICAL for travel/motion scenes!):
 - Track which way character is facing (LEFT/RIGHT)
 - Maintain screen direction: "Character facing RIGHT - maintain direction"
 - Flag if direction would flip unexpectedly (causes jarring cut)
+
+TRAVEL DIRECTION LOCK:
+For driving/walking/flying scenes, LOCK the travel direction:
+- HORIZONTAL: LEFT_TO_RIGHT or RIGHT_TO_LEFT
+- VERTICAL: ASCENDING (uphill) or DESCENDING (downhill)
+- Include "NO MIRRORING. NO DIRECTION FLIP." in EVERY prompt
+
+CRITICAL: If exterior shot shows car going DOWNHILL, interior shot MUST show:
+- Road descending through windshield
+- Mountains/horizon BELOW eye level
+- Background moving in same direction
+
+COMMON MISTAKE TO FLAG:
+- Exterior: car descending mountain
+- Interior: windshield shows road going UPHILL
+This is a continuity ERROR - flag it!
 
 ENVIRONMENT LOCKS:
 - Room layout must be identical between shots
@@ -340,12 +417,46 @@ ENVIRONMENT LOCKS:
 CONTINUITY CHECKLIST:
 □ Color grade matches previous shot
 □ Character direction consistent (facing same way)
+□ TRAVEL DIRECTION consistent (uphill/downhill, left/right)
 □ Costume/appearance unchanged
 □ Lighting direction same
 □ Background elements present
 □ Time of day consistent within scene
 □ Props in correct state
 □ Weather/atmosphere consistent
+□ Interior/exterior direction match (windshield view matches exterior)
+
+## CWS (CONTINUOUS WORLD STORYTELLING) MODE
+
+When CWS is enabled, use 3D WORLD STATE to validate continuity:
+
+3D COORDINATE SYSTEM:
+- X: Left (-) / Right (+) relative to camera
+- Y: Down (-) / Up (+)
+- Z: Away from camera (-) / Toward camera (+)
+
+NO TELEPORTING RULE:
+- Entity position delta must be < 2 units between panels
+- If > 2 units moved, an intermediate shot MUST show movement
+- Flag: "TELEPORT VIOLATION" if entity jumped positions
+
+NO DIRECTION FLIP RULE:
+- Entity facing direction must match lock OR show turn
+- Travel direction must match lock (LEFT_TO_RIGHT stays LEFT_TO_RIGHT)
+- Flag: "DIRECTION VIOLATION" if flipped without transition
+
+STATE PROGRESSION RULE:
+- Props only progress forward (closed→open, NOT open→closed)
+- To reverse state, MUST show the reset action
+- Flag: "STATE REGRESSION" if prop state went backwards
+
+180° RULE TRACKING:
+- Camera must stay on ONE side of line of action
+- Line established between two primary entities
+- Side A rigs: OTS_A, CU_A
+- Side B rigs: OTS_B, CU_B
+- Neutral: WIDE_MASTER, REACTION_INSERT
+- Flag: "180 VIOLATION" if camera crossed without bridge shot
 
 CHAIN STRATEGIES:
 - NEW_SEQUENCE: First shot of scene, no chaining needed
@@ -435,7 +546,7 @@ async function callOpenAIAgent(
   systemPrompt: string,
   userMessage: string
 ): Promise<any> {
-  console.log(`[${agentName.toUpperCase()} AGENT] Calling OpenAI GPT-4o...`);
+  console.log(`[${agentName.toUpperCase()} AGENT] Calling OpenAI ${OPENAI_MODEL}...`);
 
   const response = await fetch(OPENAI_API_URL, {
     method: 'POST',
@@ -449,7 +560,7 @@ async function callOpenAIAgent(
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ],
-      max_tokens: 4000,
+      max_completion_tokens: 4000,  // GPT-5.2 uses max_completion_tokens, not max_tokens
       temperature: 0.7
     })
   });

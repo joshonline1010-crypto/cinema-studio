@@ -35,11 +35,22 @@ interface ConsensusResult {
 
 const AGENT_NAMES = ['narrative', 'visual', 'technical', 'production'];
 
-async function callRealAgent(agentName: string, context: ShotContext): Promise<AgentDecision> {
-  const baseUrl = process.env.SITE_URL || 'http://localhost:3001';
+async function callRealAgent(agentName: string, context: ShotContext, requestUrl?: string): Promise<AgentDecision> {
+  // Extract port from the incoming request URL, or try common ports
+  let baseUrl = process.env.SITE_URL || 'http://localhost:4321';
+
+  // If we have the request URL, extract the port from it
+  if (requestUrl) {
+    try {
+      const url = new URL(requestUrl);
+      baseUrl = `${url.protocol}//${url.host}`;
+    } catch (e) {
+      // Fall back to default
+    }
+  }
 
   try {
-    console.log(`[COUNCIL] Calling ${agentName.toUpperCase()} agent via Claude...`);
+    console.log(`[COUNCIL] Calling ${agentName.toUpperCase()} agent via Claude at ${baseUrl}...`);
 
     const response = await fetch(`${baseUrl}/api/council/agent`, {
       method: 'POST',
@@ -189,15 +200,17 @@ export const POST: APIRoute = async ({ request }) => {
     context.refs = context.refs || [];
     context.previousShots = context.previousShots || [];
 
+    // Get the request URL to determine correct port
+    const requestUrl = request.url;
     console.log('[COUNCIL] Starting council meeting - calling 4 Claude agents in parallel...');
     const startTime = Date.now();
 
     // Run ALL 4 REAL AI agent evaluations in parallel
     const [narrativeDecision, visualDecision, technicalDecision, productionDecision] = await Promise.all([
-      callRealAgent('narrative', context),
-      callRealAgent('visual', context),
-      callRealAgent('technical', context),
-      callRealAgent('production', context)
+      callRealAgent('narrative', context, requestUrl),
+      callRealAgent('visual', context, requestUrl),
+      callRealAgent('technical', context, requestUrl),
+      callRealAgent('production', context, requestUrl)
     ]);
 
     const elapsed = Date.now() - startTime;
