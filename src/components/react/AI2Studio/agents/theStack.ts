@@ -584,27 +584,3 @@ export function validateRefStack(stack: RefStack): {
 // ============================================
 
 export default TheStack;
-
-export {
-  // Class
-  TheStack,
-
-  // Grid builders
-  buildCharacterMasterPrompt,
-  buildEnvironmentMasterPrompt,
-  buildPropMasterPrompt,
-
-  // Grid utilities
-  createGrid,
-  getGridCellCoordinates,
-  getAllGridCellCoordinates,
-
-  // Ref utilities
-  buildRefLockPhrases,
-  validateRefStack,
-
-  // Variation data
-  CHARACTER_GRID_VARIATIONS,
-  ENVIRONMENT_GRID_VARIATIONS,
-  PROP_GRID_VARIATIONS
-};

@@ -29,9 +29,6 @@
  * ```
  */
 
-// Export types
-export * from './specTypes';
-
 // Export individual agents
 export { worldEngineerAgent, analyzeConceptForWorld, buildBaseWorldPrompt } from './worldEngineerAgent';
 export { beatPlannerAgent, calculateShotCount, detectNarrativeType, generateBeats } from './beatPlannerAgent';

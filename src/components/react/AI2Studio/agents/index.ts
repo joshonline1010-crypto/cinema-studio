@@ -21,12 +21,47 @@ export {
 // These implement the AI2Studio Master Prompting & World Engineering Bible
 // with the 4 official agents: WorldEngineer, BeatPlanner, ShotCompiler, ContinuityValidator
 
-export * from './specTypes';
-export * from './specAgents';
+// NOTE: specTypes has some overlapping type names with types.ts
+// Export specific types to avoid conflicts
+export {
+  CWS_LAWS,
+  GLOBAL_CONSTRAINTS,
+  PROMPT_TEMPLATES,
+  routeModel,
+  PIPELINE_PHASES
+} from './specTypes';
+export type {
+  SpecAgentRole,
+  SpecAgent,
+  WorldStateJSON,
+  CameraRigsJSON,
+  SceneGeographyMemory,
+  WorldEngineerInput,
+  WorldEngineerOutput,
+  BeatDefinition,
+  BeatPlannerInput,
+  BeatPlannerOutput,
+  ShotCard,
+  ShotCompilerInput,
+  ShotCompilerOutput,
+  ContinuityViolation,
+  RepairInstruction,
+  ContinuityValidatorInput,
+  ContinuityValidatorOutput,
+  RefInput,
+  MasterRef,
+  ViolationType,
+  RepairAction,
+  PipelinePhase as SpecPipelinePhase
+} from './specTypes';
 
-export { worldEngineerAgent } from './worldEngineerAgent';
-export { beatPlannerAgent } from './beatPlannerAgent';
-export { shotCompilerAgent } from './shotCompilerAgent';
+// Re-export GeneratedAsset from specTypes with different name to avoid conflict
+export type { GeneratedAsset as SpecGeneratedAsset } from './specTypes';
+
+// Spec Agents
+export { worldEngineerAgent, analyzeConceptForWorld, buildBaseWorldPrompt } from './worldEngineerAgent';
+export { beatPlannerAgent, calculateShotCount, detectNarrativeType, generateBeats } from './beatPlannerAgent';
+export { shotCompilerAgent, buildPhotoPrompt as buildSpecPhotoPrompt, buildMotionPrompt as buildSpecMotionPrompt } from './shotCompilerAgent';
 export { continuityValidatorAgent } from './continuityValidatorAgent';
 
 export { specOrchestrator, specAgents } from './specAgents';

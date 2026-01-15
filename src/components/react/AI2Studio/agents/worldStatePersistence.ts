@@ -396,10 +396,3 @@ export const worldStatePersistence = {
 // ============================================
 
 export default worldStatePersistence;
-
-// Export types
-export type {
-  ProjectSession,
-  GeneratedAssetRecord,
-  WorldStateSnapshot
-};

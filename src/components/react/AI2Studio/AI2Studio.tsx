@@ -6,6 +6,16 @@ import CouncilPanel from './components/CouncilPanel';
 import AgentDebugPanel from './components/AgentDebugPanel';
 import { useCouncilStore } from '../CouncilStudio/councilStore';
 
+// Spec Pipeline Agents (PDF Bible v4.0)
+import {
+  specOrchestrator,
+  worldStatePersistence,
+  TheStack,
+  buildCharacterMasterPrompt,
+  buildEnvironmentMasterPrompt
+} from './agents';
+import type { ShotCard, WorldEngineerOutput, BeatPlannerOutput, ShotCompilerOutput } from './agents';
+
 // Mode descriptions
 const MODE_INFO = {
   auto: 'AI decides the best approach',
@@ -136,6 +146,14 @@ export default function AI2Studio() {
 
   // Model dropdown in chat header
   const [showModelDropdown, setShowModelDropdown] = useState(false);
+
+  // SPEC PIPELINE STATE (PDF Bible v4.0)
+  const [useSpecPipeline, setUseSpecPipeline] = useState(false);
+  const [specWorldState, setSpecWorldState] = useState<WorldEngineerOutput | null>(null);
+  const [specBeats, setSpecBeats] = useState<BeatPlannerOutput | null>(null);
+  const [specShotCards, setSpecShotCards] = useState<ShotCompilerOutput | null>(null);
+  const [specSessionId, setSpecSessionId] = useState<string | null>(null);
+  const [showSpecPanel, setShowSpecPanel] = useState(false);
 
   // Format a nice summary from a JSON plan - SIMPLIFIED: Refs row, then content
   const formatPlanSummary = (plan: any): React.ReactNode => {
@@ -1887,6 +1905,153 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
     await generateVideosWithAssets();
   };
 
+  // ============================================
+  // SPEC PIPELINE (PDF Bible v4.0)
+  // ============================================
+
+  /**
+   * Run the full spec pipeline from concept to shot cards
+   * This uses the 4 spec agents: WorldEngineer, BeatPlanner, ShotCompiler, ContinuityValidator
+   */
+  const runSpecPipeline = async (concept: string, targetDuration: number = 30) => {
+    console.log('[AI2] 🚀 Running Spec Pipeline for:', concept.substring(0, 50) + '...');
+    addMessage('assistant', '🌍 **Spec Pipeline Started**\n\nRunning World Engineer → Beat Planner → Shot Compiler...');
+
+    try {
+      setIsGeneratingAssets(true);
+      setPipelinePhase('refs'); // Using refs phase for world building
+
+      // Create a new session for persistence
+      const session = worldStatePersistence.createSession({
+        projectName: concept.substring(0, 30),
+        concept,
+        targetDuration
+      });
+      setSpecSessionId(session.projectId);
+
+      // Collect refs from uploaded images
+      const refInputs = [
+        ...characterRefs.map(r => ({ url: r.url, name: r.name, type: 'character' as const })),
+        ...locationRefs.map(r => ({ url: r.url, name: r.name, type: 'location' as const })),
+        ...productRefs.map(r => ({ url: r.url, name: r.name, type: 'prop' as const }))
+      ];
+
+      // Run the full pipeline
+      const result = await specOrchestrator.runPipeline({
+        concept,
+        targetDuration,
+        refs: refInputs,
+        constraints: {
+          pacingStyle: 'medium'
+        }
+      });
+
+      // Store results
+      setSpecWorldState(result.worldState);
+      setSpecBeats(result.beats);
+      setSpecShotCards(result.shotCards);
+
+      // Save to persistence
+      worldStatePersistence.saveWorldState(session.projectId, result.worldState);
+      worldStatePersistence.saveShotCards(session.projectId, result.shotCards.shotCards);
+
+      console.log('[AI2] ✅ Spec Pipeline complete:', result.shotCards.shotCards.length, 'shots');
+
+      // Convert shot cards to the existing GeneratedAsset format
+      const assets: GeneratedAsset[] = result.shotCards.shotCards.map((card: ShotCard) => ({
+        id: card.shot_id,
+        type: 'image' as const,
+        prompt: card.photo_prompt,
+        motionPrompt: card.video_motion_prompt,
+        status: 'pending' as const,
+        duration: String(card.video_duration_seconds) as '5' | '10'
+      }));
+
+      setGeneratedAssets(assets);
+
+      // Build a plan object compatible with existing flow
+      const specPlan = {
+        name: 'Spec Pipeline',
+        shots: result.shotCards.shotCards.map((card: ShotCard) => ({
+          shot_id: card.shot_id,
+          photo_prompt: card.photo_prompt,
+          motion_prompt: card.video_motion_prompt,
+          camera_rig: card.camera_rig_id,
+          lens_mm: card.lens_mm,
+          video_model: card.video_model,
+          duration: card.video_duration_seconds
+        })),
+        world_state: result.worldState.worldState,
+        character_references: {},
+        scene_references: {}
+      };
+
+      setCurrentPlan(specPlan);
+
+      // Add summary message
+      const worldSummary = result.worldState.worldState;
+      addMessage('assistant', `✅ **Spec Pipeline Complete!**
+
+**World State:**
+- Environment: ${worldSummary.environment_geometry.static_description}
+- Lighting: ${worldSummary.lighting.primary_light_direction}
+- Entities: ${worldSummary.entities.map(e => e.entity_id).join(', ')}
+
+**Beats:** ${result.beats.beats.length} beats planned
+
+**Shot Cards:** ${result.shotCards.shotCards.length} shots ready
+
+Click **Execute Plan** to start generating images and videos.`);
+
+      setPipelinePhase('idle');
+      setIsGeneratingAssets(false);
+
+      return result;
+
+    } catch (error) {
+      console.error('[AI2] ❌ Spec Pipeline error:', error);
+      addMessage('assistant', `❌ **Spec Pipeline Error**\n\n${error}`);
+      setPipelinePhase('idle');
+      setIsGeneratingAssets(false);
+      throw error;
+    }
+  };
+
+  /**
+   * Execute the spec plan using shot cards
+   */
+  const executeSpecPlan = async () => {
+    if (!specShotCards || specShotCards.shotCards.length === 0) {
+      console.log('[AI2] No spec shot cards to execute');
+      return;
+    }
+
+    console.log('[AI2] Executing spec plan with', specShotCards.shotCards.length, 'shot cards');
+
+    // Build refs from THE_STACK
+    const stack = TheStack.fromRefInputs([
+      ...characterRefs.map(r => ({ url: r.url, name: r.name, type: 'character' as const })),
+      ...locationRefs.map(r => ({ url: r.url, name: r.name, type: 'location' as const })),
+      ...productRefs.map(r => ({ url: r.url, name: r.name, type: 'prop' as const }))
+    ]);
+
+    // Convert to plan format and execute
+    const plan = {
+      name: 'Spec Execution',
+      shots: specShotCards.shotCards.map((card: ShotCard) => ({
+        shot_id: card.shot_id,
+        photo_prompt: card.photo_prompt,
+        motion_prompt: card.video_motion_prompt,
+        video_model: card.video_model,
+        duration: card.video_duration_seconds
+      })),
+      character_references: characterRefs.length > 0 ? { main: { name: characterRefs[0].name, description: characterRefs[0].name } } : {},
+      scene_references: locationRefs.length > 0 ? { main: { name: locationRefs[0].name, description: locationRefs[0].name } } : {}
+    };
+
+    await generateFromJsonPlan(plan);
+  };
+
   // Legacy function for backwards compatibility - now uses approval flow
   const generateFromJsonPlan = async (plan: any) => {
     // Start with refs, then images
@@ -2107,6 +2272,20 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
           >
             <span className="text-base">🧠</span>
             Council
+          </button>
+
+          {/* SPEC PIPELINE toggle (PDF Bible v4.0) */}
+          <button
+            onClick={() => setUseSpecPipeline(!useSpecPipeline)}
+            className={`px-3 py-1.5 text-sm rounded-lg transition flex items-center gap-1.5 ${
+              useSpecPipeline
+                ? 'bg-teal-500/30 text-teal-300 border border-teal-500/50'
+                : 'bg-white/10 text-white/50 hover:bg-white/20'
+            }`}
+            title="Spec Pipeline: WorldEngineer → BeatPlanner → ShotCompiler (PDF Bible v4.0)"
+          >
+            <span className="text-base">🌍</span>
+            Spec
           </button>
 
           {/* Agent Debug Panel toggle */}
@@ -2428,6 +2607,10 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
               const failedUploads = refImages.filter(r => (r as any)._failed === true);
               const hasReadyRefs = refImages.filter(r => r.url?.startsWith('http')).length;
 
+              // Get latest user message for spec pipeline concept
+              const latestUserMsg = [...messages].reverse().find(m => m.role === 'user');
+              const concept = latestUserMsg?.content || input;
+
               if (hasPlan && !isGenerating && !isGeneratingAssets) {
                 return (
                   <div className="space-y-2">
@@ -2442,16 +2625,50 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
                         ⚠️ {failedUploads.length} ref(s) failed to upload - will run without them
                       </div>
                     )}
+
+                    {/* SPEC PIPELINE BUTTON (when enabled) */}
+                    {useSpecPipeline && (
+                      <button
+                        onClick={() => runSpecPipeline(concept, 30)}
+                        disabled={pendingUploads.length > 0 || !concept}
+                        className="w-full py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition flex items-center justify-center gap-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="text-lg">🌍</span>
+                        Run Spec Pipeline (World → Beats → Shots)
+                      </button>
+                    )}
+
+                    {/* Standard Execute Button */}
                     <button
-                      onClick={() => generateFromJsonPlan(latestPlan)}
+                      onClick={() => useSpecPipeline && specShotCards ? executeSpecPlan() : generateFromJsonPlan(latestPlan)}
                       disabled={pendingUploads.length > 0}
                       className="w-full py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition flex items-center justify-center gap-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
-                      Execute Plan ({latestPlan.shots.length} shots){hasReadyRefs > 0 ? ` + ${hasReadyRefs} refs` : ''}
+                      {useSpecPipeline && specShotCards
+                        ? `Execute Spec (${specShotCards.shotCards.length} shots)`
+                        : `Execute Plan (${latestPlan.shots.length} shots)`}{hasReadyRefs > 0 ? ` + ${hasReadyRefs} refs` : ''}
                     </button>
+                  </div>
+                );
+              }
+
+              // Show SPEC button even without a plan (if spec mode is on)
+              if (useSpecPipeline && !isGenerating && !isGeneratingAssets && concept) {
+                return (
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => runSpecPipeline(concept, 30)}
+                      className="w-full py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition flex items-center justify-center gap-2 font-semibold"
+                    >
+                      <span className="text-lg">🌍</span>
+                      Run Spec Pipeline
+                    </button>
+                    <div className="text-xs text-white/40 text-center">
+                      WorldEngineer → BeatPlanner → ShotCompiler
+                    </div>
                   </div>
                 );
               }
