@@ -196,6 +196,46 @@ export interface ShotCompilerInput {
   cameraRigs: CameraRigsJSON;
   beats: BeatDefinition[];
   masterRefs: MasterRef[];
+  // Director's Plan - contains video_model, shot_type per shot
+  directorPlan?: {
+    shotSequence?: Array<{
+      shot_number: number;
+      shot_type: string;
+      purpose?: string;
+      camera_rig?: string;
+      lens_mm?: number;
+      duration_seconds?: number;
+      subject_focus?: string;
+      camera_movement?: string;
+      energy_level?: number;
+      target_duration_ms?: number;
+      edit_intent?: any;
+      dialogue_info?: {
+        has_dialogue: boolean;
+        speech_mode?: 'lip_sync' | 'pov' | 'inner_thoughts' | 'voice_only';
+        character?: string;
+        line_summary?: string;
+      };
+      sora_candidate?: boolean;
+      sora_reason?: string;
+      sora_ref_type?: string;
+      sora_preset?: string;
+      video_model?: VideoModel;
+      model_reasoning?: string;
+    }>;
+    refAssignments?: any[];
+    continuityLocks?: any;
+    characterDirections?: any[];
+  };
+  // Script lines from scriptwriter
+  script?: Array<{
+    shot_number: number;
+    character: string;
+    dialogue_type: string;
+    line_text: string;
+  }>;
+  // Validated ref stacks from refValidator
+  validatedRefs?: any[];
 }
 
 export interface MasterRef {
@@ -213,6 +253,7 @@ export interface ShotCard {
   shot_id: string;
   beat_id: string;
   type: 'STATE_IMAGE' | 'GRID' | 'VIDEO_CLIP';
+  shot_type?: string;              // e.g., 'WIDE_MASTER', 'CU_A', 'TRACKING' - from Director
   camera_rig_id: string;
   lens_mm: number;
   direction_lock: 'LEFT_TO_RIGHT' | 'RIGHT_TO_LEFT';
@@ -232,6 +273,18 @@ export interface ShotCard {
     notes: string;
   };
   continuity_phrases: string[];
+  // Director's video model selection
+  sora_candidate?: boolean;
+  sora_preset?: string;
+  sora_reason?: string;
+  model_reasoning?: string;
+  // Dialogue info for audio pipeline
+  dialogue_info?: {
+    has_dialogue: boolean;
+    speech_mode?: 'lip_sync' | 'pov' | 'inner_thoughts' | 'voice_only';
+    character?: string;
+    line_summary?: string;
+  };
 }
 
 // ============================================

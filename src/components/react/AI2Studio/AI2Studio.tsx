@@ -2012,13 +2012,16 @@ Running all phases automatically...`);
 
       // SAVE GENERATED REFS TO STATE - so they show in UI!
       if (result.masterRefs && result.masterRefs.length > 0) {
-        const refsForState = result.masterRefs.map((ref: any) => ({
+        const refsForState: GeneratedRef[] = result.masterRefs.map((ref: any) => ({
           id: ref.id || ref.name,
           name: ref.name,
-          type: ref.type,
+          type: ref.type === 'CHARACTER_MASTER' ? 'character' :
+                ref.type === 'ENVIRONMENT_MASTER' ? 'location' :
+                ref.type === 'PROP_MASTER' ? 'item' : ref.type,
+          description: ref.prompt || ref.description || ref.name,
           url: ref.url || '',
-          approved: ref.url ? undefined : false,  // Auto-approve if has URL
-          prompt: ref.prompt
+          status: ref.url ? 'done' as const : 'pending' as const,
+          approved: ref.url ? undefined : false
         }));
         setGeneratedRefs(refsForState);
         console.log('[AI2] 📎 Refs saved to state:', refsForState.length);
@@ -2057,7 +2060,7 @@ Running all phases automatically...`);
             video_model: card.video_model,
             duration: card.video_duration_seconds,
             // Include segment/beat info for tabs
-            segment: beat?.segment || beat?.act || `Beat ${idx + 1}`,
+            segment: (beat as any)?.segment || (beat as any)?.act || `Beat ${idx + 1}`,
             beat: beat?.beat_id || `beat_${idx + 1}`,
             shot_type: card.shot_type,
             // Dialogue info for UI display
@@ -2071,8 +2074,47 @@ Running all phases automatically...`);
           };
         }),
         world_state: result.world.worldState,
-        character_references: {},
-        scene_references: {},
+        // Extract character refs from world state entities
+        character_references: Object.fromEntries(
+          (result.world?.worldState?.entities || [])
+            .filter((e: any) => e.entity_type === 'character' || e.entity_type === 'hero' || e.entity_type === 'actor')
+            .map((e: any) => [e.entity_id, {
+              name: e.display_name || e.entity_id,
+              description: e.visual_description || e.description || `${e.entity_type} in scene`,
+              type: 'character'
+            }])
+        ),
+        // Extract scene refs from world state
+        scene_references: Object.fromEntries(
+          [
+            ...(result.world?.worldState?.environment_geometry ? [{
+              id: 'main_environment',
+              display_name: 'Main Environment',
+              description: result.world.worldState.environment_geometry.static_description || 'Scene environment'
+            }] : []),
+            ...(result.world?.worldState?.entities || [])
+              .filter((e: any) => e.entity_type === 'location' || e.entity_type === 'environment' || e.entity_type === 'prop')
+              .map((e: any) => ({
+                id: e.entity_id,
+                display_name: e.display_name || e.entity_id,
+                description: e.visual_description || e.description
+              }))
+          ].map((e: any) => [e.id, {
+            name: e.display_name,
+            description: e.description,
+            type: 'location'
+          }])
+        ),
+        // Extract items/props
+        item_references: Object.fromEntries(
+          (result.world?.worldState?.entities || [])
+            .filter((e: any) => e.entity_type === 'prop' || e.entity_type === 'object' || e.entity_type === 'vehicle')
+            .map((e: any) => [e.entity_id, {
+              name: e.display_name || e.entity_id,
+              description: e.visual_description || e.description || `${e.entity_type}`,
+              type: 'item'
+            }])
+        ),
         // V2: Include all new agent data
         direction: result.direction,
         storyAnalysis: result.storyAnalysis,
@@ -3229,31 +3271,67 @@ ${JSON.stringify(specPlan, null, 2)}
                                   )}
                                 </div>
 
-                                {/* Refs used - SIMPLIFIED summary (memoized for performance) */}
+                                {/* Refs used - Show ACTUAL refs being sent to this shot */}
                                 <div className="mb-2 p-2 bg-orange-500/10 rounded-lg border border-orange-500/20">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-[10px] text-orange-400 font-medium">📎 REFS:</span>
-                                    {hasAnyRefs ? (
-                                      <>
-                                        {readyUploadCount > 0 && (
-                                          <span className="px-1.5 py-0.5 bg-purple-500/20 rounded text-[9px] text-purple-200">
-                                            📷 {readyUploadCount} uploaded
+                                  <div className="text-[10px] text-orange-400 font-medium mb-1">📎 REFS USED:</div>
+                                  <div className="flex flex-col gap-1">
+                                    {/* Image 1: Last frame or base */}
+                                    {shot?.refs?.image_1 && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="px-1.5 py-0.5 bg-teal-500/20 rounded text-[9px] text-teal-300">
+                                          1️⃣ {shot.refs.image_1 === 'LAST_FRAME' ? `🔗 Last frame of Shot ${idx}` :
+                                              shot.refs.image_1 === 'BASE_WORLD' ? '🌍 Base World' :
+                                              shot.refs.image_1}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {/* Image 2: Character ref */}
+                                    {shot?.refs?.image_2 && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="px-1.5 py-0.5 bg-purple-500/20 rounded text-[9px] text-purple-200">
+                                          2️⃣ {shot.refs.image_2.includes('CHARACTER') ? '👤 ' : ''}
+                                          {shot.refs.image_2 || 'Character Ref'}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {/* Image 3: Environment ref */}
+                                    {shot?.refs?.image_3 && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="px-1.5 py-0.5 bg-blue-500/20 rounded text-[9px] text-blue-200">
+                                          3️⃣ {shot.refs.image_3.includes('ENVIRONMENT') ? '🏞️ ' : ''}
+                                          {shot.refs.image_3 || 'Environment Ref'}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {/* Additional refs */}
+                                    {shot?.refs?.others && shot.refs.others.length > 0 && (
+                                      <div className="flex items-center gap-1 flex-wrap">
+                                        {shot.refs.others.map((ref: string, refIdx: number) => (
+                                          <span key={refIdx} className="px-1.5 py-0.5 bg-amber-500/20 rounded text-[9px] text-amber-200">
+                                            {4 + refIdx}️⃣ {ref}
                                           </span>
-                                        )}
-                                        {generatedRefs.filter(r => r.approved !== false).length > 0 && (
-                                          <span className="px-1.5 py-0.5 bg-blue-500/20 rounded text-[9px] text-blue-200">
-                                            🎨 {generatedRefs.filter(r => r.approved !== false).length} generated
-                                          </span>
-                                        )}
+                                        ))}
+                                      </div>
+                                    )}
+                                    {/* Fallback if no ref data but we have refs available */}
+                                    {!shot?.refs && hasAnyRefs && (
+                                      <div className="flex items-center gap-1 flex-wrap">
                                         {isChained && (
                                           <span className="px-1.5 py-0.5 bg-teal-500/20 rounded text-[9px] text-teal-300">
-                                            🔗 chained
+                                            🔗 Chained from Shot {idx}
                                           </span>
                                         )}
-                                      </>
-                                    ) : (
+                                        {generatedRefs.filter(r => r.approved !== false).map((ref, refIdx) => (
+                                          <span key={refIdx} className="px-1.5 py-0.5 bg-blue-500/20 rounded text-[9px] text-blue-200">
+                                            {ref.type === 'character' ? '👤' : ref.type === 'location' ? '🏞️' : '📦'} {ref.name}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {/* No refs at all */}
+                                    {!shot?.refs && !hasAnyRefs && (
                                       <span className="text-[9px] text-white/40 italic">
-                                        prompt only {isChained && '+ 🔗 chained'}
+                                        Prompt only (no refs assigned)
                                       </span>
                                     )}
                                   </div>
@@ -3421,6 +3499,37 @@ ${JSON.stringify(specPlan, null, 2)}
                                     {isDialogue && (
                                       <span className="px-1.5 py-0.5 bg-pink-500/10 text-pink-300 text-[9px] rounded">Auto-detected dialogue</span>
                                     )}
+                                  </div>
+                                </div>
+
+                                {/* Video Input Refs - What images go into video gen */}
+                                <div className="mb-2 p-2 bg-orange-500/10 rounded-lg border border-orange-500/20">
+                                  <div className="text-[10px] text-orange-400 font-medium mb-1">📎 VIDEO INPUT:</div>
+                                  <div className="flex flex-col gap-1">
+                                    {/* Start Frame */}
+                                    <div className="flex items-center gap-1">
+                                      <span className="px-1.5 py-0.5 bg-blue-500/20 rounded text-[9px] text-blue-200">
+                                        🎬 Start: {hasImage ? `Shot ${idx + 1} photo` : 'Pending photo generation'}
+                                      </span>
+                                    </div>
+                                    {/* End Frame (for Start→End transitions) */}
+                                    {videoType === 'Start→End' && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="px-1.5 py-0.5 bg-cyan-500/20 rounded text-[9px] text-cyan-200">
+                                          🎯 End: Shot {idx + 2} photo
+                                        </span>
+                                      </div>
+                                    )}
+                                    {/* Model being used */}
+                                    <div className="flex items-center gap-1">
+                                      <span className={`px-1.5 py-0.5 rounded text-[9px] ${
+                                        shot?.video_model === 'sora-2' ? 'bg-green-500/20 text-green-200' :
+                                        shot?.video_model === 'seedance-1.5' ? 'bg-pink-500/20 text-pink-200' :
+                                        'bg-purple-500/20 text-purple-200'
+                                      }`}>
+                                        ⚙️ Model: {shot?.video_model || modelName}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
 

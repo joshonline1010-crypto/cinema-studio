@@ -14,6 +14,8 @@
 
 import { callSpecAgent } from './specAICaller';
 import type { WorldEngineerOutput, BeatDefinition, MasterRef } from './specTypes';
+import movieShotsService from '../services/movieShotsService';
+import type { FormattedShotReference } from '../types/movieShots';
 
 // ============================================
 // DIRECTOR SYSTEM PROMPT - FILM GRAMMAR MASTER
@@ -457,6 +459,197 @@ For each shot, add:
 - sora_ref_type: 'location_only' | 'character_only' | 'character_in_location'
 - sora_preset: Suggested preset from table above
 
+## SORA-2 BURST PATTERNS (PACING & STORY TURNS!)
+
+Sora-2 is your **PACING CONTROL TOOL**. Use BURSTS (3-6 rapid shots) to:
+- SELL emotional gear shifts
+- CREATE intensity through rapid cuts
+- PUNCTUATE story turns
+- BUILD anticipation before impact
+
+### AUTOMATIC BURST TRIGGERS - When you see these, plan a Sora-2 burst:
+
+**TRIGGER 1: STORY TURN (Emotional Gear Shift)**
+\`\`\`
+DETECT: "Character decides to..." / "Now it's personal" / "Everything changes"
+DETECT: Character shifts from defensive → offensive
+DETECT: Stakes suddenly change
+ACTION: Plan 3-5 shot DETERMINATION BURST
+SHOTS: CU_FACE (anger) → CU_HANDS (grip) → ECU_EYES (locked) → CU_BODY (forward)
+\`\`\`
+
+**TRIGGER 2: PACING ACCELERATION**
+\`\`\`
+DETECT: Energy jumps +3 or more (e.g., 4 → 8)
+DETECT: Chase begins / Fight escalates / Timer starts
+DETECT: "Suddenly..." / "In an instant..."
+ACTION: Plan 4-6 shot SPEED BURST
+SHOTS: Rapid alternating angles, each 2-3s, building intensity
+\`\`\`
+
+**TRIGGER 3: PRE-IMPACT ANTICIPATION**
+\`\`\`
+DETECT: Something big about to hit (punch, rocket, crash)
+DETECT: Projectile in flight
+ACTION: Plan 2-4 shot ANTICIPATION BURST before impact
+SHOTS: CU projectile → different angle → target reaction → IMPACT
+\`\`\`
+
+**TRIGGER 4: REACTION SEQUENCE**
+\`\`\`
+DETECT: Character sees something shocking
+DETECT: Multiple characters react to same event
+DETECT: "The moment they realized..."
+ACTION: Plan 3-4 shot REACTION BURST
+SHOTS: CU_FACE_A → CU_FACE_B → ECU_EYES → WIDE_REVEAL
+\`\`\`
+
+**TRIGGER 5: PREPARATION/LOADING**
+\`\`\`
+DETECT: Character preparing for action / Suiting up
+DETECT: Weapon loading, vehicle starting, ritual before battle
+ACTION: Plan 4-5 shot PREP BURST
+SHOTS: CU_HANDS → DETAIL → CU_FACE → DETAIL → READY_POSE
+\`\`\`
+
+**TRIGGER 6: DESTRUCTION CASCADE**
+\`\`\`
+DETECT: Something breaks apart / Chain reaction
+DETECT: Robot/vehicle exploding, building collapsing
+ACTION: Plan 3-5 shot DESTRUCTION BURST
+SHOTS: IMPACT → PART_A explodes → PART_B explodes → DEBRIS → AFTERMATH
+\`\`\`
+
+**TRIGGER 7: INTERIOR ACTION (Cockpit, Vehicle, Mech)**
+\`\`\`
+DETECT: Action inside vehicle/cockpit/mech
+DETECT: Pilot/driver taking action
+ACTION: Plan 3-4 shot INTERIOR BURST
+SHOTS: COCKPIT_WIDE → CU_CONTROLS → CU_PILOT_FACE → POV_WINDOW
+\`\`\`
+
+**TRIGGER 8: VEHICLE PERFORMANCE (Drifting, Racing, Flying)**
+\`\`\`
+DETECT: Car drifting / Racing scene / Fast driving
+DETECT: Gear changes, pedal work, steering action
+DETECT: Speed showcase / Performance moment
+ACTION: Plan 4-6 shot VEHICLE BURST
+SHOTS: CU_GEAR_SHIFT → CU_GAUGE → CU_STEERING → CU_PEDAL → CU_DRIVER_FACE → EXT_DRIFT
+REQ_REFS: VEHICLE_INTERIOR (gauge cluster, gear shift, steering wheel, pedals)
+\`\`\`
+
+### BURST REF REQUIREMENTS (CRITICAL!)
+
+**IMPORTANT: Bursts need MATCHING REFS to work!**
+
+When you plan a burst, you MUST specify what refs are needed:
+
+| Burst Type | Required Refs | Example |
+|------------|---------------|---------|
+| VEHICLE_INTERIOR | gauge_cluster, gear_shift, steering_wheel, pedals | Car drift scene |
+| COCKPIT_ACTION | cockpit_wide, control_panel, pilot_seat, windshield | Helicopter/jet |
+| MECH_INTERIOR | cockpit_hud, control_sticks, pilot_harness, screens | Giant robot |
+| CHARACTER_REACTION | face_neutral, face_angry, face_determined, face_fear | Emotion burst |
+| WEAPON_LOADING | gun_chamber, magazine, hands_loading, scope | Prep sequence |
+| DESTRUCTION_PARTS | body_part_A, body_part_B, debris, fire_detail | Robot exploding |
+
+### Add required_refs to burst planning:
+
+\`\`\`json
+{
+  "burst_info": {
+    "is_burst": true,
+    "burst_id": "BURST_002_DRIFT",
+    "burst_type": "VEHICLE_PERFORMANCE",
+    "burst_trigger": "Car enters drift sequence",
+
+    "required_refs": [
+      {
+        "ref_id": "car_interior_gauge",
+        "ref_type": "DETAIL",
+        "description": "Close-up of speedometer/tachometer gauge cluster",
+        "must_match": "Same car interior as establishing shot"
+      },
+      {
+        "ref_id": "car_interior_gearshift",
+        "ref_type": "DETAIL",
+        "description": "Gear shift lever with driver's hand",
+        "must_match": "Same car interior"
+      },
+      {
+        "ref_id": "car_interior_steering",
+        "ref_type": "DETAIL",
+        "description": "Steering wheel being turned hard",
+        "must_match": "Same car interior"
+      },
+      {
+        "ref_id": "car_interior_pedals",
+        "ref_type": "DETAIL",
+        "description": "Foot on gas/brake pedals",
+        "must_match": "Same car interior"
+      }
+    ]
+  }
+}
+\`\`\`
+
+**THE PLANNING CHAIN:**
+\`\`\`
+1. Director detects burst trigger (car drifting scene)
+2. Director plans burst structure (4-6 interior shots)
+3. Director specifies required_refs (gauge, gear, steering, pedals)
+4. Ref Planner generates these refs FIRST (consistent style!)
+5. Shot Compiler assigns refs to burst shots
+6. Sora-2 generates burst with matching refs
+\`\`\`
+
+### BURST STRUCTURE IN OUTPUT:
+
+When you detect a trigger, mark the shots as a burst:
+
+\`\`\`json
+{
+  "shot_number": 4,
+  "shot_type": "CU_FACE",
+  "video_model": "sora-2",
+  "sora_candidate": true,
+  "sora_preset": "GEAR_SHIFT_FACE",
+
+  "burst_info": {
+    "is_burst": true,
+    "burst_id": "BURST_001_DETERMINATION",
+    "burst_type": "GEAR_SHIFT",
+    "burst_position": 1,
+    "burst_total": 4,
+    "burst_trigger": "Hero decides to fight back after helicopter hit",
+    "burst_emotion": "defensive_to_aggressive",
+    "pacing": "rapid"
+  }
+}
+\`\`\`
+
+### BURST SIZE BY INTENSITY:
+
+| Story Moment | Burst Size | Duration Each |
+|--------------|------------|---------------|
+| Minor shift | 2-3 shots | 5s each |
+| Medium turn | 3-4 shots | 5s each |
+| Major climax | 4-6 shots | 5s each |
+| Ultimate moment | 6-8 shots | 5s each |
+
+### SORA-2 vs KLING DECISION:
+
+| Situation | Model | Why |
+|-----------|-------|-----|
+| Normal dialogue | Kling 2.6 | Steady pacing needed |
+| Walking/traveling | Kling 2.6 | Continuous motion |
+| Establishing shot | Kling 2.6 | Wide = Kling territory |
+| **STORY TURN** | **Sora-2 BURST** | Sell the emotional shift! |
+| **FAST ACTION** | **Sora-2 BURST** | Pacing control |
+| **PRE-IMPACT** | **Sora-2 BURST** | Build tension |
+| **DESTRUCTION** | **Sora-2 BURST** | Chaos details |
+| Calm after storm | Kling 2.6 | Reset to normal |
+
 ## REMEMBER
 
 You are the DIRECTOR. You see the WHOLE picture. You make creative decisions that serve the STORY. Every technical choice (shot type, ref, chain) must serve an EMOTIONAL purpose.
@@ -582,6 +775,8 @@ export interface DirectorOutput {
     key_expressions: string[];
     movement_pattern: string;
   }>;
+  // NEW: Movie shot references from the database
+  movie_shot_references?: FormattedShotReference[];
 }
 
 // ============================================
@@ -608,8 +803,32 @@ export const directorAgent = {
     else if (input.targetDuration <= 60) shotCount = 12;
     else shotCount = Math.ceil(input.targetDuration / 5);
 
-    // Build user prompt
-    const userPrompt = buildDirectorPrompt(input, shotCount);
+    // ============================================
+    // QUERY MOVIE SHOTS DATABASE FOR REFERENCES
+    // ============================================
+    let movieShotRefs: FormattedShotReference[] = [];
+    try {
+      // Get recommended director from story analysis (if available)
+      const recommendedDirector = input.storyAnalysis?.recommendedDirector;
+
+      if (recommendedDirector) {
+        console.log('[Director] 🎥 Fetching reference shots for director:', recommendedDirector);
+        movieShotRefs = await movieShotsService.getShotsByDirector(recommendedDirector, 5);
+        console.log('[Director] 📽️ Found', movieShotRefs.length, 'reference shots');
+      }
+
+      // If no director-specific refs, get by emotion
+      if (movieShotRefs.length === 0 && input.storyAnalysis?.emotionalArc) {
+        const emotion = input.storyAnalysis.emotionalArc.split(' ')[0].toLowerCase();
+        console.log('[Director] 🎭 Fetching shots by emotion:', emotion);
+        movieShotRefs = await movieShotsService.getShotsByEmotion(emotion, 5);
+      }
+    } catch (err) {
+      console.warn('[Director] Could not fetch movie shot references:', err);
+    }
+
+    // Build user prompt (now includes movie shot references)
+    const userPrompt = buildDirectorPrompt(input, shotCount, movieShotRefs);
 
     // Call Claude
     const aiResponse = await callSpecAgent({
@@ -633,11 +852,15 @@ export const directorAgent = {
       console.log('[Director] Director style:', plan.scene_analysis?.director_style);
       console.log('[Director] Shot count:', plan.shot_sequence?.length);
 
-      // Validate and fill in any missing fields
-      return validateAndFillPlan(plan, input, shotCount);
+      // Validate and fill in any missing fields, include movie shot refs
+      const validatedPlan = validateAndFillPlan(plan, input, shotCount);
+      validatedPlan.movie_shot_references = movieShotRefs;
+      return validatedPlan;
     } catch (err) {
       console.error('[Director] Error parsing plan:', err);
-      return createFallbackPlan(input, shotCount);
+      const fallback = createFallbackPlan(input, shotCount);
+      fallback.movie_shot_references = movieShotRefs;
+      return fallback;
     }
   }
 };
@@ -646,7 +869,7 @@ export const directorAgent = {
 // PROMPT BUILDER
 // ============================================
 
-function buildDirectorPrompt(input: DirectorInput, shotCount: number): string {
+function buildDirectorPrompt(input: DirectorInput, shotCount: number, movieShotRefs?: FormattedShotReference[]): string {
   const refList = (input.availableRefs || []).map(r =>
     `- ${r.name} (${r.type}): ${r.url ? 'AVAILABLE' : 'pending'}`
   ).join('\n');
@@ -665,13 +888,27 @@ function buildDirectorPrompt(input: DirectorInput, shotCount: number): string {
     ? JSON.stringify(worldState.sceneGeographyMemory, null, 2)
     : '{ "note": "Scene geography pending" }';
 
+  // Format movie shot references if available
+  const movieRefSection = movieShotRefs && movieShotRefs.length > 0
+    ? `
+
+MOVIE SHOT REFERENCES (Study these for framing and style):
+${movieShotRefs.map((ref, i) => `
+Reference ${i + 1}: ${ref.movie} (${ref.directorFormatted})
+- Shot Type: ${ref.shotType}, Angle: ${ref.angle}
+- Emotion: ${ref.emotion}, Lighting: ${ref.lighting}
+- How to recreate: ${ref.photoPrompt}
+- Tags: ${ref.tags.join(', ')}
+`).join('\n')}`
+    : '';
+
   return `Create a COMPLETE PRODUCTION PLAN for this concept.
 
 CONCEPT: "${input.concept}"
 
 TARGET DURATION: ${input.targetDuration} seconds
 EXPECTED SHOTS: ${shotCount} shots (each ~5 seconds)
-
+${movieRefSection}
 WORLD STATE:
 ${worldStateJson}
 

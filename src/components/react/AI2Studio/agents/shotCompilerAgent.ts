@@ -246,20 +246,30 @@ export const shotCompilerAgent: SpecAgent = {
       const shotCards: ShotCard[] = (aiData.shotCards || []).map((aiShot: any, index: number) => {
         const beat = input.beats[index] || input.beats[0];
 
-        // Determine video model
-        const characterSpeaks = beat.allowed_deltas?.some((d: string) =>
-          d.includes('lip_sync') || d.includes('dialogue') || d.includes('speaks')
-        ) || false;
+        // GET DIRECTOR'S PLAN FOR THIS SHOT (contains video_model, shot_type, etc.)
+        const directorShot = input.directorPlan?.shotSequence?.[index];
+
+        // Use Director's video_model if available, otherwise fallback to routing logic
+        const characterSpeaks = directorShot?.dialogue_info?.has_dialogue ||
+          beat.allowed_deltas?.some((d: string) =>
+            d.includes('lip_sync') || d.includes('dialogue') || d.includes('speaks')
+          ) || false;
         const needsStartEnd = aiShot.requires_end_frame || false;
-        const videoModel = aiShot.model_recommendation ||
+        const videoModel = directorShot?.video_model ||
+          aiShot.model_recommendation ||
           routeModel({ characterSpeaksOnCamera: characterSpeaks, needsStartEndStateChange: needsStartEnd });
+
+        // Get script line for this shot if available
+        const scriptLine = input.script?.find(s => s.shot_number === index + 1);
 
         return {
           shot_id: aiShot.shot_id || `shot_${String(index + 1).padStart(2, '0')}`,
           beat_id: aiShot.beat_id || beat.beat_id || `beat_${String(index + 1).padStart(2, '0')}`,
           type: 'STATE_IMAGE' as const,
-          camera_rig_id: aiShot.camera_rig_id || beat.camera_rig_id || 'WIDE_MASTER',
-          lens_mm: aiShot.lens_mm || beat.lens_mm || 35,
+          // USE DIRECTOR'S SHOT TYPE
+          shot_type: directorShot?.shot_type || aiShot.shot_type || beat.camera_rig_id || 'WIDE_MASTER',
+          camera_rig_id: directorShot?.camera_rig || aiShot.camera_rig_id || beat.camera_rig_id || 'WIDE_MASTER',
+          lens_mm: directorShot?.lens_mm || aiShot.lens_mm || beat.lens_mm || 35,
           direction_lock: beat.world_lock?.direction_lock || 'LEFT_TO_RIGHT',
           refs: {
             image_1: index > 0 ? 'LAST_FRAME' : 'BASE_WORLD',
@@ -268,8 +278,9 @@ export const shotCompilerAgent: SpecAgent = {
             others: aiShot.ref_urls?.slice(2) || []
           },
           photo_prompt: aiShot.photo_prompt || 'Scene continues',
+          // USE DIRECTOR'S VIDEO MODEL
           video_model: videoModel,
-          video_duration_seconds: aiShot.duration_seconds || 5,
+          video_duration_seconds: directorShot?.duration_seconds || aiShot.duration_seconds || 5,
           video_motion_prompt: aiShot.video_prompt || 'Static shot, subtle ambient movement, then settles',
           start_end_pairing: {
             start_frame: 'this_shot_image',
@@ -280,7 +291,19 @@ export const shotCompilerAgent: SpecAgent = {
             'THIS EXACT CHARACTER',
             'THIS EXACT LIGHTING',
             'NO MIRRORING'
-          ]
+          ],
+          // DIRECTOR'S SORA FLAGS
+          sora_candidate: directorShot?.sora_candidate || false,
+          sora_preset: directorShot?.sora_preset,
+          sora_reason: directorShot?.sora_reason,
+          model_reasoning: directorShot?.model_reasoning,
+          // DIALOGUE INFO (from Director + Script)
+          dialogue_info: directorShot?.dialogue_info ? {
+            has_dialogue: directorShot.dialogue_info.has_dialogue,
+            speech_mode: directorShot.dialogue_info.speech_mode,
+            character: directorShot.dialogue_info.character,
+            line_summary: scriptLine?.line_text || directorShot.dialogue_info.line_summary
+          } : undefined
         };
       });
 
@@ -309,6 +332,10 @@ function compileShotCardsFallback(input: ShotCompilerInput): ShotCompilerOutput 
     const prevBeat = i > 0 ? input.beats[i - 1] : null;
     const nextBeat = i < input.beats.length - 1 ? input.beats[i + 1] : null;
 
+    // GET DIRECTOR'S PLAN FOR THIS SHOT
+    const directorShot = input.directorPlan?.shotSequence?.[i];
+    const scriptLine = input.script?.find(s => s.shot_number === i + 1);
+
     const shotCard = compileBeatToShotCard(
       beat,
       prevBeat,
@@ -316,7 +343,9 @@ function compileShotCardsFallback(input: ShotCompilerInput): ShotCompilerOutput 
       input.worldState,
       input.cameraRigs,
       input.masterRefs,
-      i
+      i,
+      directorShot,
+      scriptLine
     );
 
     shotCards.push(shotCard);
@@ -336,23 +365,27 @@ function compileBeatToShotCard(
   worldState: WorldStateJSON,
   cameraRigs: CameraRigsJSON,
   masterRefs: MasterRef[],
-  index: number
+  index: number,
+  directorShot?: any,
+  scriptLine?: any
 ): ShotCard {
   // Determine if character speaks (for model routing)
-  const characterSpeaks = beat.allowed_deltas.some(d =>
-    d.includes('lip_sync') || d.includes('dialogue') || d.includes('speaks')
-  );
+  const characterSpeaks = directorShot?.dialogue_info?.has_dialogue ||
+    beat.allowed_deltas?.some(d =>
+      d.includes('lip_sync') || d.includes('dialogue') || d.includes('speaks')
+    ) || false;
 
   // Determine if START→END transition needed
   const needsStartEnd = beat.camera_intent === 'REVEAL' ||
     beat.distance_state !== prevBeat?.distance_state ||
     beat.energy_level - (prevBeat?.energy_level || 1) >= 2;
 
-  // Route model
-  const videoModel = routeModel({
-    characterSpeaksOnCamera: characterSpeaks,
-    needsStartEndStateChange: needsStartEnd
-  });
+  // USE DIRECTOR'S VIDEO MODEL if available, otherwise fallback to routing
+  const videoModel = directorShot?.video_model ||
+    routeModel({
+      characterSpeaksOnCamera: characterSpeaks,
+      needsStartEndStateChange: needsStartEnd
+    });
 
   // Build photo prompt
   const photoPrompt = buildPhotoPrompt(beat, prevBeat, worldState, index);
@@ -373,16 +406,30 @@ function compileBeatToShotCard(
     shot_id: `shot_${String(index + 1).padStart(2, '0')}`,
     beat_id: beat.beat_id,
     type: index === 0 ? 'STATE_IMAGE' : 'STATE_IMAGE',
-    camera_rig_id: beat.camera_rig_id,
-    lens_mm: beat.lens_mm,
-    direction_lock: beat.world_lock.direction_lock,
+    // USE DIRECTOR'S SHOT TYPE
+    shot_type: directorShot?.shot_type || beat.camera_rig_id || 'WIDE_MASTER',
+    camera_rig_id: directorShot?.camera_rig || beat.camera_rig_id,
+    lens_mm: directorShot?.lens_mm || beat.lens_mm,
+    direction_lock: beat.world_lock?.direction_lock || 'LEFT_TO_RIGHT',
     refs,
     photo_prompt: photoPrompt,
     video_model: videoModel,
-    video_duration_seconds: 5,
+    video_duration_seconds: directorShot?.duration_seconds || 5,
     video_motion_prompt: motionPrompt,
     start_end_pairing: startEndPairing,
-    continuity_phrases: continuityPhrases
+    continuity_phrases: continuityPhrases,
+    // DIRECTOR'S SORA FLAGS
+    sora_candidate: directorShot?.sora_candidate || false,
+    sora_preset: directorShot?.sora_preset,
+    sora_reason: directorShot?.sora_reason,
+    model_reasoning: directorShot?.model_reasoning,
+    // DIALOGUE INFO
+    dialogue_info: directorShot?.dialogue_info ? {
+      has_dialogue: directorShot.dialogue_info.has_dialogue,
+      speech_mode: directorShot.dialogue_info.speech_mode,
+      character: directorShot.dialogue_info.character,
+      line_summary: scriptLine?.line_text || directorShot.dialogue_info.line_summary
+    } : undefined
   };
 }
 
