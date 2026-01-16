@@ -3229,6 +3229,57 @@ ${JSON.stringify(specPlan, null, 2)}
                                   </div>
                                 </div>
 
+                                {/* Dialogue/Audio Info - Show if shot has dialogue */}
+                                {(shot?.dialogue_info?.has_dialogue || shot?.has_dialogue || shot?.speech_mode) && (
+                                  <div className="mb-2 p-2 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-[10px] text-purple-400 font-medium">🎤 AUDIO:</span>
+                                      {/* Speech Mode Badge */}
+                                      <span className={`px-1.5 py-0.5 rounded text-[9px] ${
+                                        (shot?.dialogue_info?.speech_mode || shot?.speech_mode) === 'lip_sync'
+                                          ? 'bg-pink-500/20 text-pink-200'
+                                          : 'bg-purple-500/20 text-purple-200'
+                                      }`}>
+                                        {(shot?.dialogue_info?.speech_mode || shot?.speech_mode) === 'lip_sync' && '👄 VEED Lip Sync'}
+                                        {(shot?.dialogue_info?.speech_mode || shot?.speech_mode) === 'voice_only' && '🔊 Voiceover'}
+                                        {(shot?.dialogue_info?.speech_mode || shot?.speech_mode) === 'inner_thoughts' && '💭 Inner Thoughts'}
+                                        {(shot?.dialogue_info?.speech_mode || shot?.speech_mode) === 'pov' && '👁️ POV Voice'}
+                                        {!(shot?.dialogue_info?.speech_mode || shot?.speech_mode) && '🎙️ TTS'}
+                                      </span>
+                                      {/* TTS Provider */}
+                                      <span className="px-1.5 py-0.5 bg-blue-500/20 rounded text-[9px] text-blue-200">
+                                        🔈 ElevenLabs
+                                      </span>
+                                    </div>
+                                    {/* Dialogue Line */}
+                                    {(shot?.dialogue_info?.line_summary || shot?.dialogue_line) && (
+                                      <div className="mt-1 text-[10px] text-white/70 italic">
+                                        "{shot?.dialogue_info?.line_summary || shot?.dialogue_line}"
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Video Model Badge */}
+                                {shot?.video_model && (
+                                  <div className="mb-2 flex items-center gap-2">
+                                    <span className={`px-2 py-0.5 rounded text-[9px] font-medium ${
+                                      shot.video_model === 'sora-2' ? 'bg-green-500/20 text-green-300' :
+                                      shot.video_model === 'seedance-1.5' ? 'bg-pink-500/20 text-pink-300' :
+                                      shot.video_model === 'kling-o1' ? 'bg-amber-500/20 text-amber-300' :
+                                      shot.video_model === 'veed-fabric' ? 'bg-purple-500/20 text-purple-300' :
+                                      'bg-blue-500/20 text-blue-300'
+                                    }`}>
+                                      🎬 {shot.video_model}
+                                    </span>
+                                    {shot?.sora_preset && (
+                                      <span className="px-1.5 py-0.5 bg-green-500/10 rounded text-[8px] text-green-300/70">
+                                        {shot.sora_preset}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
                                 {/* Prompt - Full text visible - ALWAYS show */}
                                 <div className="bg-blue-500/10 rounded-lg p-2 border border-blue-500/20">
                                   <div className="text-[10px] text-blue-400 font-medium mb-1">📷 IMAGE PROMPT:</div>
