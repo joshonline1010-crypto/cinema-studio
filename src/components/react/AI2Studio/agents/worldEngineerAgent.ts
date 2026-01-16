@@ -36,6 +36,7 @@ import type {
   NDCCoordinates
 } from './gameEngineDoctrine';
 import { DOCTRINE, coord, ndc, compassToVector, buildCompassLightingPhrase } from './gameEngineDoctrine';
+import { callSpecAgent, buildWorldEngineerPrompt } from './specAICaller';
 
 // ============================================
 // SYSTEM PROMPT - GAME ENGINE DOCTRINE
@@ -250,16 +251,76 @@ export const worldEngineerAgent: SpecAgent = {
 };
 
 // ============================================
-// CREATE NEW WORLD
+// CREATE NEW WORLD - NOW CALLS CLAUDE AI!
 // ============================================
 
 async function createNewWorld(input: WorldEngineerInput): Promise<WorldEngineerOutput> {
   const worldId = `world_${Date.now()}`;
 
-  // Analyze concept to extract entities and environment
+  console.log('[WorldEngineer] 🧠 CALLING CLAUDE AI to analyze concept...');
+  console.log('[WorldEngineer] Concept:', input.concept);
+
+  // Build the user prompt for Claude
+  const userPrompt = buildWorldEngineerPrompt(input.concept, input.refs || []);
+
+  // Call Claude with the system prompt
+  const aiResponse = await callSpecAgent({
+    systemPrompt: WORLD_ENGINEER_SYSTEM_PROMPT,
+    userMessage: userPrompt,
+    expectJson: true,
+    model: 'claude-sonnet'  // Use Sonnet for speed, it's still very capable
+  });
+
+  if (!aiResponse.success) {
+    console.error('[WorldEngineer] AI call failed:', aiResponse.error);
+    console.log('[WorldEngineer] Falling back to template-based analysis...');
+    // Fallback to template-based if AI fails
+    return createNewWorldFallback(input, worldId);
+  }
+
+  console.log('[WorldEngineer] ✅ Got AI response from:', aiResponse.provider);
+
+  // Parse the AI response
+  const aiData = aiResponse.data;
+
+  // Validate and extract world state from AI response
+  try {
+    const worldState: WorldStateJSON = aiData.worldState || createDefaultWorldState(worldId);
+    worldState.world_id = worldId;  // Ensure our ID is used
+
+    const cameraRigs: CameraRigsJSON = aiData.cameraRigs || { camera_rigs: buildDefaultCameraRigs() };
+    const scaleAnchors: ScaleAnchor[] = aiData.scaleAnchors || worldState.scale_anchors || [];
+    const entities: EntityDefinition[] = aiData.entities || [];
+    const sceneGeographyMemory: SceneGeographyMemory = aiData.sceneGeographyMemory || createDefaultGeographyMemory();
+    const baseWorldReferencePrompt: string = aiData.baseWorldReferencePrompt || 'Empty scene, cinematic lighting';
+
+    console.log('[WorldEngineer] 🌍 World created by AI:', worldId);
+    console.log('[WorldEngineer] Entities:', entities.length);
+    console.log('[WorldEngineer] Environment:', worldState.environment_geometry?.static_description?.substring(0, 100) + '...');
+    console.log('[WorldEngineer] Camera rigs:', cameraRigs.camera_rigs?.length || 0);
+
+    return {
+      worldState,
+      cameraRigs,
+      scaleAnchors,
+      baseWorldReferencePrompt,
+      entities,
+      sceneGeographyMemory
+    };
+  } catch (parseError) {
+    console.error('[WorldEngineer] Error parsing AI response:', parseError);
+    console.log('[WorldEngineer] AI raw response:', aiResponse.rawText.substring(0, 500));
+    return createNewWorldFallback(input, worldId);
+  }
+}
+
+// Fallback function when AI fails
+async function createNewWorldFallback(input: WorldEngineerInput, worldId: string): Promise<WorldEngineerOutput> {
+  console.log('[WorldEngineer] Using template fallback...');
+
+  // Use the old template-based analysis as fallback
   const analysis = analyzeConceptForWorld(input.concept, input.refs || []);
 
-  // Build world state
   const worldState: WorldStateJSON = {
     world_id: worldId,
     environment_geometry: {
@@ -283,12 +344,10 @@ async function createNewWorld(input: WorldEngineerInput): Promise<WorldEngineerO
     entities: analysis.entities
   };
 
-  // Build camera rigs (start with standard rigs + custom if needed)
   const cameraRigs: CameraRigsJSON = {
     camera_rigs: buildCameraRigs(analysis)
   };
 
-  // Build scene geography memory
   const sceneGeographyMemory: SceneGeographyMemory = {
     hero_side_of_frame: analysis.heroSide,
     villain_side_of_frame: analysis.villainSide,
@@ -297,20 +356,66 @@ async function createNewWorld(input: WorldEngineerInput): Promise<WorldEngineerO
     forbid_flip: true
   };
 
-  // Build base world reference prompt
-  const baseWorldReferencePrompt = buildBaseWorldPrompt(analysis);
-
-  console.log('[WorldEngineer] World created:', worldId);
-  console.log('[WorldEngineer] Entities:', analysis.entities.length);
-  console.log('[WorldEngineer] Camera rigs:', cameraRigs.camera_rigs.length);
-
   return {
     worldState,
     cameraRigs,
     scaleAnchors: analysis.scaleAnchors,
-    baseWorldReferencePrompt,
+    baseWorldReferencePrompt: buildBaseWorldPrompt(analysis),
     entities: analysis.entities,
     sceneGeographyMemory
+  };
+}
+
+// Helper functions for AI response parsing
+function createDefaultWorldState(worldId: string): WorldStateJSON {
+  return {
+    world_id: worldId,
+    environment_geometry: {
+      ground_plane: { Y: 0 },
+      static_landmarks: ['horizon'],
+      static_description: 'Generic environment'
+    },
+    lighting: {
+      primary_light_direction: 'from upper-left at 45 degrees',
+      primary_light_color_temp: '5600K daylight',
+      secondary_fill: 'soft bounce',
+      intensity_baseline: 1.0,
+      direction_locked: true
+    },
+    atmospherics: {
+      smoke_baseline: 'none',
+      dust_baseline: 'none',
+      haze: 'none'
+    },
+    scale_anchors: [{ anchor_name: 'human_height', real_world_reference: 'Adult human', approx_size_m: 1.75 }],
+    entities: []
+  };
+}
+
+function buildDefaultCameraRigs(): CameraRigDefinition[] {
+  const rigs: CameraRigDefinition[] = [];
+  for (const [rigId, rig] of Object.entries(STANDARD_RIGS)) {
+    rigs.push({
+      rig_id: rigId,
+      camera_position: rig.position,
+      look_at: rig.lookAt,
+      default_lens_mm: rig.lens.focalLength,
+      allowed_lenses_mm: [24, 35, 50, 85],
+      camera_motion_allowed: false,
+      allowed_camera_motions: ['static'],
+      notes: rig.name
+    });
+  }
+  return rigs;
+}
+
+function createDefaultGeographyMemory(): SceneGeographyMemory {
+  return {
+    hero_side_of_frame: 'CENTER',
+    villain_side_of_frame: 'CENTER',
+    light_direction_lock: 'upper-left',
+    color_grade_lock: 'natural cinematic',
+    forbid_flip: true
   };
 }
 

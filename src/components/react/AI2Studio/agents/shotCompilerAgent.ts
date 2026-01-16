@@ -27,6 +27,7 @@ import type {
 } from './specTypes';
 import { PROMPT_TEMPLATES, GLOBAL_CONSTRAINTS, routeModel } from './specTypes';
 import type { VideoModel } from './types';
+import { callSpecAgent, buildShotCompilerPrompt } from './specAICaller';
 
 // ============================================
 // SYSTEM PROMPT
@@ -211,33 +212,118 @@ export const shotCompilerAgent: SpecAgent = {
   systemPrompt: SHOT_COMPILER_SYSTEM_PROMPT,
 
   async execute(input: ShotCompilerInput): Promise<ShotCompilerOutput> {
-    console.log('[ShotCompiler] Compiling', input.beats.length, 'beats into shot cards');
+    console.log('[ShotCompiler] 🧠 CALLING CLAUDE AI to compile shot cards...');
+    console.log('[ShotCompiler] Beats to compile:', input.beats.length);
 
-    const shotCards: ShotCard[] = [];
+    // Build the user prompt for Claude
+    const userPrompt = buildShotCompilerPrompt(
+      input.beats,
+      input.worldState,
+      input.masterRefs
+    );
 
-    for (let i = 0; i < input.beats.length; i++) {
-      const beat = input.beats[i];
-      const prevBeat = i > 0 ? input.beats[i - 1] : null;
-      const nextBeat = i < input.beats.length - 1 ? input.beats[i + 1] : null;
+    // Call Claude with the system prompt
+    const aiResponse = await callSpecAgent({
+      systemPrompt: SHOT_COMPILER_SYSTEM_PROMPT,
+      userMessage: userPrompt,
+      expectJson: true,
+      model: 'claude-sonnet'
+    });
 
-      const shotCard = compileBeatToShotCard(
-        beat,
-        prevBeat,
-        nextBeat,
-        input.worldState,
-        input.cameraRigs,
-        input.masterRefs,
-        i
-      );
-
-      shotCards.push(shotCard);
+    if (!aiResponse.success) {
+      console.error('[ShotCompiler] AI call failed:', aiResponse.error);
+      console.log('[ShotCompiler] Falling back to template-based compilation...');
+      return compileShotCardsFallback(input);
     }
 
-    console.log('[ShotCompiler] Generated', shotCards.length, 'shot cards');
+    console.log('[ShotCompiler] ✅ Got AI response from:', aiResponse.provider);
 
-    return { shotCards };
+    // Parse the AI response
+    const aiData = aiResponse.data;
+
+    try {
+      // Extract shot cards from AI response
+      const shotCards: ShotCard[] = (aiData.shotCards || []).map((aiShot: any, index: number) => {
+        const beat = input.beats[index] || input.beats[0];
+
+        // Determine video model
+        const characterSpeaks = beat.allowed_deltas?.some((d: string) =>
+          d.includes('lip_sync') || d.includes('dialogue') || d.includes('speaks')
+        ) || false;
+        const needsStartEnd = aiShot.requires_end_frame || false;
+        const videoModel = aiShot.model_recommendation ||
+          routeModel({ characterSpeaksOnCamera: characterSpeaks, needsStartEndStateChange: needsStartEnd });
+
+        return {
+          shot_id: aiShot.shot_id || `shot_${String(index + 1).padStart(2, '0')}`,
+          beat_id: aiShot.beat_id || beat.beat_id || `beat_${String(index + 1).padStart(2, '0')}`,
+          type: 'STATE_IMAGE' as const,
+          camera_rig_id: aiShot.camera_rig_id || beat.camera_rig_id || 'WIDE_MASTER',
+          lens_mm: aiShot.lens_mm || beat.lens_mm || 35,
+          direction_lock: beat.world_lock?.direction_lock || 'LEFT_TO_RIGHT',
+          refs: {
+            image_1: index > 0 ? 'LAST_FRAME' : 'BASE_WORLD',
+            image_2: aiShot.ref_urls?.[0] || '',
+            image_3: aiShot.ref_urls?.[1] || '',
+            others: aiShot.ref_urls?.slice(2) || []
+          },
+          photo_prompt: aiShot.photo_prompt || 'Scene continues',
+          video_model: videoModel,
+          video_duration_seconds: aiShot.duration_seconds || 5,
+          video_motion_prompt: aiShot.video_prompt || 'Static shot, subtle ambient movement, then settles',
+          start_end_pairing: {
+            start_frame: 'this_shot_image',
+            end_frame: needsStartEnd ? 'next_shot_image' : '',
+            notes: ''
+          },
+          continuity_phrases: aiShot.identity_lock_phrase?.split('. ') || [
+            'THIS EXACT CHARACTER',
+            'THIS EXACT LIGHTING',
+            'NO MIRRORING'
+          ]
+        };
+      });
+
+      console.log('[ShotCompiler] 🎬 Generated', shotCards.length, 'shot cards by AI');
+      shotCards.forEach((card, i) => {
+        console.log(`[ShotCompiler]   Shot ${i + 1}: ${card.photo_prompt?.substring(0, 80)}...`);
+      });
+
+      return { shotCards };
+    } catch (parseError) {
+      console.error('[ShotCompiler] Error parsing AI response:', parseError);
+      console.log('[ShotCompiler] AI raw response:', aiResponse.rawText.substring(0, 500));
+      return compileShotCardsFallback(input);
+    }
   }
 };
+
+// Fallback when AI fails
+function compileShotCardsFallback(input: ShotCompilerInput): ShotCompilerOutput {
+  console.log('[ShotCompiler] Using template fallback...');
+
+  const shotCards: ShotCard[] = [];
+
+  for (let i = 0; i < input.beats.length; i++) {
+    const beat = input.beats[i];
+    const prevBeat = i > 0 ? input.beats[i - 1] : null;
+    const nextBeat = i < input.beats.length - 1 ? input.beats[i + 1] : null;
+
+    const shotCard = compileBeatToShotCard(
+      beat,
+      prevBeat,
+      nextBeat,
+      input.worldState,
+      input.cameraRigs,
+      input.masterRefs,
+      i
+    );
+
+    shotCards.push(shotCard);
+  }
+
+  return { shotCards };
+}
 
 // ============================================
 // BEAT TO SHOT CARD COMPILATION

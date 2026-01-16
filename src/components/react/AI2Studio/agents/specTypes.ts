@@ -35,6 +35,12 @@ export interface WorldEngineerInput {
   concept: string;
   refs?: RefInput[];
   existingWorldState?: WorldState;
+  // Optional story context from Story Analyst (Phase -1)
+  storyContext?: {
+    storyType?: string;
+    lighting?: string;
+    colorPalette?: any;
+  };
 }
 
 export interface RefInput {

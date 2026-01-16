@@ -66,6 +66,130 @@ export { continuityValidatorAgent } from './continuityValidatorAgent';
 
 export { specOrchestrator, specAgents } from './specAgents';
 
+// ============================================
+// UNIFIED PIPELINE - Everything in One
+// ============================================
+// Story Analyst + Director + Council + Spec + Producer - No toggles needed
+
+// Story Analyst - THE FIRST BRAIN (analyzes WHY before anything else)
+export { storyAnalystAgent } from './storyAnalystAgent';
+export type { StoryAnalysisInput, StoryAnalysisOutput, KeyWord, EmotionBeat, LensChoice } from './storyAnalystAgent';
+
+// Director - Film grammar, shot patterns, ref assignments
+export { directorAgent } from './directorAgent';
+export type { DirectorInput, DirectorOutput, ShotPlan, RefAssignment } from './directorAgent';
+
+// Model Picker - Technical model selection (runs BEFORE Shot Compiler)
+export {
+  modelPickerAgent,
+  MODEL_COSTS,
+  printModelSelectionSummary
+} from './modelPickerAgent';
+export type {
+  VideoModel as ModelPickerVideoModel,
+  ImageModel,
+  ModelCost,
+  ModelSelection,
+  ModelPickerInput,
+  ModelPickerOutput
+} from './modelPickerAgent';
+
+// Producer - Execution order, dependencies, what waits for what
+export { producerAgent } from './producerAgent';
+export type { ProductionManifest, ProductionAsset, ExecutionPhase, AssetType } from './producerAgent';
+
+// Unified Pipeline - Master orchestrator
+export { unifiedPipeline } from './unifiedPipeline';
+export type {
+  UnifiedPipelineInput,
+  UnifiedPipelineOutput,
+  CouncilAdvice,
+  ValidationResult,
+  RefGeneratorFn
+} from './unifiedPipeline';
+
+// Verification Agent - Quality Control & Feedback Loop
+export { verificationAgent } from './verificationAgent';
+export type { VerificationResult, VerificationIssue, RepairAction as VerificationRepairAction, IssueSeverity, IssuePhase } from './verificationAgent';
+
+// Editor Agent - Vision-Based Clip Surgeon (Trim, Speed, Cut Points)
+export {
+  editorAgent,
+  buildFrameExtractionCommand,
+  buildSingleFrameCommand,
+  buildTrimCommand,
+  calculateFinalDuration,
+  buildEditTimelineJSON,
+  exportTimelineJSON,
+  buildSingleClipJSON,
+  printAnalysisSummary,
+  printTrimInstruction,
+  FRAME_ANALYSIS_PROMPT,
+  CUT_POINT_PROMPT
+} from './editorAgent';
+export type {
+  CutReason,
+  SpeedPreset,
+  FrameAnalysis,
+  CutPoint,
+  SpeedSegment,
+  ClipAnalysis,
+  TrimInstruction,
+  EditorInput,
+  EditorOutput,
+  EditTimelineJSON,
+  EditClipJSON
+} from './editorAgent';
+
+// Audio Planner Agent - Voiceover, Dialogue, Music Timing
+export {
+  audioPlannerAgent,
+  FAL_ENDPOINTS,
+  routeAudioGeneration,
+  // Character voice registry
+  registerCharacterVoice,
+  getCharacterVoice,
+  findCharacterVoiceByName,
+  getVoiceIdForCharacter,
+  listCharacterVoices,
+  clearVoiceRegistry,
+  characterVoiceRegistry,
+  ELEVENLABS_PRESETS,
+  // Sora 2 multi-shot utilities
+  buildSoraMultiShotPrompt,
+  buildSoraRequest,
+  validateSoraShotsForRefType,
+  getPresetsForRefType,
+  getBRollPresets,
+  SORA_SHOT_PRESETS
+} from './audioPlannerAgent';
+export type {
+  AudioPlan,
+  VoiceoverSegment,
+  DialogueSegment,
+  MusicCue,
+  SoundEffect,
+  RenderTimelineEntry,
+  VoiceStyle,
+  AudioAssetType,
+  AudioGenerationType,
+  AudioRouting,
+  SpeechMode,
+  // Voice settings types
+  VoiceProvider,
+  CharacterVoiceSettings,
+  // Sora 2 types
+  SoraShotType,
+  SoraCameraMove,
+  SoraDuration,
+  SoraResolution,
+  SoraShotDefinition,
+  SoraMultiShotInput,
+  SoraMultiShotOutput,
+  SoraRefType,
+  SoraCollageContents
+} from './audioPlannerAgent';
+
 // World State Persistence
 export { worldStatePersistence } from './worldStatePersistence';
 export type { ProjectSession, GeneratedAssetRecord, WorldStateSnapshot } from './worldStatePersistence';

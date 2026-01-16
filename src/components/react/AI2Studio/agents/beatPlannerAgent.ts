@@ -26,6 +26,7 @@ import type {
   CameraIntent,
   ForbiddenChange
 } from './specTypes';
+import { callSpecAgent, buildBeatPlannerPrompt } from './specAICaller';
 
 // ============================================
 // SYSTEM PROMPT
@@ -253,36 +254,106 @@ export const beatPlannerAgent: SpecAgent = {
   systemPrompt: BEAT_PLANNER_SYSTEM_PROMPT,
 
   async execute(input: BeatPlannerInput): Promise<BeatPlannerOutput> {
-    console.log('[BeatPlanner] Planning beats for story:', input.storyOutline.substring(0, 50) + '...');
+    console.log('[BeatPlanner] 🧠 CALLING CLAUDE AI to plan beats...');
+    console.log('[BeatPlanner] Story:', input.storyOutline.substring(0, 100) + '...');
     console.log('[BeatPlanner] Target duration:', input.targetDurationSeconds, 'seconds');
 
-    // Calculate shot count based on duration
-    const shotCount = calculateShotCount(input.targetDurationSeconds);
-    console.log('[BeatPlanner] Estimated shot count:', shotCount);
-
-    // Detect narrative type
-    const narrativeType = detectNarrativeType(input.storyOutline);
-    console.log('[BeatPlanner] Detected narrative type:', narrativeType);
-
-    // Generate beats based on narrative type
-    const beats = generateBeats(
+    // Build the user prompt for Claude
+    const userPrompt = buildBeatPlannerPrompt(
       input.storyOutline,
       input.targetDurationSeconds,
-      shotCount,
-      narrativeType,
-      input.worldState,
-      input.constraints
+      input.worldState
     );
 
-    console.log('[BeatPlanner] Generated', beats.length, 'beats');
+    // Call Claude with the system prompt
+    const aiResponse = await callSpecAgent({
+      systemPrompt: BEAT_PLANNER_SYSTEM_PROMPT,
+      userMessage: userPrompt,
+      expectJson: true,
+      model: 'claude-sonnet'
+    });
 
-    return {
-      beats,
-      totalDuration: input.targetDurationSeconds,
-      shotCount: beats.length
-    };
+    if (!aiResponse.success) {
+      console.error('[BeatPlanner] AI call failed:', aiResponse.error);
+      console.log('[BeatPlanner] Falling back to template-based planning...');
+      return generateBeatsFallback(input);
+    }
+
+    console.log('[BeatPlanner] ✅ Got AI response from:', aiResponse.provider);
+
+    // Parse the AI response
+    const aiData = aiResponse.data;
+
+    try {
+      // Extract beats from AI response
+      const beats: BeatDefinition[] = (aiData.beats || []).map((aiBeat: any, index: number) => {
+        // Ensure all required fields exist
+        return {
+          beat_id: aiBeat.beat_id || `beat_${String(index + 1).padStart(2, '0')}`,
+          timecode_range_seconds: aiBeat.timecode_range_seconds || { start: index * 5, end: (index + 1) * 5 },
+          distance_state: aiBeat.distance_state || 'APPROACH',
+          information_owner: aiBeat.information_owner || 'HERO',
+          camera_intent: aiBeat.camera_intent || 'REVEAL',
+          energy_level: aiBeat.energy_level || 2,
+          shot_mode: aiBeat.shot_mode || (index === 0 ? 'NEW_SHOT' : 'MUTATE_PREVIOUS'),
+          camera_rig_id: aiBeat.camera_rig_id || 'WIDE_MASTER',
+          lens_mm: aiBeat.lens_mm || 35,
+          actor_positions: aiBeat.actor_positions || [],
+          screen_anchors: aiBeat.screen_anchors || [],
+          compass: aiBeat.compass || { movement_direction: 'SOUTH', key_light_from: 'NORTH_WEST' },
+          start_frame_ref: aiBeat.start_frame_ref || { type: index === 0 ? 'BASE_WORLD' : 'PREVIOUS_LAST_FRAME', ref: '' },
+          world_lock: aiBeat.world_lock || {
+            world_id: input.worldState?.world_id || 'world_001',
+            entities_locked: true,
+            lighting_direction_locked: true,
+            color_grade_locked: true,
+            direction_lock: 'LEFT_TO_RIGHT'
+          },
+          allowed_deltas: aiBeat.allowed_deltas || ['expression_change', 'pose_shift'],
+          forbidden_changes: aiBeat.forbidden_changes || ['mirroring', 'identity_drift', 'teleport'],
+          end_state_truth: aiBeat.end_state_truth || 'Scene continues'
+        };
+      });
+
+      console.log('[BeatPlanner] 📋 Generated', beats.length, 'beats by AI');
+      beats.forEach((beat, i) => {
+        console.log(`[BeatPlanner]   Beat ${i + 1}: ${beat.end_state_truth?.substring(0, 60)}...`);
+      });
+
+      return {
+        beats,
+        totalDuration: aiData.totalDuration || input.targetDurationSeconds,
+        shotCount: beats.length
+      };
+    } catch (parseError) {
+      console.error('[BeatPlanner] Error parsing AI response:', parseError);
+      console.log('[BeatPlanner] AI raw response:', aiResponse.rawText.substring(0, 500));
+      return generateBeatsFallback(input);
+    }
   }
 };
+
+// Fallback when AI fails
+function generateBeatsFallback(input: BeatPlannerInput): BeatPlannerOutput {
+  console.log('[BeatPlanner] Using template fallback...');
+
+  const shotCount = calculateShotCount(input.targetDurationSeconds);
+  const narrativeType = detectNarrativeType(input.storyOutline);
+  const beats = generateBeats(
+    input.storyOutline,
+    input.targetDurationSeconds,
+    shotCount,
+    narrativeType,
+    input.worldState,
+    input.constraints
+  );
+
+  return {
+    beats,
+    totalDuration: input.targetDurationSeconds,
+    shotCount: beats.length
+  };
+}
 
 // ============================================
 // SHOT COUNT CALCULATION

@@ -16,6 +16,9 @@ import {
 } from './agents';
 import type { ShotCard, WorldEngineerOutput, BeatPlannerOutput, ShotCompilerOutput } from './agents';
 
+// UNIFIED PIPELINE - Everything in One (Director + Council + Spec + Validation)
+import { unifiedPipeline, type UnifiedPipelineOutput } from './agents/unifiedPipeline';
+
 // Mode descriptions
 const MODE_INFO = {
   auto: 'AI decides the best approach',
@@ -1919,16 +1922,26 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
   // ============================================
 
   /**
-   * Run the full spec pipeline from concept to shot cards
-   * This uses the 4 spec agents: WorldEngineer, BeatPlanner, ShotCompiler, ContinuityValidator
+   * Run the UNIFIED pipeline - Director + Council + Spec + Validation ALL IN ONE
+   * No toggles, no modes - just complete production planning
    */
   const runSpecPipeline = async (concept: string, targetDuration: number = 30) => {
-    console.log('[AI2] 🚀 Running Spec Pipeline for:', concept.substring(0, 50) + '...');
-    addMessage('assistant', '🌍 **Spec Pipeline Started**\n\nRunning World Engineer → Beat Planner → Shot Compiler...');
+    console.log('[AI2] 🚀 Running UNIFIED Pipeline for:', concept.substring(0, 50) + '...');
+    addMessage('assistant', `🎬 **UNIFIED PIPELINE Started**
+
+**Phase 0:** World Engineering (3D coordinates, entities, lighting)
+**Phase 1:** Director Analysis (scene type, shot patterns, film grammar)
+**Phase 1b:** Council Deliberation (narrative, visual, technical, production)
+**Phase 2:** Ref Strategy (which refs for which shots)
+**Phase 3:** Beat Planning (story moments with timing)
+**Phase 4:** Shot Compilation (photo & video prompts)
+**Phase 5:** Validation (continuity check)
+
+Running all phases automatically...`);
 
     try {
       setIsGeneratingAssets(true);
-      setPipelinePhase('refs'); // Using refs phase for world building
+      setPipelinePhase('refs');
 
       // Create a new session for persistence
       const session = worldStatePersistence.createSession({
@@ -1945,29 +1958,48 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
         ...productRefs.map(r => ({ url: r.url, name: r.name, type: 'prop' as const }))
       ];
 
-      // Run the full pipeline
-      const result = await specOrchestrator.runPipeline({
-        concept,
-        targetDuration,
-        refs: refInputs,
-        constraints: {
-          pacingStyle: 'medium'
+      // Run the UNIFIED pipeline (everything in one!)
+      const result = await unifiedPipeline.run(
+        {
+          concept,
+          targetDuration,
+          refs: refInputs,
+          generateRefs: refInputs.length === 0  // Auto-generate if no refs provided
+        },
+        // Ref generator callback (optional - for auto-generating refs)
+        async (params) => {
+          console.log('[AI2] Generating ref:', params.name, params.type);
+          const response = await fetch('/api/cinema/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: params.prompt,
+              image_size: 'square_hd',
+              num_images: 1
+            })
+          });
+          const data = await response.json();
+          return { url: data.images?.[0]?.url || '' };
+        },
+        // Progress callback
+        (phase, message) => {
+          console.log(`[AI2] ${phase}: ${message}`);
         }
-      });
+      );
 
-      // Store results
-      setSpecWorldState(result.worldState);
+      // Store results (compatible with existing state)
+      setSpecWorldState(result.world);
       setSpecBeats(result.beats);
-      setSpecShotCards(result.shotCards);
+      setSpecShotCards(result.shots);
 
       // Save to persistence
-      worldStatePersistence.saveWorldState(session.projectId, result.worldState);
-      worldStatePersistence.saveShotCards(session.projectId, result.shotCards.shotCards);
+      worldStatePersistence.saveWorldState(session.projectId, result.world);
+      worldStatePersistence.saveShotCards(session.projectId, result.shots.shotCards);
 
-      console.log('[AI2] ✅ Spec Pipeline complete:', result.shotCards.shotCards.length, 'shots');
+      console.log('[AI2] ✅ UNIFIED Pipeline complete:', result.shots.shotCards.length, 'shots');
 
       // Convert shot cards to the existing GeneratedAsset format
-      const assets: GeneratedAsset[] = result.shotCards.shotCards.map((card: ShotCard) => ({
+      const assets: GeneratedAsset[] = result.shots.shotCards.map((card: ShotCard) => ({
         id: card.shot_id,
         type: 'image' as const,
         prompt: card.photo_prompt,
@@ -1980,8 +2012,8 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
 
       // Build a plan object compatible with existing flow
       const specPlan = {
-        name: 'Spec Pipeline',
-        shots: result.shotCards.shotCards.map((card: ShotCard) => ({
+        name: 'Unified Pipeline',
+        shots: result.shots.shotCards.map((card: ShotCard) => ({
           shot_id: card.shot_id,
           photo_prompt: card.photo_prompt,
           motion_prompt: card.video_motion_prompt,
@@ -1990,25 +2022,48 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
           video_model: card.video_model,
           duration: card.video_duration_seconds
         })),
-        world_state: result.worldState.worldState,
+        world_state: result.world.worldState,
         character_references: {},
-        scene_references: {}
+        scene_references: {},
+        // NEW: Include Director and Council data
+        direction: result.direction,
+        councilAdvice: result.councilAdvice
       };
 
       setCurrentPlan(specPlan);
 
-      // Add summary message
-      const worldSummary = result.worldState.worldState;
-      addMessage('assistant', `✅ **Spec Pipeline Complete!**
+      // Build comprehensive summary message
+      const worldSummary = result.world.worldState;
+      const directionSummary = result.direction;
+      const validation = result.validation;
 
-**World State:**
-- Environment: ${worldSummary.environment_geometry.static_description}
-- Lighting: ${worldSummary.lighting.primary_light_direction}
-- Entities: ${worldSummary.entities.map(e => e.entity_id).join(', ')}
+      addMessage('assistant', `✅ **UNIFIED PIPELINE Complete!**
 
-**Beats:** ${result.beats.beats.length} beats planned
+**🌍 World State:**
+- Environment: ${worldSummary?.environment_geometry?.static_description || 'Created'}
+- Lighting: ${worldSummary?.lighting?.primary_light_direction || 'Set'}
+- Entities: ${worldSummary?.entities?.map(e => e.entity_id).join(', ') || 'Defined'}
 
-**Shot Cards:** ${result.shotCards.shotCards.length} shots ready
+**🎬 Director's Plan:**
+- Scene Type: **${directionSummary?.scene_analysis?.scene_type || 'Analyzed'}**
+- Style: ${directionSummary?.scene_analysis?.director_style || 'Determined'}
+- Energy Arc: ${directionSummary?.scene_analysis?.energy_arc?.join(' → ') || 'Planned'}
+
+**🧠 Council Advice:**
+- Narrative: ${result.councilAdvice?.narrative?.beatStructure || 'Provided'}
+- Visual: ${result.councilAdvice?.visual?.directorStyle || 'Recommended'}
+- Technical: ${result.councilAdvice?.technical?.modelSelections?.length || 0} model selections
+- Production: ${result.councilAdvice?.production?.chainStrategy || 'Planned'}
+
+**📋 Production:**
+- Beats: ${result.beats?.beats?.length || 0} story beats
+- Shots: ${result.shots?.shotCards?.length || 0} shot cards ready
+- Refs: ${result.masterRefs?.length || 0} master references
+
+**✓ Validation:** Score ${validation?.overallScore || 0}/100 ${validation?.passed ? '✅ PASSED' : '⚠️ Issues found'}
+${validation?.issues?.length ? `- ${validation.issues.length} issues to review` : ''}
+
+**⏱️ Timing:** ${result.timing?.totalMs || 0}ms total
 
 Click **Execute Plan** to start generating images and videos.`);
 

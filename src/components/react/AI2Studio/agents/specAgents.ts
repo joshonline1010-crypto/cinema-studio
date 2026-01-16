@@ -73,17 +73,31 @@ export interface SpecPipelineOutput {
   worldState: WorldEngineerOutput;
   beats: BeatPlannerOutput;
   shotCards: ShotCompilerOutput;
+  masterRefs: MasterRef[];  // Generated refs from Phase 1
   validation: ContinuityValidatorOutput | null;
   currentPhase: PipelinePhase;
   success: boolean;
   errors: string[];
 }
 
+// Callback for generating refs (called by UI)
+export type RefGeneratorCallback = (params: {
+  type: 'character' | 'environment' | 'prop';
+  prompt: string;
+  name: string;
+}) => Promise<{ url: string }>;
+
 export const specOrchestrator = {
   /**
    * Run the full spec pipeline from concept to shot cards
+   *
+   * @param input - Pipeline input with concept, duration, refs
+   * @param refGenerator - Optional callback to generate refs (if not provided, uses input refs)
    */
-  async runPipeline(input: SpecPipelineInput): Promise<SpecPipelineOutput> {
+  async runPipeline(
+    input: SpecPipelineInput,
+    refGenerator?: RefGeneratorCallback
+  ): Promise<SpecPipelineOutput> {
     const errors: string[] = [];
     let currentPhase: PipelinePhase = 'PHASE_0_WORLD_ENGINEERING';
 
@@ -96,9 +110,81 @@ export const specOrchestrator = {
       refs: input.refs
     }) as WorldEngineerOutput;
 
-    currentPhase = 'PHASE_3_BEATS_AND_STATE_FRAMES';
+    // Phase 1: Generate Master Refs (if generator provided and no refs given)
+    currentPhase = 'PHASE_1_MASTERS';
+    console.log('[SpecOrchestrator] Phase 1: Master References');
+
+    let masterRefs: MasterRef[] = [];
+
+    // Check if we have existing refs
+    const existingRefs = (input.refs || []).map((ref, i) => ({
+      id: `ref_${i}`,
+      type: ref.type === 'character' ? 'CHARACTER_MASTER' as const :
+            ref.type === 'location' ? 'ENVIRONMENT_MASTER' as const :
+            'PROP_MASTER' as const,
+      url: ref.url,
+      name: ref.name
+    }));
+
+    if (existingRefs.length > 0) {
+      console.log('[SpecOrchestrator] Using', existingRefs.length, 'provided refs');
+      masterRefs = existingRefs;
+    } else if (refGenerator) {
+      // Generate refs based on world state entities
+      console.log('[SpecOrchestrator] Generating master refs from world state...');
+
+      // Generate CHARACTER_MASTER for each character entity
+      const characterEntities = worldState.entities.filter(e => e.entity_type === 'character');
+      for (const entity of characterEntities) {
+        console.log('[SpecOrchestrator] Generating CHARACTER_MASTER for:', entity.entity_id);
+        const prompt = `${entity.appearance_lock_notes}, 3x3 grid showing 9 expressions: neutral, happy, sad, angry, surprised, determined, fearful, confident, exhausted. White background, consistent character across all cells. THIS EXACT CHARACTER in each cell.`;
+
+        try {
+          const result = await refGenerator({
+            type: 'character',
+            prompt,
+            name: entity.entity_id
+          });
+          masterRefs.push({
+            id: `char_${entity.entity_id}`,
+            type: 'CHARACTER_MASTER',
+            url: result.url,
+            name: entity.entity_id
+          });
+        } catch (err) {
+          console.error('[SpecOrchestrator] Failed to generate CHARACTER_MASTER:', err);
+          errors.push(`Failed to generate character ref for ${entity.entity_id}`);
+        }
+      }
+
+      // Generate ENVIRONMENT_MASTER from world state
+      console.log('[SpecOrchestrator] Generating ENVIRONMENT_MASTER');
+      const envPrompt = `${worldState.worldState.environment_geometry.static_description}, 3x3 grid showing environment from 9 angles: wide front, wide left, wide right, medium front, medium left, medium right, detail shot 1, detail shot 2, overhead. Empty scene, no characters. Lighting: ${worldState.worldState.lighting.primary_light_direction}.`;
+
+      try {
+        const result = await refGenerator({
+          type: 'environment',
+          prompt: envPrompt,
+          name: 'environment'
+        });
+        masterRefs.push({
+          id: 'env_master',
+          type: 'ENVIRONMENT_MASTER',
+          url: result.url,
+          name: 'environment'
+        });
+      } catch (err) {
+        console.error('[SpecOrchestrator] Failed to generate ENVIRONMENT_MASTER:', err);
+        errors.push('Failed to generate environment ref');
+      }
+
+      console.log('[SpecOrchestrator] Generated', masterRefs.length, 'master refs');
+    } else {
+      console.log('[SpecOrchestrator] No refs provided and no generator - shots will have no refs');
+    }
 
     // Phase 3a: Beat Planning
+    currentPhase = 'PHASE_3_BEATS_AND_STATE_FRAMES';
     console.log('[SpecOrchestrator] Phase 3a: Beat Planning');
     const beats = await beatPlannerAgent.execute({
       storyOutline: input.concept,
@@ -109,15 +195,6 @@ export const specOrchestrator = {
 
     // Phase 3b: Shot Compilation
     console.log('[SpecOrchestrator] Phase 3b: Shot Compilation');
-    const masterRefs: MasterRef[] = (input.refs || []).map((ref, i) => ({
-      id: `ref_${i}`,
-      type: ref.type === 'character' ? 'CHARACTER_MASTER' as const :
-            ref.type === 'location' ? 'ENVIRONMENT_MASTER' as const :
-            'PROP_MASTER' as const,
-      url: ref.url,
-      name: ref.name
-    }));
-
     const shotCards = await shotCompilerAgent.execute({
       worldState: worldState.worldState,
       cameraRigs: worldState.cameraRigs,
@@ -126,17 +203,54 @@ export const specOrchestrator = {
     }) as ShotCompilerOutput;
 
     console.log('[SpecOrchestrator] Pipeline complete');
-    console.log('[SpecOrchestrator] Generated:', shotCards.shotCards.length, 'shot cards');
+    console.log('[SpecOrchestrator] Generated:', shotCards.shotCards.length, 'shot cards with', masterRefs.length, 'refs');
 
     return {
       worldState,
       beats,
       shotCards,
+      masterRefs,
       validation: null, // Will be populated after generation
       currentPhase,
-      success: true,
+      success: errors.length === 0,
       errors
     };
+  },
+
+  /**
+   * Get required refs for a concept (without generating them)
+   * Call this first to show user what refs are needed
+   */
+  async planRefs(input: SpecPipelineInput): Promise<{
+    characterRefs: Array<{ name: string; prompt: string }>;
+    environmentRef: { prompt: string };
+    propRefs: Array<{ name: string; prompt: string }>;
+  }> {
+    // Run world engineer to analyze concept
+    const worldState = await worldEngineerAgent.execute({
+      concept: input.concept,
+      refs: input.refs
+    }) as WorldEngineerOutput;
+
+    const characterRefs = worldState.entities
+      .filter(e => e.entity_type === 'character')
+      .map(e => ({
+        name: e.entity_id,
+        prompt: `${e.appearance_lock_notes}, 3x3 expression grid: neutral, happy, sad, angry, surprised, determined, fearful, confident, exhausted. White background. THIS EXACT CHARACTER.`
+      }));
+
+    const environmentRef = {
+      prompt: `${worldState.worldState.environment_geometry.static_description}, 3x3 angle grid. Empty scene, no characters. Lighting: ${worldState.worldState.lighting.primary_light_direction}.`
+    };
+
+    const propRefs = worldState.entities
+      .filter(e => e.entity_type === 'prop' || e.entity_type === 'vehicle')
+      .map(e => ({
+        name: e.entity_id,
+        prompt: `${e.appearance_lock_notes}, 3x3 grid showing object from multiple angles.`
+      }));
+
+    return { characterRefs, environmentRef, propRefs };
   },
 
   /**
