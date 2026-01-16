@@ -308,6 +308,43 @@ Add \`dialogue_info\` to shots with speech:
 - \`pov\` means camera = character's eyes
 - \`inner_thoughts\` = character on screen but mouth doesn't move
 
+## VOICE & AUDIO TOOL CHAIN (PRE-PLAN THIS!)
+
+When planning dialogue/voiceover, know the tools BEFORE you plan shots:
+
+### Tool Selection:
+| Need | Tool | Notes |
+|------|------|-------|
+| **TTS (any voice)** | ElevenLabs | Use same voice_id = consistent voice! |
+| **Lip sync (face visible)** | VEED Fabric | Takes ElevenLabs audio → syncs to face |
+| **Clone celebrity voice** | MiniMax voice-clone | ONLY for celebrity/real person |
+| **TTS with cloned voice** | MiniMax speech-02-hd | After cloning |
+
+### Workflow by Shot Type:
+\`\`\`
+VOICEOVER (face NOT visible):
+  → ElevenLabs TTS only (no VEED needed)
+
+TALKING HEAD (face visible):
+  → ElevenLabs TTS → VEED lip sync
+
+NARRATION OVER FLASHBACK:
+  → ElevenLabs TTS (voiceover track)
+  → Flashback shots are SILENT video (sora-2/kling)
+  → Audio layered in post
+
+MULTIPLE CHARACTERS TALKING:
+  → Each character = different ElevenLabs voice_id
+  → Each gets VEED lip sync when on camera
+\`\`\`
+
+### Frame Narrative (Story within Story):
+When someone TELLS a story with flashbacks:
+1. FRAME SHOTS (person talking) → ElevenLabs + VEED lip sync
+2. FLASHBACK SHOTS (action) → Silent video (sora-2/kling) + music/SFX
+3. VOICEOVER on flashback → Same ElevenLabs voice_id (consistency!)
+4. Return to FRAME → Same VEED lip sync setup
+
 ### When to Use Full Length (4-10s)
 - DIALOG (let actors breathe)
 - EMOTIONAL climax (hold on face)

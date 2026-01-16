@@ -173,8 +173,12 @@ What visual references are needed and WHY?
   },
 
   "audio_narrative_plan": {
+    "narrative_structure": "linear",  // "linear" | "frame_story" | "flashback" | "montage"
+    "frame_story_detected": false,    // TRUE if someone TELLS a story (campfire tale style)
+    "frame_story_details": null,      // { narrator: "woman", listener: "kid", setting: "bunker" }
     "needs_voiceover": false,
     "voiceover_reason": "Action sequence - visuals tell the story, VO would distract",
+    "voiceover_character": null,      // Who narrates? Must match ElevenLabs voice_id
     "needs_dialogue": false,
     "dialogue_reason": "Solo character escape - no one to talk to",
     "needs_music": true,
@@ -184,7 +188,8 @@ What visual references are needed and WHY?
       "why": "Immerse viewer in danger, make it visceral"
     },
     "dialogue_shots": [],
-    "voiceover_segments": []
+    "voiceover_segments": [],
+    "tension_break": null             // { type: "cutaway", description: "Kid interrupts asking question" }
   },
 
   "creative_brief": {
@@ -202,6 +207,29 @@ What visual references are needed and WHY?
   }
 }
 \`\`\`
+
+## DETECT NARRATIVE STRUCTURE
+
+Look for these patterns in the concept:
+
+### Frame Story (story within story):
+Trigger words: "tells the story", "recounts", "remembers", "flashback to"
+Example: "Woman tells her kid how she escaped the T-Rex"
+→ narrative_structure: "frame_story"
+→ frame_story_detected: true
+→ frame_story_details: { narrator: "woman", listener: "kid", setting: "present day" }
+→ voiceover_character: "woman" (consistent ElevenLabs voice!)
+
+### Tension Break (cutaway interruption):
+Classic Spielberg trick - cut away at peak tension
+Example: "Kid asks 'Did you make it?!' before showing the climax"
+→ tension_break: { type: "cutaway", character: "kid", line: "Did you make it?!" }
+
+### Voice Consistency Rule:
+If frame_story_detected = true:
+- ALL voiceover = SAME ElevenLabs voice_id
+- Narrator's talking head = VEED lip sync
+- Flashback shots = SILENT (audio layered in post)
 
 ## REMEMBER
 
