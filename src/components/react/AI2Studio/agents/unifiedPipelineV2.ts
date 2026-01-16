@@ -299,27 +299,47 @@ export const unifiedPipelineV2 = {
         }) as WorldEngineerOutput;
       } catch (worldErr) {
         console.error('[PipelineV2] World Engineer failed:', worldErr);
-        // Create fallback world state
+        // Create fallback world state with all required properties
         world = {
           worldState: {
+            world_id: 'fallback_world',
             environment_geometry: {
-              static_description: 'Generic scene environment',
-              bounding_box: { width: 100, height: 50, depth: 100 }
+              ground_plane: { Y: 0 },
+              static_landmarks: [],
+              static_description: 'Generic scene environment'
             },
             lighting: {
               primary_light_direction: 'natural overhead',
-              light_type: 'natural'
+              primary_light_color_temp: '5600K',
+              secondary_fill: 'ambient',
+              intensity_baseline: 1.0,
+              direction_locked: false
             },
-            camera_positions: {}
+            atmospherics: {
+              smoke_baseline: 'none',
+              dust_baseline: 'none',
+              haze: 'none'
+            },
+            scale_anchors: [],
+            entities: []
           },
           cameraRigs: {
-            rigs: {
-              WIDE_MASTER: { position: { x: 0, y: 5, z: 20 }, rotation: { pan: 0, tilt: -10, roll: 0 }, lens_mm: 24 },
-              MEDIUM_A: { position: { x: 5, y: 3, z: 10 }, rotation: { pan: -15, tilt: 0, roll: 0 }, lens_mm: 35 },
-              CLOSEUP_A: { position: { x: 2, y: 2, z: 5 }, rotation: { pan: 0, tilt: 0, roll: 0 }, lens_mm: 85 }
-            }
+            camera_rigs: [
+              { rig_id: 'WIDE_MASTER', camera_position: { x: 0, y: 5, z: 20 }, look_at: { x: 0, y: 0, z: 0 }, default_lens_mm: 24, allowed_lenses_mm: [24, 35], camera_motion_allowed: true, allowed_camera_motions: ['dolly', 'pan'] },
+              { rig_id: 'MEDIUM_A', camera_position: { x: 5, y: 3, z: 10 }, look_at: { x: 0, y: 1, z: 0 }, default_lens_mm: 35, allowed_lenses_mm: [35, 50], camera_motion_allowed: true, allowed_camera_motions: ['track'] },
+              { rig_id: 'CLOSEUP_A', camera_position: { x: 2, y: 2, z: 5 }, look_at: { x: 0, y: 1.5, z: 0 }, default_lens_mm: 85, allowed_lenses_mm: [85, 100], camera_motion_allowed: false, allowed_camera_motions: [] }
+            ]
           },
-          entities: []
+          scaleAnchors: [],
+          baseWorldReferencePrompt: 'Generic scene',
+          entities: [],
+          sceneGeographyMemory: {
+            hero_side_of_frame: 'CENTER',
+            villain_side_of_frame: 'CENTER',
+            light_direction_lock: 'natural',
+            color_grade_lock: 'neutral',
+            forbid_flip: false
+          }
         } as WorldEngineerOutput;
         errors.push('World Engineer failed - using fallback');
       }
@@ -328,11 +348,34 @@ export const unifiedPipelineV2 = {
       if (!world || !world.worldState) {
         console.warn('[PipelineV2] World state missing, creating fallback');
         world = {
-          ...world,
           worldState: {
-            environment_geometry: { static_description: 'Scene environment' },
-            lighting: { primary_light_direction: 'natural' },
-            camera_positions: {}
+            world_id: 'fallback_world',
+            environment_geometry: {
+              ground_plane: { Y: 0 },
+              static_landmarks: [],
+              static_description: 'Scene environment'
+            },
+            lighting: {
+              primary_light_direction: 'natural',
+              primary_light_color_temp: '5600K',
+              secondary_fill: 'ambient',
+              intensity_baseline: 1.0,
+              direction_locked: false
+            },
+            atmospherics: { smoke_baseline: 'none', dust_baseline: 'none', haze: 'none' },
+            scale_anchors: [],
+            entities: []
+          },
+          cameraRigs: world?.cameraRigs || { camera_rigs: [] },
+          scaleAnchors: world?.scaleAnchors || [],
+          baseWorldReferencePrompt: world?.baseWorldReferencePrompt || 'Scene',
+          entities: world?.entities || [],
+          sceneGeographyMemory: world?.sceneGeographyMemory || {
+            hero_side_of_frame: 'CENTER',
+            villain_side_of_frame: 'CENTER',
+            light_direction_lock: 'natural',
+            color_grade_lock: 'neutral',
+            forbid_flip: false
           }
         } as WorldEngineerOutput;
       }
