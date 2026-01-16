@@ -577,13 +577,23 @@ export const directorAgent = {
 // ============================================
 
 function buildDirectorPrompt(input: DirectorInput, shotCount: number): string {
-  const refList = input.availableRefs.map(r =>
+  const refList = (input.availableRefs || []).map(r =>
     `- ${r.name} (${r.type}): ${r.url ? 'AVAILABLE' : 'pending'}`
   ).join('\n');
 
-  const entities = input.worldState.entities?.map(e =>
+  // Safely access worldState - may not exist yet in V2 pipeline
+  const worldState = input.worldState || {};
+  const entities = (worldState.entities || []).map((e: any) =>
     `- ${e.entity_id} (${e.entity_type}) at position (${e.base_world_position?.x || 0}, ${e.base_world_position?.y || 0}, ${e.base_world_position?.z || 0})`
-  ).join('\n') || 'No entities defined';
+  ).join('\n') || 'No entities defined yet';
+
+  const worldStateJson = worldState.worldState
+    ? JSON.stringify(worldState.worldState, null, 2)
+    : '{ "note": "World will be built after direction" }';
+
+  const sceneGeoJson = worldState.sceneGeographyMemory
+    ? JSON.stringify(worldState.sceneGeographyMemory, null, 2)
+    : '{ "note": "Scene geography pending" }';
 
   return `Create a COMPLETE PRODUCTION PLAN for this concept.
 
@@ -593,7 +603,7 @@ TARGET DURATION: ${input.targetDuration} seconds
 EXPECTED SHOTS: ${shotCount} shots (each ~5 seconds)
 
 WORLD STATE:
-${JSON.stringify(input.worldState.worldState, null, 2)}
+${worldStateJson}
 
 ENTITIES IN SCENE:
 ${entities}
@@ -602,7 +612,7 @@ AVAILABLE REFS:
 ${refList || 'No refs yet - plan for CHARACTER_MASTER and ENVIRONMENT_MASTER'}
 
 SCENE GEOGRAPHY:
-${JSON.stringify(input.worldState.sceneGeographyMemory, null, 2)}
+${sceneGeoJson}
 
 ---
 
