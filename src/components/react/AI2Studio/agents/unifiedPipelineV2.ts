@@ -222,10 +222,21 @@ export const unifiedPipelineV2 = {
       const phase4Start = Date.now();
 
       // Director now gets coverage options AND picks models
+      // NOTE: World doesn't exist yet at this phase, so we pass a minimal stub
       const direction = await directorAgent.execute({
         concept: input.concept,
         targetDuration: input.targetDuration,
-        worldState: { worldState: null, cameraRigs: null, entities: [] } as any,
+        worldState: {
+          worldState: {
+            world_id: 'pending',
+            environment_geometry: { static_description: 'Scene environment - to be built' },
+            lighting: { primary_light_direction: 'natural' },
+            camera_positions: {}
+          },
+          cameraRigs: { rigs: {} },
+          entities: [],
+          sceneGeographyMemory: {}
+        } as any,
         availableRefs: [],
         storyAnalysis: {
           storyType: storyAnalysis.concept_analysis?.story_type,
@@ -389,8 +400,8 @@ export const unifiedPipelineV2 = {
       const phase10Start = Date.now();
 
       const shots = await shotCompilerAgent.execute({
-        worldState: world.worldState,
-        cameraRigs: world.cameraRigs,
+        worldState: world?.worldState || { environment_geometry: { static_description: 'Scene' }, lighting: { primary_light_direction: 'natural' }, camera_positions: {} },
+        cameraRigs: world?.cameraRigs || { rigs: {} },
         beats: beats.beats || [],
         masterRefs,
         directorPlan: {
@@ -433,7 +444,7 @@ export const unifiedPipelineV2 = {
       const phase12Start = Date.now();
 
       const continuity = await continuityValidatorAgent.execute({
-        worldState: world.worldState,
+        worldState: world?.worldState || { environment_geometry: { static_description: 'Scene' }, lighting: { primary_light_direction: 'natural' }, camera_positions: {} },
         shots: shots.shotCards || [],
         continuityLocks: direction.continuity_locks
       }) as ContinuityValidatorOutput;
