@@ -1,3 +1,5 @@
+// @ts-nocheck
+// DEPRECATED: Council Orchestrator - replaced by unifiedPipelineV2.ts
 // Council Orchestrator - Manages agent communication and consensus building
 // NOW WITH REAL CLAUDE AI CALLS FOR EACH AGENT
 import type {

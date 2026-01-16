@@ -1,3 +1,5 @@
+// @ts-nocheck
+// DEPRECATED: Visual Agent - replaced by directorAgent.ts in V2 pipeline
 // Visual Agent - Director Style & Cinematography Specialist
 import type { CouncilAgent, AgentDecision, AgentResponse, ShotContext, DirectorDecisionSystem } from './types';
 

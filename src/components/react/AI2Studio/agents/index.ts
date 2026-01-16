@@ -161,7 +161,10 @@ export {
   validateSoraShotsForRefType,
   getPresetsForRefType,
   getBRollPresets,
-  SORA_SHOT_PRESETS
+  SORA_SHOT_PRESETS,
+  // Sora 2 TESTED rules (January 2026)
+  SORA_QUALITY_RULES,
+  buildHyperKineticSoraPrompt
 } from './audioPlannerAgent';
 export type {
   AudioPlan,
@@ -213,3 +216,61 @@ export {
   PROP_GRID_VARIATIONS
 } from './theStack';
 export type { RefPriority, StackedRef, RefStack, GridCell, Grid3x3 } from './theStack';
+
+// ============================================
+// NEW AGENTS - Pipeline V2
+// ============================================
+
+// Coverage Planner - Plans all camera angles per beat
+export { coveragePlannerAgent } from './coveragePlannerAgent';
+export type {
+  CoverageAngle,
+  BeatCoverage,
+  CoveragePlannerInput,
+  CoveragePlannerOutput
+} from './coveragePlannerAgent';
+
+// Scriptwriter - Writes actual dialogue and narration
+export { scriptwriterAgent } from './scriptwriterAgent';
+export type {
+  DialogueLine,
+  VoiceoverSegment as ScriptVoiceoverSegment,
+  CharacterVoice,
+  ScriptwriterInput,
+  ScriptwriterOutput
+} from './scriptwriterAgent';
+
+// Ref Planner - Plans refs and chaining strategy (replaces Council)
+export { refPlannerAgent } from './refPlannerAgent';
+export type {
+  RefRequirement,
+  ShotRefStack,
+  ChainingStrategy,
+  RefPlannerInput,
+  RefPlannerOutput
+} from './refPlannerAgent';
+
+// Ref Validator - Validates refs before Shot Compiler
+export { refValidatorAgent } from './refValidatorAgent';
+export type {
+  RefValidationIssue,
+  ValidatedRefStack,
+  RefValidatorInput,
+  RefValidatorOutput
+} from './refValidatorAgent';
+
+// Editor Advisor - Refines edit intent with editing knowledge
+export { editorAdvisorAgent } from './editorAdvisorAgent';
+export type {
+  EditDecision,
+  EditorAdvisorInput,
+  EditorAdvisorOutput
+} from './editorAdvisorAgent';
+
+// Unified Pipeline V2 - Complete rewrite with all new agents
+export { unifiedPipelineV2 } from './unifiedPipelineV2';
+export type {
+  UnifiedPipelineV2Input,
+  UnifiedPipelineV2Output,
+  RefGeneratorFn as RefGeneratorFnV2
+} from './unifiedPipelineV2';

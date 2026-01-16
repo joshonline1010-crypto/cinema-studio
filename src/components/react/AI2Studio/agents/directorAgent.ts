@@ -320,11 +320,51 @@ Add \`dialogue_info\` to shots with speech:
 - \`x3\` - Time-lapse, transition filler
 - NEVER speed up dialogue!
 
+## VIDEO MODEL SELECTION (YOU DECIDE THIS!)
+
+As Director, you SELECT the video model for each shot based on what the shot needs.
+This is YOUR decision - you know the creative intent, so you pick the best tool.
+
+### Available Models:
+
+| Model | Best For | Cost | When to Use |
+|-------|----------|------|-------------|
+| **kling-2.6** | Action, movement | $0.35 | DEFAULT. Most shots use this. |
+| **kling-o1** | Start→End transitions | $0.45 | When you need controlled zoom/orbit with specific end frame |
+| **seedance-1.5** | Dialogue with lip sync | $0.40 | Character SPEAKS with visible face (speech_mode: lip_sync) |
+| **sora-2** | B-roll, atmosphere | $0.50 | Vehicles, landscapes, environments WITHOUT characters |
+| **veed-fabric** | Talking head avatar | $0.30 | Static close-up with character talking |
+
+### Decision Tree:
+
+\`\`\`
+Does character SPEAK on camera?
+├── YES (speech_mode: lip_sync)
+│   ├── Static close-up? → veed-fabric
+│   └── Movement/action while talking? → seedance-1.5
+├── NO dialogue, but is it B-roll/atmosphere?
+│   └── YES (sora_candidate: true) → sora-2
+└── NO dialogue, story-critical?
+    ├── Needs controlled start→end transition? → kling-o1
+    └── Standard action/movement → kling-2.6
+\`\`\`
+
+### Add video_model to EVERY shot:
+
+\`\`\`json
+{
+  "shot_number": 1,
+  "shot_type": "WIDE_MASTER",
+  "video_model": "kling-2.6",
+  "model_reasoning": "Establishing shot, no dialogue, standard movement"
+}
+\`\`\`
+
 ## SORA 2 B-ROLL DETECTION
 
 For EFFICIENCY, identify shots that could use Sora 2 instead of our full pipeline.
 
-**GOOD for Sora 2 (sora_candidate: true):**
+**GOOD for Sora 2 (sora_candidate: true, video_model: sora-2):**
 - Vehicle flying/moving (helicopters, cars, boats)
 - Environment atmosphere (cityscapes, landscapes, weather)
 - Interior mood shots (empty rooms, cockpits without people)
@@ -340,6 +380,8 @@ For EFFICIENCY, identify shots that could use Sora 2 instead of our full pipelin
 - "Flying TO location" (story beat) vs "just flying" (atmosphere)
 
 For each shot, add:
+- video_model: The model you've selected
+- model_reasoning: Why this model fits
 - sora_candidate: true/false
 - sora_reason: Why it is/isn't a good candidate
 - sora_ref_type: 'location_only' | 'character_only' | 'character_in_location'
@@ -430,6 +472,13 @@ export interface ShotPlan {
   sora_reason?: string;     // Why it's a good/bad candidate
   sora_ref_type?: 'location_only' | 'character_only' | 'character_in_location' | 'collage';
   sora_preset?: string;     // Suggested preset (VEHICLE_FLYING, ATMOSPHERE_EXT, etc.)
+
+  // ============================================
+  // VIDEO MODEL SELECTION - Director decides!
+  // ============================================
+  // Director picks the model for each shot based on creative needs
+  video_model: 'kling-2.6' | 'kling-o1' | 'seedance-1.5' | 'sora-2' | 'veed-fabric';
+  model_reasoning?: string;  // Why this model was chosen
 }
 
 export interface RefAssignment {
@@ -666,7 +715,10 @@ function createDefaultShotSequence(shotCount: number, sceneType: string): ShotPl
     energy_level: Math.min(5, 2 + Math.floor(i / 2)),
     // Default: not Sora 2 candidate (story shots need full pipeline)
     sora_candidate: false,
-    sora_reason: 'Story-critical shot - needs full pipeline for character continuity'
+    sora_reason: 'Story-critical shot - needs full pipeline for character continuity',
+    // Default video model
+    video_model: 'kling-2.6' as const,
+    model_reasoning: 'Default action model for story shots'
   }));
 }
 

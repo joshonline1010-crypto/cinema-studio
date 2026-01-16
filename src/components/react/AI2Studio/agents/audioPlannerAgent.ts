@@ -622,8 +622,151 @@ export const SORA_SHOT_PRESETS = {
   QUICK_TWO_SHOT: [
     { duration_seconds: 4 as const, shot_type: 'wide' as const, camera_movement: 'static' as const },
     { duration_seconds: 4 as const, shot_type: 'close-up' as const, camera_movement: 'dolly-in' as const }
+  ],
+
+  // ============================================
+  // HYPER-KINETIC B-ROLL (TESTED - HIGH QUALITY)
+  // ============================================
+  // Based on real testing: Close-ups and macro shots work BEST
+  // 12 seconds = 5 shots is the optimal quality/length balance
+  // Use "Fast cut" / "Quick cut" / "Rapid cut" prompt pattern
+  //
+  // INPUT: Photo becomes START FRAME - ensure it's what you want to show
+  // or be ready to vision-check and trim first 1-2 seconds if static
+  //
+  // ⚠️ QUALITY NOTES:
+  // - Close-ups / Macro = BEST quality
+  // - Wide shots = WORST quality ("looks ass")
+  // - Focal length changes = VERY GOOD
+  // - Pacing / visual timing = VERY GOOD
+
+  // Military/Tech cockpit startup (TESTED - WORKS EXCELLENT)
+  COCKPIT_STARTUP_HYPER: [
+    { duration_seconds: 4 as const, shot_type: 'close-up' as const, camera_movement: 'dolly-in' as const, description: 'cyclic control stick gripped, hand tensing' },
+    { duration_seconds: 4 as const, shot_type: 'extreme-close-up' as const, camera_movement: 'static' as const, description: 'ammunition counter display, SAFE to ARMED' },
+    { duration_seconds: 4 as const, shot_type: 'close-up' as const, camera_movement: 'handheld' as const, description: 'hand slamming master arm switch' }
+  ],
+
+  // Tactical display sequence (TESTED)
+  TACTICAL_DISPLAY_HYPER: [
+    { duration_seconds: 4 as const, shot_type: 'extreme-close-up' as const, camera_movement: 'static' as const, description: 'finger tapping tactical display screen' },
+    { duration_seconds: 4 as const, shot_type: 'close-up' as const, camera_movement: 'pan-right' as const, description: 'hand flipping toggle switches' },
+    { duration_seconds: 4 as const, shot_type: 'extreme-close-up' as const, camera_movement: 'dolly-in' as const, description: 'buttons being pressed rapidly' }
+  ],
+
+  // Hands-on-controls sequence (TESTED)
+  HANDS_CONTROLS_HYPER: [
+    { duration_seconds: 4 as const, shot_type: 'close-up' as const, camera_movement: 'tracking' as const, description: 'hands moving across control panel' },
+    { duration_seconds: 4 as const, shot_type: 'extreme-close-up' as const, camera_movement: 'handheld' as const, description: 'fingers on buttons and switches' },
+    { duration_seconds: 4 as const, shot_type: 'medium' as const, camera_movement: 'dolly-out' as const, description: 'wider view showing full console with hands' }
+  ],
+
+  // Generic hyper-kinetic B-roll (works for any subject)
+  HYPER_KINETIC_CLOSEUPS: [
+    { duration_seconds: 4 as const, shot_type: 'close-up' as const, camera_movement: 'dolly-in' as const, description: 'fast cut to detail' },
+    { duration_seconds: 4 as const, shot_type: 'extreme-close-up' as const, camera_movement: 'handheld' as const, description: 'macro detail shot' },
+    { duration_seconds: 4 as const, shot_type: 'close-up' as const, camera_movement: 'tracking' as const, description: 'following motion' }
   ]
 } as const;
+
+// ============================================
+// SORA 2 TESTED QUALITY RULES (January 2026)
+// ============================================
+// These rules are based on REAL TESTING results:
+//
+// SHOT TYPE QUALITY RANKING:
+// 1. Extreme close-up / Macro  = ⭐⭐⭐⭐⭐ BEST
+// 2. Close-up                  = ⭐⭐⭐⭐⭐ EXCELLENT
+// 3. Medium (with action)      = ⭐⭐⭐   GOOD
+// 4. Wide shots                = ⭐      POOR ("looks ass")
+//
+// OPTIMAL SETTINGS:
+// - Duration: 12 seconds = 5 shots (best quality balance)
+// - Storyboards: 2x2 grids work as input!
+// - Start Frame: Input photo = first frame of video
+//
+// CAMERA MOVES THAT WORK WELL:
+// - Snap zoom, rapid zoom in
+// - Whip pan transitions
+// - Dolly in/out
+// - Handheld for tension
+//
+// PROMPT PATTERN (TESTED):
+// "[SETUP] shot from [POV], rapid fast cuts:
+//  Fast cut - [close-up description]
+//  Quick cut - [detail description]
+//  Rapid cut - [action description]
+//  Final cut - [payoff shot]
+//  Hyper-kinetic editing, 0.5-1 second per shot,
+//  [lighting], [textures], shallow depth of field"
+//
+// START FRAME RULE:
+// The input photo becomes frame 1 of the video.
+// - If photo is what you want shown: GOOD
+// - If photo is just a ref: Use vision to check first 1-2s and trim
+//
+export const SORA_QUALITY_RULES = {
+  BEST_SHOT_TYPES: ['extreme-close-up', 'close-up'],
+  GOOD_SHOT_TYPES: ['medium', 'over-shoulder'],
+  AVOID_SHOT_TYPES: ['wide'],  // Quality suffers
+
+  OPTIMAL_DURATION_SECONDS: 12,
+  OPTIMAL_SHOT_COUNT: 5,
+
+  // For hyper-kinetic editing, each cut should be:
+  CUT_DURATION_RANGE: { min: 0.5, max: 1.0 },
+
+  // Input can be storyboard grid
+  ACCEPTS_STORYBOARD_INPUT: true,
+  STORYBOARD_FORMATS: ['2x2', '3x3'],
+
+  // First frame rule
+  INPUT_IS_START_FRAME: true,
+  VISION_CHECK_RECOMMENDED: true,  // Check first 1-2 seconds
+} as const;
+
+/**
+ * Build a hyper-kinetic Sora prompt using the TESTED pattern
+ * This is the prompt format that works best for fast B-roll
+ */
+export function buildHyperKineticSoraPrompt(
+  scene_description: string,
+  pov: string,
+  shots: Array<{ cut_type: 'Fast cut' | 'Quick cut' | 'Rapid cut' | 'Final cut'; description: string }>,
+  style?: {
+    lighting?: string;
+    textures?: string;
+    additional?: string;
+  }
+): string {
+  let prompt = `${scene_description} shot from ${pov}, rapid fast cuts:\n\n`;
+
+  for (const shot of shots) {
+    prompt += `${shot.cut_type} - ${shot.description}\n\n`;
+  }
+
+  prompt += `Hyper-kinetic editing, 0.5-1 second per shot`;
+
+  if (style?.lighting) {
+    prompt += `, ${style.lighting}`;
+  } else {
+    prompt += `, dramatic instrument glow`;
+  }
+
+  if (style?.textures) {
+    prompt += `, ${style.textures}`;
+  } else {
+    prompt += `, metallic textures`;
+  }
+
+  prompt += `, shallow depth of field`;
+
+  if (style?.additional) {
+    prompt += `, ${style.additional}`;
+  }
+
+  return prompt;
+}
 
 // Helper to get appropriate presets for ref type
 export function getPresetsForRefType(refType: SoraRefType): string[] {

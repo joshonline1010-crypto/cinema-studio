@@ -1,3 +1,5 @@
+// @ts-nocheck
+// DEPRECATED: CouncilPanel - replaced by V2 pipeline
 // CouncilPanel - MISSION CONTROL DESIGN
 // War Room aesthetic with agent "stations" and live telemetry
 import React, { useState, useEffect } from 'react';

@@ -16,7 +16,9 @@ import {
 } from './agents';
 import type { ShotCard, WorldEngineerOutput, BeatPlannerOutput, ShotCompilerOutput } from './agents';
 
-// UNIFIED PIPELINE - Everything in One (Director + Council + Spec + Validation)
+// UNIFIED PIPELINE V2 - Complete rewrite with all new agents
+import { unifiedPipelineV2, type UnifiedPipelineV2Output } from './agents/unifiedPipelineV2';
+// Keep V1 for backwards compatibility if needed
 import { unifiedPipeline, type UnifiedPipelineOutput } from './agents/unifiedPipeline';
 
 // Mode descriptions
@@ -100,6 +102,7 @@ export default function AI2Studio() {
   const [isGeneratingAssets, setIsGeneratingAssets] = useState(false);
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
   const [pipelinePhase, setPipelinePhase] = useState<PipelinePhase>('idle');
+  const [pipelineStatus, setPipelineStatus] = useState<string>(''); // Current phase status message
   const [generatedRefs, setGeneratedRefs] = useState<GeneratedRef[]>([]);
   const [currentPlan, setCurrentPlan] = useState<any>(null);
   const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null);
@@ -445,7 +448,8 @@ export default function AI2Studio() {
           })),
           refs: [...characterRefs, ...locationRefs, ...productRefs].map(r => ({
             id: r.name,
-            type: r.name.includes('char') ? 'character' : 'location',
+            name: r.name,
+            type: r.name.includes('char') ? 'character' as const : 'location' as const,
             url: r.url
           }))
         });
@@ -1569,7 +1573,7 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
 
     // ============ PHASE 2: Generate NON-BASE shots with base refs ============
     console.log(`[AI2] PHASE 2: Generating ${nonBaseIndices.length} non-base shots with base refs...`);
-    const nonBasePromises = nonBaseIndices.map(i => {
+    const nonBasePromises = nonBaseIndices.map((i: number) => {
       const shot = shots[i];
       const sceneId = shot.scene_id || 'default';
       const baseUrl = sceneBaseUrls[sceneId];
@@ -1901,7 +1905,7 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
     } else if (successfulVideos.length === 1) {
       // Single video - just set it as final
       const singleUrl = successfulVideos[0].url;
-      setFinalVideoUrl(singleUrl);
+      setFinalVideoUrl(singleUrl ?? null);
       // Add completion message to chat
       if (singleUrl) {
         addMessage('assistant', `🎬 **Video Complete!**\n\nSingle clip ready.\n\n[▶️ Watch Video](${singleUrl})`);
@@ -1958,8 +1962,8 @@ Running all phases automatically...`);
         ...productRefs.map(r => ({ url: r.url, name: r.name, type: 'prop' as const }))
       ];
 
-      // Run the UNIFIED pipeline (everything in one!)
-      const result = await unifiedPipeline.run(
+      // Run the UNIFIED PIPELINE V2 (complete rewrite with all new agents!)
+      const result = await unifiedPipelineV2.run(
         {
           concept,
           targetDuration,
@@ -1981,9 +1985,21 @@ Running all phases automatically...`);
           const data = await response.json();
           return { url: data.images?.[0]?.url || '' };
         },
-        // Progress callback
+        // Progress callback - UPDATE UI IN REAL TIME
         (phase, message) => {
           console.log(`[AI2] ${phase}: ${message}`);
+          // Show status message in UI
+          setPipelineStatus(`${phase}: ${message}`);
+          // Update UI with phase info - map V2 phases to UI phases
+          if (phase.startsWith('PHASE_')) {
+            const phaseNum = parseInt(phase.split('_')[1]);
+            // Phases 1-4: Story/Beat/Coverage/Director = refs prep
+            // Phases 5-9: Script/World/RefPlan/RefGen/RefValidate = refs
+            // Phases 10-11: ShotCompiler/Audio = images prep
+            // Phases 12-15: Continuity/Editor/Producer/Verification = images
+            if (phaseNum <= 9) setPipelinePhase('refs');
+            else setPipelinePhase('images');
+          }
         }
       );
 
@@ -2025,45 +2041,75 @@ Running all phases automatically...`);
         world_state: result.world.worldState,
         character_references: {},
         scene_references: {},
-        // NEW: Include Director and Council data
+        // V2: Include all new agent data
         direction: result.direction,
-        councilAdvice: result.councilAdvice
+        storyAnalysis: result.storyAnalysis,
+        coverage: result.coverage,
+        script: result.script,
+        refPlan: result.refPlan,
+        editAdvice: result.editAdvice
       };
 
       setCurrentPlan(specPlan);
 
-      // Build comprehensive summary message
-      const worldSummary = result.world.worldState;
+      // Build comprehensive summary message (V2)
+      const worldSummary = result.world?.worldState;
       const directionSummary = result.direction;
-      const validation = result.validation;
+      const storyAnalysis = result.storyAnalysis;
+      const continuity = result.continuity;
+      const verification = result.verification;
 
-      addMessage('assistant', `✅ **UNIFIED PIPELINE Complete!**
+      // Calculate model distribution
+      const modelCounts: Record<string, number> = {};
+      for (const shot of result.direction?.shot_sequence || []) {
+        const model = shot.video_model || 'kling-2.6';
+        modelCounts[model] = (modelCounts[model] || 0) + 1;
+      }
+      const modelSummary = Object.entries(modelCounts).map(([m, c]) => `${m}: ${c}`).join(', ');
 
-**🌍 World State:**
-- Environment: ${worldSummary?.environment_geometry?.static_description || 'Created'}
-- Lighting: ${worldSummary?.lighting?.primary_light_direction || 'Set'}
-- Entities: ${worldSummary?.entities?.map(e => e.entity_id).join(', ') || 'Defined'}
+      addMessage('assistant', `✅ **UNIFIED PIPELINE V2 Complete!**
+
+**🧠 Story Analysis:**
+- Type: **${storyAnalysis?.concept_analysis?.story_type || 'Analyzed'}**
+- Core Emotion: ${storyAnalysis?.concept_analysis?.core_emotion || 'Identified'}
+- Director Style: ${storyAnalysis?.director_recommendation?.director || 'Recommended'}
+
+**📷 Coverage Planning:**
+- Total Angles: ${result.coverage?.total_angles_planned || 0}
+- Recommended Shots: ${result.coverage?.recommended_total_shots || 0}
+- Estimated Cost: $${result.coverage?.estimated_cost?.recommended?.toFixed(2) || '0.00'}
 
 **🎬 Director's Plan:**
 - Scene Type: **${directionSummary?.scene_analysis?.scene_type || 'Analyzed'}**
-- Style: ${directionSummary?.scene_analysis?.director_style || 'Determined'}
+- Shots: ${directionSummary?.shot_sequence?.length || 0}
 - Energy Arc: ${directionSummary?.scene_analysis?.energy_arc?.join(' → ') || 'Planned'}
 
-**🧠 Council Advice:**
-- Narrative: ${result.councilAdvice?.narrative?.beatStructure || 'Provided'}
-- Visual: ${result.councilAdvice?.visual?.directorStyle || 'Recommended'}
-- Technical: ${result.councilAdvice?.technical?.modelSelections?.length || 0} model selections
-- Production: ${result.councilAdvice?.production?.chainStrategy || 'Planned'}
+**🎯 Model Selection:**
+${modelSummary || 'Determined per shot'}
+
+**✍️ Script:**
+- Dialogue Lines: ${result.script?.summary?.total_dialogue_lines || 0}
+- Voiceover Segments: ${result.script?.summary?.total_voiceover_segments || 0}
+- Needs Lip Sync: ${result.script?.summary?.needs_lip_sync ? 'Yes' : 'No'}
+
+**🖼️ Refs:**
+- Planned: ${result.refPlan?.summary?.total_refs_needed || 0}
+- Generated: ${result.masterRefs?.length || 0}
+- Validation: ${result.refValidation?.summary?.shots_ready || 0}/${result.refValidation?.summary?.total_shots || 0} ready
+
+**✂️ Editing:**
+- Style: ${result.editAdvice?.summary?.editing_style || 'Determined'}
+- Edited Duration: ${(result.editAdvice?.total_edited_duration_ms || 0) / 1000}s
 
 **📋 Production:**
 - Beats: ${result.beats?.beats?.length || 0} story beats
 - Shots: ${result.shots?.shotCards?.length || 0} shot cards ready
-- Refs: ${result.masterRefs?.length || 0} master references
+- Total Assets: ${result.productionManifest?.summary?.totalAssets || 0}
 
-**✓ Validation:** Score ${validation?.overallScore || 0}/100 ${validation?.passed ? '✅ PASSED' : '⚠️ Issues found'}
-${validation?.issues?.length ? `- ${validation.issues.length} issues to review` : ''}
+**✓ Verification:** Score ${verification?.score || 0}/100 ${verification?.passed ? '✅ PASSED' : '⚠️ Issues found'}
+${verification?.issues?.length ? `- ${verification.issues.length} issues to review` : ''}
 
-**⏱️ Timing:** ${result.timing?.totalMs || 0}ms total
+**⏱️ Timing:** ${result.timing?.total || 0}ms total
 
 Click **Execute Plan** to start generating images and videos.`);
 
@@ -2430,7 +2476,7 @@ Click **Execute Plan** to start generating images and videos.`);
                   ].map(m => (
                     <button
                       key={m.id}
-                      onClick={() => { setModel(m.id); setShowModelDropdown(false); }}
+                      onClick={() => { setModel(m.id as any); setShowModelDropdown(false); }}
                       className={`w-full px-3 py-2 text-left hover:bg-white/5 flex items-center justify-between ${
                         model === m.id ? 'bg-white/10' : ''
                       }`}
@@ -2543,14 +2589,48 @@ Click **Execute Plan** to start generating images and videos.`);
             {isGenerating && (
               <div className="flex justify-start">
                 <div className="bg-vs-dark border border-vs-border rounded-xl px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-purple-400 text-xs">🤖</span>
-                    <span className="text-white/70 text-sm">Claude is thinking...</span>
-                    <div className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" />
-                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
-                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-purple-400 text-xs">🤖</span>
+                      <span className="text-white/70 text-sm">Claude is thinking...</span>
+                      <div className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" />
+                        <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
+                        <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
+                      </div>
                     </div>
+                    {pipelineStatus && (
+                      <div className="text-xs text-cyan-400 font-mono pl-5 animate-pulse">
+                        {pipelineStatus}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Pipeline Progress - Show when running spec pipeline */}
+            {isGeneratingAssets && pipelineStatus && (
+              <div className="flex justify-start">
+                <div className="bg-gradient-to-r from-purple-900/50 to-cyan-900/50 border border-cyan-500/30 rounded-xl px-4 py-3 max-w-md">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-cyan-400 text-sm">⚡</span>
+                      <span className="text-cyan-300 text-sm font-semibold">Pipeline Running</span>
+                    </div>
+                    <div className="text-xs text-white/90 font-mono bg-black/30 px-2 py-1 rounded">
+                      {pipelineStatus}
+                    </div>
+                    {generationProgress.total > 0 && (
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-purple-500 to-cyan-500 transition-all duration-300"
+                            style={{ width: `${(generationProgress.current / generationProgress.total) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-white/50">{generationProgress.current}/{generationProgress.total}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2765,7 +2845,7 @@ Click **Execute Plan** to start generating images and videos.`);
               const planLocs = latestPlan?.scene_references || {};
               const planItems = latestPlan?.item_references || latestPlan?.product_references || {};
 
-              const allRefs: Array<{ id: string; name: string; type: 'char' | 'loc' | 'item'; desc?: string; url?: string; generated?: boolean }> = [];
+              const allRefs: Array<{ id: string; name: string; type: 'char' | 'loc' | 'item' | 'baseplate'; desc?: string; url?: string; generated?: boolean }> = [];
 
               // User uploaded refs first
               refImages.forEach((r, i) => {
@@ -2936,9 +3016,9 @@ Click **Execute Plan** to start generating images and videos.`);
                   {(generatedAssets.length > 0 || (hasPlan && latestPlan.shots.length > 0)) && (() => {
                     // Extract unique segments from shots
                     const shots = latestPlan?.shots || [];
-                    const segments = [...new Set(shots.map((s: any) =>
+                    const segments: string[] = [...new Set(shots.map((s: any) =>
                       s.segment || s.section || s.phase || s.act || s.beat || 'all'
-                    ).filter((s: string) => s && s !== 'all'))];
+                    ).filter((s: string) => s && s !== 'all'))] as string[];
                     // Calculate shot counts per segment
                     const getSegmentCount = (seg: string) => seg === 'all'
                       ? shots.length

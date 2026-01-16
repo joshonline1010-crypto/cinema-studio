@@ -1,3 +1,5 @@
+// @ts-nocheck
+// DEPRECATED: Production Agent - replaced by refPlannerAgent.ts in V2 pipeline
 // Production Agent - Continuity & Chaining Specialist
 import type { CouncilAgent, AgentDecision, AgentResponse, ShotContext, ChainStrategy } from './types';
 

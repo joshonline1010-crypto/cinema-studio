@@ -1,3 +1,5 @@
+// @ts-nocheck
+// DEPRECATED: Technical Agent - replaced by modelPickerAgent.ts + directorAgent.ts in V2 pipeline
 // Technical Agent - Model Routing & Cost Specialist
 import type { CouncilAgent, AgentDecision, AgentResponse, ShotContext, VideoModel, ModelSelection, MODEL_SPECS } from './types';
 

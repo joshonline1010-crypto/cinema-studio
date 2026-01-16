@@ -15,7 +15,7 @@ export interface ChatSession {
 }
 
 type Mode = 'auto' | 'planning' | 'prompts' | 'chat';
-type Model = 'claude-opus' | 'claude-sonnet' | 'qwen' | 'mistral';
+type Model = 'claude-opus' | 'claude-sonnet' | 'gpt-5.2' | 'gpt-4o' | 'qwen' | 'mistral';
 
 interface AI2StudioState {
   // Messages

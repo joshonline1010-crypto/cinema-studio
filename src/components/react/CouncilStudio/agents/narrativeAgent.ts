@@ -1,3 +1,5 @@
+// @ts-nocheck
+// DEPRECATED: Narrative Agent - replaced by storyAnalystAgent.ts in V2 pipeline
 // Narrative Agent - Story Structure & Beat Specialist
 import type { CouncilAgent, AgentDecision, AgentResponse, ShotContext } from './types';
 

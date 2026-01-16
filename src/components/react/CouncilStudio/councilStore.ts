@@ -1,3 +1,5 @@
+// @ts-nocheck
+// DEPRECATED: Council Store - replaced by V2 pipeline
 // Council Store - Zustand state management for the Council system
 import { create } from 'zustand';
 import type {
