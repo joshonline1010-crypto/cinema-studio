@@ -2010,6 +2010,20 @@ Running all phases automatically...`);
       setSpecBeats(result.beats);
       setSpecShotCards(result.shots);
 
+      // SAVE GENERATED REFS TO STATE - so they show in UI!
+      if (result.masterRefs && result.masterRefs.length > 0) {
+        const refsForState = result.masterRefs.map((ref: any) => ({
+          id: ref.id || ref.name,
+          name: ref.name,
+          type: ref.type,
+          url: ref.url || '',
+          approved: ref.url ? undefined : false,  // Auto-approve if has URL
+          prompt: ref.prompt
+        }));
+        setGeneratedRefs(refsForState);
+        console.log('[AI2] 📎 Refs saved to state:', refsForState.length);
+      }
+
       // Save to persistence
       worldStatePersistence.saveWorldState(session.projectId, result.world);
       worldStatePersistence.saveShotCards(session.projectId, result.shots.shotCards);
@@ -2031,15 +2045,31 @@ Running all phases automatically...`);
       // Build a plan object compatible with existing flow
       const specPlan = {
         name: 'Unified Pipeline',
-        shots: result.shots.shotCards.map((card: ShotCard) => ({
-          shot_id: card.shot_id,
-          photo_prompt: card.photo_prompt,
-          motion_prompt: card.video_motion_prompt,
-          camera_rig: card.camera_rig_id,
-          lens_mm: card.lens_mm,
-          video_model: card.video_model,
-          duration: card.video_duration_seconds
-        })),
+        shots: result.shots.shotCards.map((card: ShotCard, idx: number) => {
+          // Get the beat for this shot to include segment info
+          const beat = result.beats?.beats?.[idx];
+          return {
+            shot_id: card.shot_id,
+            photo_prompt: card.photo_prompt,
+            motion_prompt: card.video_motion_prompt,
+            camera_rig: card.camera_rig_id,
+            lens_mm: card.lens_mm,
+            video_model: card.video_model,
+            duration: card.video_duration_seconds,
+            // Include segment/beat info for tabs
+            segment: beat?.segment || beat?.act || `Beat ${idx + 1}`,
+            beat: beat?.beat_id || `beat_${idx + 1}`,
+            shot_type: card.shot_type,
+            // Dialogue info for UI display
+            dialogue_info: card.dialogue_info,
+            has_dialogue: card.dialogue_info?.has_dialogue,
+            speech_mode: card.dialogue_info?.speech_mode,
+            dialogue_line: card.dialogue_info?.line_summary,
+            // Sora preset for UI display
+            sora_preset: card.sora_preset,
+            sora_candidate: card.sora_candidate
+          };
+        }),
         world_state: result.world.worldState,
         character_references: {},
         scene_references: {},
