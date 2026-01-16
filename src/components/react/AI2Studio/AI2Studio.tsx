@@ -1977,13 +1977,15 @@ Running all phases automatically...`);
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              type: 'image',  // REQUIRED - tells API to use nano-banana-pro
               prompt: params.prompt,
-              image_size: 'square_hd',
-              num_images: 1
+              aspect_ratio: '1:1',  // Square for refs
+              resolution: '2K'
             })
           });
           const data = await response.json();
-          return { url: data.images?.[0]?.url || '' };
+          // FAL returns { images: [{ url }] }
+          return { url: data.images?.[0]?.url || data.image?.url || '' };
         },
         // Progress callback - UPDATE UI IN REAL TIME
         (phase, message) => {
@@ -2111,7 +2113,11 @@ ${verification?.issues?.length ? `- ${verification.issues.length} issues to revi
 
 **⏱️ Timing:** ${result.timing?.total || 0}ms total
 
-Click **Execute Plan** to start generating images and videos.`);
+Click **Execute Plan** to start generating images and videos.
+
+\`\`\`json
+${JSON.stringify(specPlan, null, 2)}
+\`\`\``);
 
       setPipelinePhase('idle');
       setIsGeneratingAssets(false);

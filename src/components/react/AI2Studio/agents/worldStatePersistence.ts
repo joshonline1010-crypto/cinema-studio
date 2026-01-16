@@ -206,9 +206,15 @@ export const worldStatePersistence = {
       return;
     }
 
-    session.worldState = output.worldState;
-    session.cameraRigs = output.cameraRigs;
-    session.sceneGeographyMemory = output.sceneGeographyMemory;
+    // Null safety - output may be null if pipeline failed
+    if (!output) {
+      console.warn('[WorldStatePersistence] No world state to save (output is null)');
+      return;
+    }
+
+    session.worldState = output?.worldState;
+    session.cameraRigs = output?.cameraRigs;
+    session.sceneGeographyMemory = output?.sceneGeographyMemory;
 
     this.saveSession(session);
     console.log('[WorldStatePersistence] World state saved for:', projectId);

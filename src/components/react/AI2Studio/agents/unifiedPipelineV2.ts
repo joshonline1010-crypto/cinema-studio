@@ -487,9 +487,24 @@ export const unifiedPipelineV2 = {
       const phase12Start = Date.now();
 
       const continuity = await continuityValidatorAgent.execute({
-        worldState: world?.worldState || { environment_geometry: { static_description: 'Scene' }, lighting: { primary_light_direction: 'natural' }, camera_positions: {} },
-        shots: shots.shotCards || [],
-        continuityLocks: direction.continuity_locks
+        generatedImages: [], // No images yet - this is planning phase
+        generatedVideos: [], // No videos yet - this is planning phase
+        worldState: world?.worldState || {
+          world_id: 'fallback',
+          environment_geometry: { ground_plane: { Y: 0 }, static_landmarks: [], static_description: 'Scene' },
+          lighting: { primary_light_direction: 'natural', primary_light_color_temp: '5600K', secondary_fill: 'ambient', intensity_baseline: 1.0, direction_locked: false },
+          atmospherics: { smoke_baseline: 'none', dust_baseline: 'none', haze: 'none' },
+          scale_anchors: [],
+          entities: []
+        },
+        sceneGeographyMemory: world?.sceneGeographyMemory || {
+          hero_side_of_frame: 'CENTER',
+          villain_side_of_frame: 'CENTER',
+          light_direction_lock: 'natural',
+          color_grade_lock: 'neutral',
+          forbid_flip: false
+        },
+        shotCards: shots.shotCards || []
       }) as ContinuityValidatorOutput;
 
       timing.phase12_continuity = Date.now() - phase12Start;

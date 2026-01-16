@@ -329,24 +329,37 @@ This is YOUR decision - you know the creative intent, so you pick the best tool.
 
 | Model | Best For | Cost | When to Use |
 |-------|----------|------|-------------|
-| **kling-2.6** | Action, movement | $0.35 | DEFAULT. Most shots use this. |
-| **kling-o1** | Start→End transitions | $0.45 | When you need controlled zoom/orbit with specific end frame |
-| **seedance-1.5** | Dialogue with lip sync | $0.40 | Character SPEAKS with visible face (speech_mode: lip_sync) |
-| **sora-2** | B-roll, atmosphere | $0.50 | Vehicles, landscapes, environments WITHOUT characters |
+| **sora-2** | CLOSE-UPS, details, b-roll | $0.50 | **PREFER THIS for ECU/CU shots!** Fast, great quality on close-ups |
+| **kling-2.6** | WIDE/MEDIUM action | $0.35 | Wide shots, full-body movement |
+| **kling-o1** | Start→End transitions | $0.45 | Controlled zoom/orbit with specific end frame |
+| **seedance-1.5** | Dialogue with lip sync | $0.40 | Character SPEAKS with visible face |
 | **veed-fabric** | Talking head avatar | $0.30 | Static close-up with character talking |
+
+### SORA 2 QUALITY RULES (CRITICAL!)
+- **CLOSE-UPS = BEST** (ECU, CU, INSERT) → Sora 2 excels here!
+- **WIDE SHOTS = POOR** → Never use Sora 2 for wide/establishing
+- **12 seconds = 5 shots optimal** for fast editing
+- **Input image = START FRAME** (highest priority)
 
 ### Decision Tree:
 
 \`\`\`
-Does character SPEAK on camera?
-├── YES (speech_mode: lip_sync)
-│   ├── Static close-up? → veed-fabric
-│   └── Movement/action while talking? → seedance-1.5
-├── NO dialogue, but is it B-roll/atmosphere?
-│   └── YES (sora_candidate: true) → sora-2
-└── NO dialogue, story-critical?
-    ├── Needs controlled start→end transition? → kling-o1
-    └── Standard action/movement → kling-2.6
+Is it a CLOSE-UP or DETAIL shot? (ECU, CU, INSERT, MACRO)
+├── YES → sora-2 (FAST + great quality on close-ups!)
+│   Examples: feet running, hands grabbing, eyes widening, dials/buttons
+│
+└── NO (WIDE or MEDIUM shot)
+    ├── Does character SPEAK? → seedance-1.5 or veed-fabric
+    ├── Start→End transition needed? → kling-o1
+    └── Standard action → kling-2.6
+
+CHASE/ACTION SCENE PATTERN (use lots of Sora 2!):
+- CU feet running → sora-2
+- WIDE establishing → kling-2.6
+- CU hands reaching → sora-2
+- CU villain approaching → sora-2
+- MEDIUM hero reacts → kling-2.6
+- INSERT detail (door closing, timer) → sora-2
 \`\`\`
 
 ### Add video_model to EVERY shot:
@@ -360,24 +373,44 @@ Does character SPEAK on camera?
 }
 \`\`\`
 
-## SORA 2 B-ROLL DETECTION
+## SORA 2 - USE IT AGGRESSIVELY!
 
-For EFFICIENCY, identify shots that could use Sora 2 instead of our full pipeline.
+Sora 2 is FAST and EXCELLENT for close-ups. Use it to create dynamic editing with lots of cuts!
 
-**GOOD for Sora 2 (sora_candidate: true, video_model: sora-2):**
-- Vehicle flying/moving (helicopters, cars, boats)
-- Environment atmosphere (cityscapes, landscapes, weather)
-- Interior mood shots (empty rooms, cockpits without people)
-- Transition filler between scenes
-- Multi-angle coverage of same subject (not story-critical)
-- Tension/emotion shots WITHOUT dialogue
+**BEST for Sora 2 (sora_candidate: true, video_model: sora-2):**
+- **CLOSE-UPS/MACRO** - faces, hands, feet, eyes, details (BEST QUALITY!)
+- **INSERT SHOTS** - buttons, dials, doors closing, timers, props
+- **SFX-HEAVY SHOTS** - explosions, fire, smoke, debris, weather
+- **SPEED RAMPS** - slow-mo to fast, dramatic timing changes
+- **TRANSITIONS** - smooth camera moves, whip pans, reveals
+- **TENSION CUTS** - quick detail shots to build suspense
+- Vehicle/environment atmosphere (cityscapes, weather)
+- B-roll filler between scenes
 
-**NOT for Sora 2 (sora_candidate: false):**
-- Story-critical character action
-- Dialogue or talking
-- Shots needing precise character continuity
-- Plot moments that matter
-- "Flying TO location" (story beat) vs "just flying" (atmosphere)
+**HYPER-KINETIC EDITING with Sora 2:**
+For chase/action scenes, use MANY quick Sora 2 shots:
+- CU feet pounding → CU predator feet → CU hands reaching → INSERT door closing
+- Each 2-3 seconds, rapid cuts = tension!
+- Sora 2 generates FAST so you can make many variations
+
+**NOT for Sora 2:**
+- WIDE establishing shots (poor quality on wide)
+- Full-body character action (use Kling)
+- Dialogue scenes (use Seedance)
+- Shots requiring specific start→end control (use Kling O1)
+
+**Sora 2 Presets for Action/Chase:**
+| Preset | Use For | Duration |
+|--------|---------|----------|
+| FEET_RUNNING | Hero/villain feet pounding ground | 2-3s |
+| HANDS_REACHING | Desperate grab for door/lever/object | 2-3s |
+| EYES_WIDENING | Fear/shock reaction close-up | 2s |
+| PREDATOR_APPROACH | Villain/monster getting closer | 3s |
+| DOOR_CLOSING | Bunker/elevator/escape closing | 3s |
+| TIMER_COUNTDOWN | Clock/display counting down | 2s |
+| DEBRIS_FLYING | Explosion aftermath, dust, particles | 2-3s |
+| SPEED_RAMP_SLOW | Dramatic slow-mo moment | 3s |
+| IMPACT_MOMENT | Hit/crash/collision detail | 2s |
 
 For each shot, add:
 - video_model: The model you've selected
@@ -385,7 +418,7 @@ For each shot, add:
 - sora_candidate: true/false
 - sora_reason: Why it is/isn't a good candidate
 - sora_ref_type: 'location_only' | 'character_only' | 'character_in_location'
-- sora_preset: Suggested preset (VEHICLE_FLYING, ATMOSPHERE_EXT, etc.)
+- sora_preset: Suggested preset from table above
 
 ## REMEMBER
 
