@@ -2441,12 +2441,15 @@ Running all phases automatically...`);
 
       // Save to persistence
       worldStatePersistence.saveWorldState(session.projectId, result.world);
-      worldStatePersistence.saveShotCards(session.projectId, result.shots.shotCards);
+      const shotCards = result.shots?.shotCards || [];
+      if (shotCards.length > 0) {
+        worldStatePersistence.saveShotCards(session.projectId, shotCards);
+      }
 
-      console.log('[AI2] ✅ UNIFIED Pipeline complete:', result.shots.shotCards.length, 'shots');
+      console.log('[AI2] ✅ UNIFIED Pipeline complete:', shotCards.length, 'shots');
 
       // Convert shot cards to the existing GeneratedAsset format
-      const assets: GeneratedAsset[] = result.shots.shotCards.map((card: ShotCard) => ({
+      const assets: GeneratedAsset[] = shotCards.map((card: ShotCard) => ({
         id: card.shot_id,
         type: 'image' as const,
         prompt: card.photo_prompt,
@@ -2462,7 +2465,7 @@ Running all phases automatically...`);
       // Build a plan object compatible with existing flow
       const specPlan = {
         name: 'Unified Pipeline',
-        shots: result.shots.shotCards.map((card: ShotCard, idx: number) => {
+        shots: shotCards.map((card: ShotCard, idx: number) => {
           // Get the beat for this shot to include segment info
           const beat = result.beats?.beats?.[idx];
           return {
