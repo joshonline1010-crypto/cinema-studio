@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI2 Studio Agent Pipeline - Visual Guide</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e4e4e4;
+      line-height: 1.6;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(90deg, #f39c12, #e74c3c);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 2rem;
+    }
+
+    /* Quick Nav */
+    .quick-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-bottom: 2rem;
+      padding: 1rem;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+    }
+
+    .quick-nav a {
+      padding: 0.5rem 1rem;
+      background: rgba(255,255,255,0.1);
+      border-radius: 20px;
+      color: #e4e4e4;
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    .quick-nav a:hover {
+      background: #f39c12;
+      color: #000;
+    }
+
+    /* Section */
+    section {
+      margin-bottom: 2rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #f39c12;
+    }
+
+    /* Agent Card */
+    .agent-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      border-left: 4px solid;
+    }
+
+    .agent-card.story { border-color: #9b59b6; }
+    .agent-card.beat { border-color: #3498db; }
+    .agent-card.coverage { border-color: #1abc9c; }
+    .agent-card.director { border-color: #e74c3c; }
+    .agent-card.script { border-color: #f39c12; }
+    .agent-card.world { border-color: #2ecc71; }
+    .agent-card.ref { border-color: #e67e22; }
+    .agent-card.shot { border-color: #9b59b6; }
+    .agent-card.audio { border-color: #1abc9c; }
+    .agent-card.editor { border-color: #e74c3c; }
+    .agent-card.producer { border-color: #f39c12; }
+
+    .agent-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .agent-icon {
+      font-size: 2rem;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+    }
+
+    .agent-title {
+      flex: 1;
+    }
+
+    .agent-title h3 {
+      font-size: 1.2rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .agent-title .phase {
+      font-size: 0.8rem;
+      color: #888;
+    }
+
+    /* Thinking/Output boxes */
+    .thinking, .output {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+    }
+
+    .thinking {
+      background: rgba(52, 152, 219, 0.15);
+      border: 1px dashed rgba(52, 152, 219, 0.4);
+    }
+
+    .thinking::before {
+      content: "THINKS ABOUT:";
+      display: block;
+      font-size: 0.7rem;
+      font-weight: bold;
+      color: #3498db;
+      margin-bottom: 0.5rem;
+    }
+
+    .output {
+      background: rgba(46, 204, 113, 0.15);
+      border: 1px solid rgba(46, 204, 113, 0.4);
+    }
+
+    .output::before {
+      content: "OUTPUTS:";
+      display: block;
+      font-size: 0.7rem;
+      font-weight: bold;
+      color: #2ecc71;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Lists */
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    ul li {
+      padding: 0.3rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+
+    ul li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: #f39c12;
+    }
+
+    /* Arrow connector */
+    .arrow {
+      text-align: center;
+      font-size: 2rem;
+      color: #f39c12;
+      margin: 0.5rem 0;
+      animation: bounce 1s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(5px); }
+    }
+
+    /* Example box */
+    .example {
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 0.75rem;
+      font-family: 'Consolas', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+    }
+
+    .example::before {
+      content: "EXAMPLE:";
+      display: block;
+      font-size: 0.7rem;
+      font-weight: bold;
+      color: #e67e22;
+      margin-bottom: 0.5rem;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* Key rules */
+    .key-rules {
+      background: linear-gradient(135deg, rgba(231, 76, 60, 0.2), rgba(243, 156, 18, 0.2));
+      border: 2px solid #e74c3c;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .key-rules h3 {
+      color: #e74c3c;
+      margin-bottom: 1rem;
+    }
+
+    /* Model table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    th {
+      background: rgba(243, 156, 18, 0.2);
+      color: #f39c12;
+    }
+
+    tr:hover {
+      background: rgba(255,255,255,0.05);
+    }
+
+    /* Decision tree */
+    .decision-tree {
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      font-family: 'Consolas', monospace;
+      line-height: 1.8;
+    }
+
+    .decision-tree .yes { color: #2ecc71; }
+    .decision-tree .no { color: #e74c3c; }
+    .decision-tree .model { color: #f39c12; font-weight: bold; }
+
+    /* Phase summary */
+    .phase-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .phase-box {
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .phase-box .num {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #f39c12;
+    }
+
+    .phase-box .label {
+      font-size: 0.75rem;
+      color: #888;
+    }
+
+    /* Burst patterns */
+    .burst-pattern {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    .burst-shot {
+      background: rgba(231, 76, 60, 0.3);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      border: 1px solid rgba(231, 76, 60, 0.5);
+    }
+
+    .burst-shot.sora {
+      background: rgba(155, 89, 182, 0.3);
+      border-color: rgba(155, 89, 182, 0.5);
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AI2 Studio Agent Pipeline</h1>
+    <p class="subtitle">Visual Guide to Every Step, Thought, and Output</p>
+
+    <nav class="quick-nav">
+      <a href="#overview">Overview</a>
+      <a href="#story">Story Analyst</a>
+      <a href="#beat">Beat Planner</a>
+      <a href="#director">Director</a>
+      <a href="#models">Model Routing</a>
+      <a href="#bursts">Sora-2 Bursts</a>
+      <a href="#generation">Generation</a>
+    </nav>
+
+    <!-- OVERVIEW -->
+    <section id="overview">
+      <h2>The Big Picture</h2>
+
+      <p style="margin-bottom: 1rem;">User types a concept. 15 agents think about it. Assets get generated. Video comes out.</p>
+
+      <div class="phase-summary">
+        <div class="phase-box">
+          <div class="num">15</div>
+          <div class="label">Planning Phases</div>
+        </div>
+        <div class="phase-box">
+          <div class="num">6</div>
+          <div class="label">Generation Steps</div>
+        </div>
+        <div class="phase-box">
+          <div class="num">4</div>
+          <div class="label">Video Models</div>
+        </div>
+        <div class="phase-box">
+          <div class="num">$0.43</div>
+          <div class="label">Cost per Shot</div>
+        </div>
+      </div>
+
+      <div class="example">
+USER INPUT: "A Lamborghini truck commercial with dramatic mountain driving"
+
+          ↓ 15 planning phases ↓
+
+OUTPUT: 6 shot cards with prompts, refs, model assignments, audio plan
+
+          ↓ generation phases ↓
+
+FINAL: Stitched video with voiceover
+      </div>
+    </section>
+
+    <!-- PHASE 1: STORY ANALYST -->
+    <section id="story">
+      <h2>Phase 1: Story Analyst</h2>
+
+      <div class="agent-card story">
+        <div class="agent-header">
+          <div class="agent-icon">🧠</div>
+          <div class="agent-title">
+            <h3>Story Analyst Agent</h3>
+            <div class="phase">The First Brain - Sets Creative Direction</div>
+          </div>
+        </div>
+
+        <div class="thinking">
+          <ul>
+            <li>What TYPE of story is this? (commercial, drama, action, horror)</li>
+            <li>What's the EMOTIONAL arc? (builds tension, ends triumphant)</li>
+            <li>Which DIRECTOR style fits? (Spielberg, Kubrick, Nolan, Bay)</li>
+            <li>What VISUAL language? (color palette, lighting, camera style)</li>
+            <li>What AUDIO needs? (epic score, voiceover, SFX)</li>
+          </ul>
+        </div>
+
+        <div class="output">
+          <ul>
+            <li><strong>story_type:</strong> "commercial"</li>
+            <li><strong>emotional_arc:</strong> "builds from calm → intense → triumphant"</li>
+            <li><strong>recommended_director:</strong> "Michael Bay"</li>
+            <li><strong>visual_language:</strong> { pacing: "fast", lighting: "golden hour", color: "warm orange" }</li>
+            <li><strong>audio_plan:</strong> { music: "epic orchestral", voiceover: true }</li>
+          </ul>
+        </div>
+
+        <div class="example">
+"Lamborghini truck commercial with dramatic mountain driving"
+
+THINKS: Commercial = product is hero. Mountain driving = ACTION scene.
+        Dramatic = Bay-style with dynamic camera. Product reveal = key beat.
+
+OUTPUTS:
+  story_type: "commercial"
+  emotional_arc: "awe → thrill → desire"
+  recommended_director: "Michael Bay"
+  director_techniques: ["hero shots", "low angles", "golden hour", "dust clouds"]
+        </div>
+      </div>
+    </section>
+
+    <div class="arrow">↓</div>
+
+    <!-- PHASE 2: BEAT PLANNER -->
+    <section id="beat">
+      <h2>Phase 2: Beat Planner</h2>
+
+      <div class="agent-card beat">
+        <div class="agent-header">
+          <div class="agent-icon">📋</div>
+          <div class="agent-title">
+            <h3>Beat Planner Agent</h3>
+            <div class="phase">Breaks Story Into Emotional Beats</div>
+          </div>
+        </div>
+
+        <div class="thinking">
+          <ul>
+            <li>How long is the video? (30s = 6 beats, 60s = 12 beats)</li>
+            <li>What are the KEY MOMENTS? (hook, build, climax, resolve)</li>
+            <li>Where does ENERGY peak? (usually beat 4-5 of 6)</li>
+            <li>What CHANGES between beats? (location, emotion, intensity)</li>
+          </ul>
+        </div>
+
+        <div class="output">
+          <ul>
+            <li><strong>beats[]:</strong> Array of story beats with timing</li>
+            <li><strong>energy_curve:</strong> [2, 3, 4, 5, 4, 3] (1-5 scale)</li>
+            <li><strong>key_transitions:</strong> Where scenes/emotions shift</li>
+          </ul>
+        </div>
+
+        <div class="example">
+30-second commercial → 6 beats
+
+BEAT 1 (0-5s): "HOOK" - Truck emerges from dust cloud, energy: 3
+BEAT 2 (5-10s): "CAPABILITY" - Truck conquers rough terrain, energy: 4
+BEAT 3 (10-15s): "POWER" - Engine roars, dust billows, energy: 5
+BEAT 4 (15-20s): "BEAUTY" - Golden hour hero shot, energy: 4
+BEAT 5 (20-25s): "LUXURY" - Interior detail, driver satisfaction, energy: 3
+BEAT 6 (25-30s): "TAGLINE" - Logo, product name, energy: 2
+        </div>
+      </div>
+    </section>
+
+    <div class="arrow">↓</div>
+
+    <!-- PHASE 3-4: DIRECTOR -->
+    <section id="director">
+      <h2>Phase 4: Director Agent</h2>
+
+      <div class="key-rules">
+        <h3>KEY DECISION MAKER</h3>
+        <p>The Director is the BRAIN of the production. Makes all creative decisions:</p>
+        <ul>
+          <li>Which SHOT TYPE for each beat (WIDE, CU, INSERT, etc.)</li>
+          <li>Which VIDEO MODEL for each shot (sora-2, kling-2.6, kling-o1, veed-fabric)</li>
+          <li>Whether shot has DIALOGUE (triggers lip sync)</li>
+          <li>How long to EDIT each shot (target_duration_ms)</li>
+          <li>Whether to CHAIN from previous frame</li>
+        </ul>
+      </div>
+
+      <div class="agent-card director">
+        <div class="agent-header">
+          <div class="agent-icon">🎬</div>
+          <div class="agent-title">
+            <h3>Director Agent</h3>
+            <div class="phase">Creative Brain - Shot + Model Selection</div>
+          </div>
+        </div>
+
+        <div class="thinking">
+          <ul>
+            <li>What SCENE TYPE is this? (dialog, action, chase, emotional)</li>
+            <li>What SHOT PATTERN fits? (WIDE → CU → INSERT → WIDE)</li>
+            <li>Which CAMERA RIG for each shot?</li>
+            <li>Does character SPEAK? (→ veed-fabric)</li>
+            <li>Is it CLOSE-UP detail? (→ sora-2)</li>
+            <li>Need Start→End transition? (→ kling-o1)</li>
+            <li>Wide/medium action? (→ kling-2.6)</li>
+          </ul>
+        </div>
+
+        <div class="output">
+          <ul>
+            <li><strong>shot_sequence[]:</strong> Each shot with type, model, duration</li>
+            <li><strong>video_model:</strong> sora-2 | kling-2.6 | kling-o1 | veed-fabric</li>
+            <li><strong>model_reasoning:</strong> Why this model for this shot</li>
+            <li><strong>dialogue_info:</strong> { has_dialogue, speech_mode, character }</li>
+            <li><strong>edit_intent:</strong> { target_duration_ms, cut_trigger, allow_speed_up }</li>
+          </ul>
+        </div>
+
+        <div class="example">
+SHOT 1: WIDE_MASTER
+  video_model: "kling-2.6"
+  reason: "Establishing shot, full truck visible, no dialogue"
+  duration: 5s, target: 4000ms
+
+SHOT 2: CU_GRILLE
+  video_model: "sora-2"
+  reason: "Close-up detail - Sora excels at CU"
+  duration: 5s, target: 1500ms
+
+SHOT 3: CU_DRIVER_FACE (SPEAKS)
+  video_model: "veed-fabric"
+  reason: "Character speaks with visible face - needs lip sync"
+  dialogue_info: { has_dialogue: true, speech_mode: "lip_sync" }
+        </div>
+      </div>
+    </section>
+
+    <div class="arrow">↓</div>
+
+    <!-- MODEL ROUTING -->
+    <section id="models">
+      <h2>Video Model Selection</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Best For</th>
+            <th>Cost</th>
+            <th>Speed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>sora-2</strong></td>
+            <td>Close-ups, details, bursts, SFX, fast cuts</td>
+            <td>$0.50</td>
+            <td>Fast</td>
+          </tr>
+          <tr>
+            <td><strong>kling-2.6</strong></td>
+            <td>Wide/medium shots, full-body action</td>
+            <td>$0.35</td>
+            <td>Medium</td>
+          </tr>
+          <tr>
+            <td><strong>kling-o1</strong></td>
+            <td>Start→End transitions, controlled zoom/orbit</td>
+            <td>$0.45</td>
+            <td>Slow</td>
+          </tr>
+          <tr>
+            <td><strong>veed-fabric</strong></td>
+            <td>Lip sync (talking with face visible)</td>
+            <td>$0.30</td>
+            <td>Medium</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Decision Tree</h3>
+
+      <div class="decision-tree">
+Does character <span class="yes">SPEAK</span> with visible face?
+├── <span class="yes">YES</span> → <span class="model">veed-fabric</span> (lip sync)
+│
+└── <span class="no">NO</span>
+    ├── Is it <span class="yes">CLOSE-UP</span> or DETAIL? (ECU, CU, INSERT, MACRO)
+    │   └── <span class="yes">YES</span> → <span class="model">sora-2</span> (fast + great quality!)
+    │
+    ├── Need <span class="yes">Start→End</span> transition?
+    │   └── <span class="yes">YES</span> → <span class="model">kling-o1</span>
+    │
+    └── WIDE/MEDIUM action
+        └── <span class="model">kling-2.6</span>
+      </div>
+    </section>
+
+    <div class="arrow">↓</div>
+
+    <!-- SORA-2 BURSTS -->
+    <section id="bursts">
+      <h2>Sora-2 Burst Patterns</h2>
+
+      <p style="margin-bottom: 1rem;">When Director detects these story moments, it plans rapid Sora-2 shot sequences (3-6 shots, 1-2s each):</p>
+
+      <div class="agent-card" style="border-color: #9b59b6;">
+        <h3 style="margin-bottom: 1rem;">TRIGGER: Story Turn</h3>
+        <p style="color: #888; margin-bottom: 0.5rem;">Character shifts emotion or intention</p>
+        <div class="burst-pattern">
+          <span class="burst-shot sora">CU_FACE (anger)</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot sora">CU_HANDS (grip)</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot sora">ECU_EYES</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot sora">CU_BODY</span>
+        </div>
+      </div>
+
+      <div class="agent-card" style="border-color: #e74c3c;">
+        <h3 style="margin-bottom: 1rem;">TRIGGER: Vehicle Performance</h3>
+        <p style="color: #888; margin-bottom: 0.5rem;">Drifting, racing, gear changes - GREAT for commercials!</p>
+        <div class="burst-pattern">
+          <span class="burst-shot sora">CU_GEAR_SHIFT</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot sora">CU_GAUGE</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot sora">CU_STEERING</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot sora">CU_PEDAL</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot sora">CU_DRIVER_FACE</span>
+        </div>
+      </div>
+
+      <div class="agent-card" style="border-color: #f39c12;">
+        <h3 style="margin-bottom: 1rem;">TRIGGER: Pre-Impact</h3>
+        <p style="color: #888; margin-bottom: 0.5rem;">Something big about to hit</p>
+        <div class="burst-pattern">
+          <span class="burst-shot sora">CU_PROJECTILE</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot sora">CU_DIFF_ANGLE</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot sora">CU_TARGET_REACT</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot" style="background: rgba(46, 204, 113, 0.3); border-color: rgba(46, 204, 113, 0.5);">IMPACT (kling)</span>
+        </div>
+      </div>
+
+      <div class="agent-card" style="border-color: #e67e22;">
+        <h3 style="margin-bottom: 1rem;">TRIGGER: Destruction Cascade</h3>
+        <p style="color: #888; margin-bottom: 0.5rem;">Something breaks apart - SFX-heavy, sora-2 excels</p>
+        <div class="burst-pattern">
+          <span class="burst-shot sora">IMPACT</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot sora">PART_A EXPLODES</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot sora">PART_B</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot sora">DEBRIS</span>
+          <span class="burst-shot">→</span>
+          <span class="burst-shot sora">AFTERMATH</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="arrow">↓</div>
+
+    <!-- REMAINING AGENTS (condensed) -->
+    <section>
+      <h2>Phases 5-15: The Rest of Planning</h2>
+
+      <div class="agent-card script">
+        <div class="agent-header">
+          <div class="agent-icon">✍️</div>
+          <div class="agent-title">
+            <h3>Phase 5: Scriptwriter</h3>
+            <div class="phase">Writes actual dialogue lines</div>
+          </div>
+        </div>
+        <div class="output">
+          <ul>
+            <li>dialogue_lines[] with character, text, speech_mode</li>
+            <li>Knows which shots have lip_sync vs voiceover</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="agent-card world">
+        <div class="agent-header">
+          <div class="agent-icon">🌍</div>
+          <div class="agent-title">
+            <h3>Phase 6: World Engineer</h3>
+            <div class="phase">Builds 3D world, camera rigs, entity positions</div>
+          </div>
+        </div>
+        <div class="output">
+          <ul>
+            <li>worldState with environment geometry, lighting</li>
+            <li>cameraRigs[] with position, lens, allowed motions</li>
+            <li>entities[] with positions and appearance locks</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="agent-card ref">
+        <div class="agent-header">
+          <div class="agent-icon">🖼️</div>
+          <div class="agent-title">
+            <h3>Phases 7-9: Ref Planner → Generator → Validator</h3>
+            <div class="phase">Plans, creates, validates reference images</div>
+          </div>
+        </div>
+        <div class="output">
+          <ul>
+            <li>CHARACTER_MASTER: 3x3 expression grid</li>
+            <li>ENVIRONMENT_MASTER: 3x3 angle grid</li>
+            <li>Chaining strategy (when to use PREVIOUS_FRAME)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="agent-card shot">
+        <div class="agent-header">
+          <div class="agent-icon">🎞️</div>
+          <div class="agent-title">
+            <h3>Phase 10: Shot Compiler</h3>
+            <div class="phase">Writes final prompts with everything available</div>
+          </div>
+        </div>
+        <div class="output">
+          <ul>
+            <li>shotCards[] with full prompts, ref assignments</li>
+            <li>Includes "THIS EXACT CHARACTER" anchors</li>
+            <li>Color lock phrases for continuity</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="agent-card audio">
+        <div class="agent-header">
+          <div class="agent-icon">🎙️</div>
+          <div class="agent-title">
+            <h3>Phase 11: Audio Planner</h3>
+            <div class="phase">Voice assignments, music cues, SFX</div>
+          </div>
+        </div>
+        <div class="output">
+          <ul>
+            <li>voice_assignments with locked voice_id per character</li>
+            <li>music_cues with timing and mood</li>
+            <li>sfx_markers for sound effects</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="agent-card editor">
+        <div class="agent-header">
+          <div class="agent-icon">✂️</div>
+          <div class="agent-title">
+            <h3>Phase 13: Editor Advisor</h3>
+            <div class="phase">Refines edit_intent with editing knowledge</div>
+          </div>
+        </div>
+        <div class="output">
+          <ul>
+            <li>target_duration_ms per shot (trim 5s → 1.5s)</li>
+            <li>cut_triggers: "zoom_complete", "character_stops"</li>
+            <li>allow_speed_up: true/false, max_speed</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="agent-card producer">
+        <div class="agent-header">
+          <div class="agent-icon">📊</div>
+          <div class="agent-title">
+            <h3>Phase 14: Producer</h3>
+            <div class="phase">Creates execution manifest</div>
+          </div>
+        </div>
+        <div class="output">
+          <ul>
+            <li>Cost estimates ($2.58 for 6 shots)</li>
+            <li>Asset counts (6 images, 6 videos, 2 refs)</li>
+            <li>Generation order for optimal parallelism</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <div class="arrow">↓</div>
+
+    <!-- GENERATION PHASE -->
+    <section id="generation">
+      <h2>Generation Phase (AI2Studio.tsx)</h2>
+
+      <p style="margin-bottom: 1rem;">After planning, the UI handles actual asset generation:</p>
+
+      <div class="agent-card" style="border-color: #3498db;">
+        <h3>Step 1: Generate Refs</h3>
+        <p>CHARACTER_MASTER (3x3 expression grid) + ENVIRONMENT_MASTER (3x3 angle grid)</p>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="agent-card" style="border-color: #9b59b6;">
+        <h3>Step 2: Ref Approval</h3>
+        <p>User approves/rejects refs before continuing</p>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="agent-card" style="border-color: #2ecc71;">
+        <h3>Step 3: Generate Images (Two-Phase)</h3>
+        <p><strong>PHASE 1:</strong> Generate BASE shots first (establishing shots)</p>
+        <p><strong>PHASE 2:</strong> Generate NON-BASE shots with base refs for consistency</p>
+        <div class="example">
+"THIS EXACT BACKGROUND, THIS EXACT ENVIRONMENT" added to non-base shots
+        </div>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="agent-card" style="border-color: #e67e22;">
+        <h3>Step 4: Image Approval</h3>
+        <p>User approves each shot. ✓ = Approved, ✗ = Reject, 🔄 = Regenerate</p>
+        <p style="color: #888;">Auto-approve option skips this step</p>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="agent-card" style="border-color: #e74c3c;">
+        <h3>Step 5: Generate Videos</h3>
+        <p>Routes to correct model based on Director's video_model assignment</p>
+        <div class="example">
+1. Compress image to <10MB (API limit)
+2. Call correct API (video-sora, video-kling, video-veed-fabric)
+3. Frame chaining: sequential with last frame → next start
+        </div>
+      </div>
+
+      <div class="arrow">↓</div>
+
+      <div class="agent-card" style="border-color: #f39c12;">
+        <h3>Step 6: Stitch</h3>
+        <p>FFmpeg concatenates all videos → Upload to Catbox → Final URL</p>
+      </div>
+    </section>
+
+    <footer>
+      <p>AI2 Studio Agent Pipeline - Last Updated: Jan 17, 2026</p>
+      <p style="margin-top: 0.5rem;">Open in browser: <code>C:\Users\yodes\Documents\n8n\video-studio\docs\AGENT_PIPELINE_VISUAL.html</code></p>
+    </footer>
+  </div>
+</body>
+</html>

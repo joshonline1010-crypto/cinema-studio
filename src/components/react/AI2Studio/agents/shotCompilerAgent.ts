@@ -30,6 +30,59 @@ import type { VideoModel } from './types';
 import { callSpecAgent, buildShotCompilerPrompt } from './specAICaller';
 
 // ============================================
+// NO STATIC SHOTS RULE (CRITICAL!)
+// ============================================
+// EVERY shot must have movement: zoom, shake, pan, or light change
+// Static shots look DEAD and FROZEN - never use them!
+
+const MOVEMENT_ADDITIONS = [
+  'slow push-in, then settles',
+  'subtle dolly forward, then holds',
+  'gentle camera drift, then settles',
+  'slight handheld movement, then settles',
+  'slow orbit around subject, then holds',
+  'subtle zoom in, then settles',
+  'gentle pan right, then holds',
+  'light flickers subtly, then stabilizes',
+  'camera breathes slightly, then settles'
+];
+
+function ensureNoStaticShot(motionPrompt: string | undefined): string {
+  if (!motionPrompt || motionPrompt.trim() === '') {
+    // No prompt - add movement
+    return MOVEMENT_ADDITIONS[Math.floor(Math.random() * MOVEMENT_ADDITIONS.length)];
+  }
+
+  const lowerPrompt = motionPrompt.toLowerCase();
+
+  // Check if it's a static shot
+  const staticIndicators = ['static shot', 'static camera', 'locked off', 'no movement', 'still'];
+  const hasMovement = ['dolly', 'push', 'pull', 'pan', 'tilt', 'orbit', 'track', 'zoom', 'drift', 'handheld', 'shake', 'crane', 'aerial', 'follow'];
+
+  const isStatic = staticIndicators.some(s => lowerPrompt.includes(s));
+  const alreadyHasMovement = hasMovement.some(m => lowerPrompt.includes(m));
+
+  if (isStatic || !alreadyHasMovement) {
+    // Replace static with movement OR add movement
+    const movement = MOVEMENT_ADDITIONS[Math.floor(Math.random() * MOVEMENT_ADDITIONS.length)];
+    if (isStatic) {
+      // Replace "static shot" with movement
+      return motionPrompt.replace(/static\s*(shot|camera)?[,.]?\s*/gi, '') + ', ' + movement;
+    } else {
+      // Add movement to existing prompt
+      return motionPrompt + ', ' + movement;
+    }
+  }
+
+  // Already has movement - ensure it has an endpoint
+  if (!lowerPrompt.includes('settles') && !lowerPrompt.includes('holds') && !lowerPrompt.includes('stops')) {
+    return motionPrompt + ', then settles';
+  }
+
+  return motionPrompt;
+}
+
+// ============================================
 // SYSTEM PROMPT
 // ============================================
 
@@ -141,9 +194,10 @@ CHARGING, BILLOWING, ERUPTING, SLAMMING, ADVANCING, RECOILING
 
 ## MODEL ROUTING
 
-1. Character SPEAKS on camera? → SEEDANCE 1.5
-2. START→END state change? → KLING O1
-3. Motion/action? → KLING 2.6
+1. Character SPEAKS on camera? → VEED FABRIC (lip sync)
+2. Close-up/detail shot? → SORA 2 (excellent quality)
+3. START→END state change? → KLING O1
+4. Motion/action/wide? → KLING 2.6
 
 ## OUTPUT FORMAT
 
@@ -281,7 +335,7 @@ export const shotCompilerAgent: SpecAgent = {
           // USE DIRECTOR'S VIDEO MODEL
           video_model: videoModel,
           video_duration_seconds: directorShot?.duration_seconds || aiShot.duration_seconds || 5,
-          video_motion_prompt: aiShot.video_prompt || 'Static shot, subtle ambient movement, then settles',
+          video_motion_prompt: ensureNoStaticShot(aiShot.video_prompt),
           start_end_pairing: {
             start_frame: 'this_shot_image',
             end_frame: needsStartEnd ? 'next_shot_image' : '',
@@ -292,10 +346,6 @@ export const shotCompilerAgent: SpecAgent = {
             'THIS EXACT LIGHTING',
             'NO MIRRORING'
           ],
-          // DIRECTOR'S SORA FLAGS
-          sora_candidate: directorShot?.sora_candidate || false,
-          sora_preset: directorShot?.sora_preset,
-          sora_reason: directorShot?.sora_reason,
           model_reasoning: directorShot?.model_reasoning,
           // DIALOGUE INFO (from Director + Script)
           dialogue_info: directorShot?.dialogue_info ? {
@@ -324,6 +374,8 @@ export const shotCompilerAgent: SpecAgent = {
 // Fallback when AI fails
 function compileShotCardsFallback(input: ShotCompilerInput): ShotCompilerOutput {
   console.log('[ShotCompiler] Using template fallback...');
+  console.log('[ShotCompiler] Concept available:', !!input.concept);
+  console.log('[ShotCompiler] StoryAnalysis available:', !!input.storyAnalysis);
 
   const shotCards: ShotCard[] = [];
 
@@ -345,7 +397,9 @@ function compileShotCardsFallback(input: ShotCompilerInput): ShotCompilerOutput 
       input.masterRefs,
       i,
       directorShot,
-      scriptLine
+      scriptLine,
+      input.concept,           // NEW: pass concept
+      input.storyAnalysis      // NEW: pass storyAnalysis
     );
 
     shotCards.push(shotCard);
@@ -367,7 +421,9 @@ function compileBeatToShotCard(
   masterRefs: MasterRef[],
   index: number,
   directorShot?: any,
-  scriptLine?: any
+  scriptLine?: any,
+  concept?: string,
+  storyAnalysis?: any
 ): ShotCard {
   // Determine if character speaks (for model routing)
   const characterSpeaks = directorShot?.dialogue_info?.has_dialogue ||
@@ -390,8 +446,13 @@ function compileBeatToShotCard(
   // Build photo prompt
   const photoPrompt = buildPhotoPrompt(beat, prevBeat, worldState, index);
 
-  // Build video motion prompt
-  const motionPrompt = buildMotionPrompt(beat, prevBeat);
+  // Build video motion prompt - now story-specific using concept!
+  const motionPrompt = ensureNoStaticShot(buildMotionPrompt(beat, prevBeat, directorShot, concept, storyAnalysis));
+
+  // Build Sora-specific prompt if video model is sora-2
+  const soraPrompt = videoModel === 'sora-2'
+    ? buildSoraPrompt(beat, directorShot, concept, storyAnalysis)
+    : undefined;
 
   // Determine refs
   const refs = determineRefs(beat, prevBeat, masterRefs, index);
@@ -416,12 +477,11 @@ function compileBeatToShotCard(
     video_model: videoModel,
     video_duration_seconds: directorShot?.duration_seconds || 5,
     video_motion_prompt: motionPrompt,
+    // Sora-specific fields
+    sora_prompt: soraPrompt,
+    sora_candidate: videoModel === 'sora-2',
     start_end_pairing: startEndPairing,
     continuity_phrases: continuityPhrases,
-    // DIRECTOR'S SORA FLAGS
-    sora_candidate: directorShot?.sora_candidate || false,
-    sora_preset: directorShot?.sora_preset,
-    sora_reason: directorShot?.sora_reason,
     model_reasoning: directorShot?.model_reasoning,
     // DIALOGUE INFO
     dialogue_info: directorShot?.dialogue_info ? {
@@ -504,37 +564,430 @@ function getCameraDistanceFromRig(rigId: string): string {
 }
 
 // ============================================
-// MOTION PROMPT BUILDING
+// MOTION PROMPT BUILDING - STORY-SPECIFIC!
 // ============================================
 
 function buildMotionPrompt(
   beat: BeatDefinition,
-  prevBeat: BeatDefinition | null
+  prevBeat: BeatDefinition | null,
+  directorShot?: any,
+  concept?: string,
+  storyAnalysis?: any
 ): string {
   const parts: string[] = [];
 
-  // Camera movement based on rig and intent
+  // 1. CAMERA MOVEMENT - Based on rig and intent
   const cameraMove = getCameraMovement(beat);
   if (cameraMove) {
     parts.push(cameraMove);
   }
 
-  // Subject motion from deltas
-  const subjectMotion = getSubjectMotion(beat.allowed_deltas);
-  if (subjectMotion) {
-    parts.push(subjectMotion);
+  // 2. SUBJECT MOTION - NOW USE CONCEPT FIRST!
+  let storyAction: string | null = null;
+
+  // PRIORITY 1: Extract from original concept (most reliable!)
+  if (concept) {
+    storyAction = extractActionFromConcept(concept, beat.camera_intent, beat.energy_level);
   }
 
-  // Background motion
+  // PRIORITY 2: Use extracted_entities from story analysis
+  if (!storyAction && storyAnalysis?.extracted_entities) {
+    storyAction = buildActionFromEntities(storyAnalysis.extracted_entities, beat.camera_intent);
+  }
+
+  // PRIORITY 3: Use end_state_truth if available
+  if (!storyAction && beat.end_state_truth && beat.end_state_truth.length > 5) {
+    storyAction = extractActionFromBeat(beat.end_state_truth);
+  }
+
+  // PRIORITY 4: Fallback to generic delta mapping
+  if (!storyAction) {
+    const subjectMotion = getSubjectMotion(beat.allowed_deltas);
+    if (subjectMotion) {
+      storyAction = subjectMotion;
+    }
+  }
+
+  if (storyAction) {
+    parts.push(storyAction);
+  }
+
+  // 3. BACKGROUND MOTION - Energy-based
   const bgMotion = getBackgroundMotion(beat.energy_level);
   if (bgMotion) {
     parts.push(bgMotion);
   }
 
-  // ALWAYS add endpoint
+  // 4. ALWAYS ADD ENDPOINT - Prevents Kling hang
   parts.push('then settles');
 
   return parts.join(', ');
+}
+
+/**
+ * Extract action from the original concept based on keywords and beat intent
+ */
+function extractActionFromConcept(concept: string, cameraIntent?: string, energyLevel?: number): string | null {
+  const conceptLower = concept.toLowerCase();
+
+  // CHASE/PURSUIT scenes
+  if (conceptLower.includes('chase') || conceptLower.includes('running') || conceptLower.includes('fleeing')) {
+    if (cameraIntent === 'PURSUIT' || cameraIntent === 'SCALE') {
+      return 'subject RUNNING urgently, legs pumping, desperate motion';
+    }
+    if (cameraIntent === 'INTIMACY' || cameraIntent === 'PRECISION') {
+      return 'heavy breathing, fear in eyes, sweat on face';
+    }
+    return 'urgent running motion, pursuit energy';
+  }
+
+  // ESCAPE scenes
+  if (conceptLower.includes('escape') || conceptLower.includes('getaway')) {
+    if (conceptLower.includes('plane') || conceptLower.includes('aircraft')) {
+      return 'desperate dash toward aircraft, reaching for freedom';
+    }
+    return 'escape motion, urgent movement toward safety';
+  }
+
+  // POLICE/PURSUIT by antagonist
+  if (conceptLower.includes('police') || conceptLower.includes('cop') || conceptLower.includes('officer')) {
+    if (cameraIntent === 'DOMINANCE') {
+      return 'authority figures closing in, determined pursuit';
+    }
+    return 'pursuit closing gap, tension building';
+  }
+
+  // VEHICLE scenes
+  if (conceptLower.includes('car') || conceptLower.includes('driving') || conceptLower.includes('vehicle')) {
+    return 'vehicle in motion, speed blur, urgent driving';
+  }
+
+  // PLANE/AIRCRAFT scenes
+  if (conceptLower.includes('plane') || conceptLower.includes('aircraft') || conceptLower.includes('takeoff')) {
+    return 'aircraft propeller spinning, engines warming, escape imminent';
+  }
+
+  // FIGHT/ACTION scenes
+  if (conceptLower.includes('fight') || conceptLower.includes('battle') || conceptLower.includes('combat')) {
+    if ((energyLevel || 3) >= 4) {
+      return 'combat motion, impact, physical intensity';
+    }
+    return 'tension before strike, ready stance';
+  }
+
+  // EMOTIONAL scenes
+  if (conceptLower.includes('sad') || conceptLower.includes('cry') || conceptLower.includes('emotional')) {
+    return 'subtle emotional shift, tears forming, breath catching';
+  }
+
+  return null;
+}
+
+// ============================================
+// SORA-SPECIFIC PROMPT BUILDING
+// ============================================
+
+/**
+ * Build Sora prompt - FOCUS ON ONE SUBJECT from the ref image
+ *
+ * RULES:
+ * 1. Sora can only focus on what's IN the ref image
+ * 2. Close-up of woman = woman actions ONLY
+ * 3. Close-up of dinosaur = dinosaur actions ONLY
+ * 4. Use ACTION VERBS in CAPS (SPRINTS, CHARGES, PAWS)
+ * 5. Add secondary motion (dust BILLOWS, lights GLOW)
+ * 6. Include camera movement
+ * 7. End with "then settles" or "then holds"
+ */
+function buildSoraPrompt(
+  beat: BeatDefinition,
+  directorShot: any,
+  concept?: string,
+  storyAnalysis?: any
+): string {
+  // Determine what the shot is focused on based on rig/shot type
+  const shotType = (directorShot?.shot_type || beat.camera_rig_id || '').toLowerCase();
+  const isCloseUp = shotType.includes('cu') || shotType.includes('close') || shotType.includes('ecu');
+  const isWide = shotType.includes('wide') || shotType.includes('master') || shotType.includes('establish');
+
+  // Get the subject focus from director or default
+  const subjectFocus = directorShot?.subject_focus || 'character';
+
+  // Get entities for context
+  const entities = storyAnalysis?.extracted_entities || {};
+  const protagonist = entities.characters?.find((c: any) => c.role === 'protagonist');
+  const antagonist = entities.characters?.find((c: any) => c.role === 'antagonist');
+
+  // Build the action prompt based on shot type and concept
+  const actionPrompt = buildSoraActionPrompt(
+    concept || '',
+    subjectFocus,
+    isCloseUp,
+    isWide,
+    beat.camera_intent,
+    beat.energy_level,
+    protagonist?.name,
+    antagonist?.name
+  );
+
+  // Get camera movement
+  const cameraMove = getSoraCameraMove(beat.camera_intent, isCloseUp);
+
+  // Combine: Subject ACTION, secondary motion, camera, then holds
+  const parts: string[] = [];
+
+  parts.push(actionPrompt);
+
+  if (cameraMove) {
+    parts.push(cameraMove);
+  }
+
+  // Always end with a hold/settle
+  parts.push('then holds final moment');
+
+  return parts.join(', ');
+}
+
+/**
+ * Build the main action prompt for Sora - SINGLE SUBJECT FOCUS
+ */
+function buildSoraActionPrompt(
+  concept: string,
+  subjectFocus: string,
+  isCloseUp: boolean,
+  isWide: boolean,
+  cameraIntent?: string,
+  energyLevel?: number,
+  protagonistName?: string,
+  antagonistName?: string
+): string {
+  const conceptLower = concept.toLowerCase();
+  const energy = energyLevel || 3;
+
+  // Determine the primary subject based on shot focus
+  const focusOnProtagonist = subjectFocus.includes('hero') || subjectFocus.includes('character') ||
+                             subjectFocus === protagonistName;
+  const focusOnAntagonist = subjectFocus.includes('villain') || subjectFocus.includes('threat') ||
+                            subjectFocus === antagonistName;
+
+  // CHASE/PURSUIT scenes
+  if (conceptLower.includes('chase') || conceptLower.includes('running') || conceptLower.includes('fleeing')) {
+    if (isCloseUp) {
+      if (focusOnProtagonist || !focusOnAntagonist) {
+        // Close-up of person running
+        return energy >= 4
+          ? `${protagonistName || 'Woman'} SPRINTS forward with desperate urgency, sweat on brow, eyes wide with fear, breath visible`
+          : `${protagonistName || 'Woman'} RUNS with determined focus, hair flowing, muscles tensed`;
+      } else {
+        // Close-up of pursuer
+        return `${antagonistName || 'Pursuer'} CHARGES with relentless determination, focused predator gaze`;
+      }
+    } else {
+      // Wide shot - show the chase
+      return `${protagonistName || 'Woman'} SPRINTS forward, ${antagonistName || 'pursuer'} CHARGES behind with ground-shaking presence, dust BILLOWS from movement`;
+    }
+  }
+
+  // ESCAPE/PLANE scenes
+  if (conceptLower.includes('escape') && (conceptLower.includes('plane') || conceptLower.includes('aircraft'))) {
+    if (isCloseUp) {
+      if (subjectFocus.includes('plane') || subjectFocus.includes('vehicle')) {
+        return 'Aircraft propeller SPINS with increasing speed, engine ROARS to life, metal GLEAMS under lights';
+      } else {
+        return `${protagonistName || 'Woman'} REACHES desperately toward aircraft, hope in eyes, fingers STRETCHING`;
+      }
+    } else {
+      return `${protagonistName || 'Woman'} DASHES toward waiting aircraft, propeller SPINS, dust SWIRLS from engine wash`;
+    }
+  }
+
+  // POLICE/AUTHORITY pursuit
+  if (conceptLower.includes('police') || conceptLower.includes('cop')) {
+    if (isCloseUp && focusOnAntagonist) {
+      return 'Officer ADVANCES with authority, badge GLINTS, radio CRACKLES, determined expression';
+    } else if (isCloseUp) {
+      return `${protagonistName || 'Woman'} GLANCES back in fear, panic in eyes, chest HEAVES with exertion`;
+    } else {
+      return `${protagonistName || 'Woman'} FLEES as police CLOSE IN, sirens FLASH in background, tension BUILDS`;
+    }
+  }
+
+  // DINOSAUR/CREATURE scenes (from the example)
+  if (conceptLower.includes('dinosaur') || conceptLower.includes('t-rex') || conceptLower.includes('rex')) {
+    if (isCloseUp) {
+      if (subjectFocus.includes('rex') || subjectFocus.includes('dinosaur') || focusOnAntagonist) {
+        return 'T-Rex PAWS at sealed door in frustration, massive claws SCRAPE against metal, dust SETTLES around the scene';
+      } else {
+        return `${protagonistName || 'Woman'} appears in window showing relief, breath FOGS glass, warning lights continue steady GLOW`;
+      }
+    } else {
+      return `T-Rex ROARS with primal fury, ${protagonistName || 'woman'} COWERS behind barrier, dust BILLOWS from dinosaur movement`;
+    }
+  }
+
+  // VEHICLE scenes
+  if (conceptLower.includes('car') || conceptLower.includes('vehicle') || conceptLower.includes('driving')) {
+    if (isCloseUp) {
+      if (subjectFocus.includes('vehicle') || subjectFocus.includes('car')) {
+        return 'Wheels SPIN on asphalt, engine REVS with power, exhaust BILLOWS, chrome GLEAMS';
+      } else {
+        return `Driver GRIPS wheel with white knuckles, eyes DART to mirror, jaw CLENCHES with focus`;
+      }
+    } else {
+      return 'Vehicle TEARS through scene, tires SCREECH on turn, dust TRAILS behind';
+    }
+  }
+
+  // EMOTIONAL/DRAMATIC scenes
+  if (conceptLower.includes('fear') || conceptLower.includes('terror') || conceptLower.includes('scared')) {
+    return isCloseUp
+      ? `${protagonistName || 'Character'} TREMBLES with fear, eyes WIDEN, breath CATCHES, tears WELL`
+      : `${protagonistName || 'Character'} BACKS AWAY slowly, shadow LOOMS, tension BUILDS in the air`;
+  }
+
+  if (conceptLower.includes('hope') || conceptLower.includes('relief') || conceptLower.includes('triumph')) {
+    return isCloseUp
+      ? `${protagonistName || 'Character'} expression SHIFTS to relief, shoulders DROP, smile SPREADS, eyes BRIGHTEN`
+      : `${protagonistName || 'Character'} STANDS triumphant, light BREAKS through, atmosphere LIFTS`;
+  }
+
+  // DEFAULT based on energy and intent
+  if (isCloseUp) {
+    if (energy >= 4) {
+      return `${protagonistName || 'Character'} shows intense emotion, expression SHIFTS dramatically, subtle movements reveal inner turmoil`;
+    } else {
+      return `${protagonistName || 'Character'} displays subtle reaction, eyes MOVE thoughtfully, breathing STEADIES`;
+    }
+  } else {
+    if (energy >= 4) {
+      return `${protagonistName || 'Character'} MOVES with urgency through scene, environment REACTS, dust and particles DRIFT`;
+    } else {
+      return `${protagonistName || 'Character'} navigates scene with purpose, ambient elements SHIFT subtly, atmosphere BREATHES`;
+    }
+  }
+}
+
+/**
+ * Get Sora camera movement based on intent
+ */
+function getSoraCameraMove(intent?: string, isCloseUp?: boolean): string {
+  if (!intent) return isCloseUp ? 'camera HOLDS steady' : 'camera DRIFTS slowly';
+
+  switch (intent) {
+    case 'REVEAL': return 'camera PULLS BACK revealing';
+    case 'PURSUIT': return 'camera TRACKS movement';
+    case 'DOMINANCE': return 'camera TILTS UP imposingly';
+    case 'VULNERABILITY': return 'camera LOOKS DOWN';
+    case 'PRECISION': return 'camera HOLDS on detail';
+    case 'SCALE': return 'camera PANS across scene';
+    case 'INTIMACY': return 'camera PUSHES IN gently';
+    case 'CONFUSION': return 'camera SHAKES slightly';
+    default: return isCloseUp ? 'camera HOLDS steady' : 'camera DRIFTS slowly';
+  }
+}
+
+/**
+ * Build action from extracted entities
+ */
+function buildActionFromEntities(entities: any, cameraIntent?: string): string | null {
+  const chars = entities.characters || [];
+  const vehicles = entities.vehicles || [];
+
+  // If we have a protagonist being chased
+  const protagonist = chars.find((c: any) => c.role === 'protagonist');
+  const antagonist = chars.find((c: any) => c.role === 'antagonist');
+
+  if (protagonist && antagonist) {
+    if (cameraIntent === 'PURSUIT') {
+      return `${protagonist.name} running, ${antagonist.name} in pursuit`;
+    }
+    if (cameraIntent === 'VULNERABILITY') {
+      return `${protagonist.name} cornered, fear visible`;
+    }
+  }
+
+  // If we have vehicles
+  if (vehicles.length > 0) {
+    const vehicle = vehicles[0];
+    if (vehicle.name.includes('plane') || vehicle.name.includes('aircraft')) {
+      return 'aircraft ready for escape, propeller motion';
+    }
+    return `${vehicle.name} in motion`;
+  }
+
+  // Single protagonist action
+  if (protagonist) {
+    return `${protagonist.name} in motion, urgent action`;
+  }
+
+  return null;
+}
+
+/**
+ * Extract story-specific action from beat's end_state_truth
+ */
+function extractActionFromBeat(endStateTruth: string): string | null {
+  if (!endStateTruth) return null;
+
+  const actionWords = endStateTruth.toLowerCase();
+
+  // Chase/pursuit actions
+  if (actionWords.includes('running') || actionWords.includes('fleeing')) {
+    return 'subject RUNNING, urgent movement';
+  }
+  if (actionWords.includes('chasing') || actionWords.includes('pursuing')) {
+    return 'character CHARGING forward in pursuit';
+  }
+
+  // Escape actions
+  if (actionWords.includes('escape') || actionWords.includes('escaping')) {
+    return 'desperate escape motion, urgent';
+  }
+  if (actionWords.includes('reaching') || actionWords.includes('grabbing')) {
+    return 'hand REACHING forward urgently';
+  }
+
+  // Vehicle actions
+  if (actionWords.includes('driving') || actionWords.includes('speeding')) {
+    return 'vehicle motion blur, speed';
+  }
+  if (actionWords.includes('flying') || actionWords.includes('takeoff')) {
+    return 'aircraft movement, propeller spin';
+  }
+
+  // Emotional actions
+  if (actionWords.includes('looking') || actionWords.includes('gazing')) {
+    return 'subtle head turn, eye movement';
+  }
+  if (actionWords.includes('breathing') || actionWords.includes('panting')) {
+    return 'heavy breathing motion, chest heaving';
+  }
+  if (actionWords.includes('screaming') || actionWords.includes('shouting')) {
+    return 'mouth opening, expressive face';
+  }
+
+  // Combat actions
+  if (actionWords.includes('fighting') || actionWords.includes('attacking')) {
+    return 'combat motion, impact';
+  }
+  if (actionWords.includes('falling') || actionWords.includes('collapsing')) {
+    return 'body FALLING, gravity';
+  }
+
+  // Movement direction
+  if (actionWords.includes('approaching') || actionWords.includes('advancing')) {
+    return 'subject ADVANCING toward camera';
+  }
+  if (actionWords.includes('retreating') || actionWords.includes('backing')) {
+    return 'subject moving away, retreating';
+  }
+
+  // Generic motion based on content
+  if (actionWords.includes('moving') || actionWords.includes('walking')) {
+    return 'character movement, natural motion';
+  }
+
+  return null;
 }
 
 function getCameraMovement(beat: BeatDefinition): string | null {
@@ -576,7 +1029,7 @@ function getBackgroundMotion(energyLevel: number): string | null {
 }
 
 // ============================================
-// REF DETERMINATION
+// REF DETERMINATION - Show ACTUAL ref names!
 // ============================================
 
 function determineRefs(
@@ -592,21 +1045,23 @@ function determineRefs(
     others: []
   };
 
-  // Find character master
+  // Find character master - USE ACTUAL NAME!
   const characterMaster = masterRefs.find(r => r.type === 'CHARACTER_MASTER');
   if (characterMaster) {
-    refs.image_2 = characterMaster.url || 'CHARACTER_MASTER';
+    // Show name in UI format: "👤 Woman" or "CHARACTER: Woman"
+    refs.image_2 = `CHARACTER: ${characterMaster.name || 'Unknown'}`;
   }
 
-  // Find environment master
+  // Find environment master - USE ACTUAL NAME!
   const envMaster = masterRefs.find(r => r.type === 'ENVIRONMENT_MASTER');
   if (envMaster) {
-    refs.image_3 = envMaster.url || 'ENVIRONMENT_MASTER';
+    // Show name in UI format: "🏞️ Street" or "LOCATION: Street"
+    refs.image_3 = `LOCATION: ${envMaster.name || 'Unknown'}`;
   }
 
-  // Add any prop masters to others
+  // Add any prop/vehicle masters to others - USE ACTUAL NAMES!
   const propMasters = masterRefs.filter(r => r.type === 'PROP_MASTER');
-  refs.others = propMasters.map(p => p.url || p.id);
+  refs.others = propMasters.map(p => `PROP: ${p.name || p.id}`);
 
   return refs;
 }

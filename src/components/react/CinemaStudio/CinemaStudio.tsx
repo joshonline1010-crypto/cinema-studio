@@ -4750,13 +4750,25 @@ Cinematic UGC style, clean audio, natural room tone, then settles.`;
                               {/* RENDER FINAL VIDEO - Stitch all completed videos */}
                               <button
                                 onClick={async () => {
+                                  // DEBUG: Log all shots and their video_url status
+                                  console.log('[RENDER DEBUG] All shots:', currentScene.shots.map(s => ({
+                                    id: s.shot_id,
+                                    order: s.order,
+                                    status: s.status,
+                                    has_image: !!s.image_url,
+                                    has_video: !!s.video_url,
+                                    video_url: s.video_url?.substring(0, 50) + '...'
+                                  })));
+
                                   const videoUrls = currentScene.shots
                                     .filter(s => s.video_url)
                                     .sort((a, b) => a.order - b.order)
                                     .map(s => s.video_url!);
 
+                                  console.log('[RENDER DEBUG] Videos to stitch:', videoUrls.length, videoUrls);
+
                                   if (videoUrls.length < 2) {
-                                    alert('Need at least 2 videos to render!');
+                                    alert(`Need at least 2 videos to render!\n\nFound: ${videoUrls.length} videos\nTotal shots: ${currentScene.shots.length}\n\nCheck console (F12) for details.`);
                                     return;
                                   }
 

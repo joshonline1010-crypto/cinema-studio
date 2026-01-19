@@ -196,6 +196,9 @@ export interface ShotCompilerInput {
   cameraRigs: CameraRigsJSON;
   beats: BeatDefinition[];
   masterRefs: MasterRef[];
+  // Story context for building prompts
+  concept?: string;  // Original user concept
+  storyAnalysis?: any;  // StoryAnalysisOutput with extracted_entities
   // Director's Plan - contains video_model, shot_type per shot
   directorPlan?: {
     shotSequence?: Array<{
@@ -216,10 +219,6 @@ export interface ShotCompilerInput {
         character?: string;
         line_summary?: string;
       };
-      sora_candidate?: boolean;
-      sora_reason?: string;
-      sora_ref_type?: string;
-      sora_preset?: string;
       video_model?: VideoModel;
       model_reasoning?: string;
     }>;
@@ -266,7 +265,10 @@ export interface ShotCard {
   photo_prompt: string;
   video_model: VideoModel;
   video_duration_seconds: 5 | 10;
-  video_motion_prompt: string;
+  video_motion_prompt: string;      // Kling/generic format
+  sora_prompt?: string;             // Sora-specific format (timestamped shots)
+  sora_preset?: string;             // Sora preset name if applicable
+  sora_candidate?: boolean;         // If this shot is good for Sora
   start_end_pairing: {
     start_frame: string;
     end_frame: string;
@@ -274,9 +276,6 @@ export interface ShotCard {
   };
   continuity_phrases: string[];
   // Director's video model selection
-  sora_candidate?: boolean;
-  sora_preset?: string;
-  sora_reason?: string;
   model_reasoning?: string;
   // Dialogue info for audio pipeline
   dialogue_info?: {
@@ -447,20 +446,133 @@ Forbidden: mirroring, identity change, scale drift, geometry reset.`,
 } as const;
 
 // ============================================
-// MODEL ROUTING DECISION TREE
+// MODEL ROUTING DECISION TREE (Updated 2026-01-19)
 // ============================================
+//
+// WORKFLOW RULES:
+// - SEEDANCE 1.5: GO-TO DEFAULT! VFX, zooms, talking, normal shots, everything
+// - SORA 2: RAPID CUT MONTAGES ONLY (timestamped multi-shot sequences)
+// - Kling 2.6: ONLY for the ONE slow-mo shot per fight moment (x2 in edit)
+// - Kling O1: Start→End state changes with specific end frame
+// - VEED FABRIC: Avatar with ElevenLabs voice (talking head with custom voice)
+// - ELEVENLABS: Voiceover narration (TTS for non-lip-sync audio)
+// - NO STATIC SHOTS EVER - always add movement
+//
+// AUDIO ROUTING:
+// - Character talks ON CAMERA → Seedance (built-in voice) OR Veed + ElevenLabs
+// - Voiceover/narration → ElevenLabs TTS (mix in post)
+// - Avatar with custom voice → Veed Fabric + ElevenLabs audio
+//
+// SORA 2 PROMPT FORMAT (rapid cuts with timestamps):
+// "Flash cut - Extreme close-up of hand grabbing lever, 0.4 second hold"
+// "Rapid cut - Macro shot of foot on pedal, 0.5 second"
+// "Sharp cut - POV through windshield, track rushing, 0.7 second"
+//
+// SEEDANCE handles:
+// - Dialogue (lip sync + consistent voice prompting)
+// - VFX and zoom effects
+// - Normal cinematic shots
+// - Everything that's NOT a rapid-cut montage
+//
+// FIGHT SCENE FORMULA:
+// ├── ONE slow-mo wide: Kling 2.6 → x2 in edit
+// └── Everything else: Seedance (or Sora 2 if rapid montage)
 
-export function routeModel(params: {
-  characterSpeaksOnCamera: boolean;
-  needsStartEndStateChange: boolean;
-}): VideoModel {
-  if (params.characterSpeaksOnCamera) {
-    return 'seedance-1.5';
+export interface ModelRoutingParams {
+  hasDialogue: boolean;           // Character speaks on camera
+  isRapidMontage?: boolean;       // Sora 2 timestamped multi-shot sequence
+  isFightScene?: boolean;         // Action/combat scene
+  isWideShot?: boolean;           // Wide/establishing shot
+  isCloseUp?: boolean;            // Close-up shot
+  needsStartEndChange?: boolean;  // State change with specific end frame
+  isSlowMo?: boolean;             // Explicitly slow motion (use Kling 2.6)
+  isFightSlowMoShot?: boolean;    // The ONE slow-mo shot per fight moment
+  isSuperCinematic4K?: boolean;   // Super cinematic VFX at 4K quality
+  needsAvatarWithVoice?: boolean; // Avatar with ElevenLabs custom voice
+  isVoiceoverOnly?: boolean;      // Narration (no lip sync needed)
+}
+
+export function routeModel(params: ModelRoutingParams): VideoModel {
+  // 1. AVATAR WITH CUSTOM VOICE → Veed Fabric + ElevenLabs
+  if (params.needsAvatarWithVoice) {
+    return 'veed-fabric';
   }
-  if (params.needsStartEndStateChange) {
+
+  // 2. EXPLICIT SLOW-MO → Kling 2.6 (best slow motion)
+  if (params.isSlowMo || params.isFightSlowMoShot) {
+    return 'kling-2.6';
+  }
+
+  // 3. SUPER CINEMATIC 4K VFX → Kling 2.6 (best quality VFX)
+  if (params.isSuperCinematic4K) {
+    return 'kling-2.6';
+  }
+
+  // 4. RAPID MONTAGE SEQUENCES → Sora 2 (timestamped multi-shot format)
+  // Format: "Flash cut - description, 0.4 second" style prompts
+  if (params.isRapidMontage) {
+    return 'sora-2';
+  }
+
+  // 5. START→END transitions with specific end frame → Kling O1
+  if (params.needsStartEndChange) {
     return 'kling-o1';
   }
-  return 'kling-2.6';
+
+  // 6. EVERYTHING ELSE → SEEDANCE 1.5 (GO-TO DEFAULT!)
+  // This includes:
+  // - Dialogue with lip sync (save voice prompting for consistency!)
+  // - VFX and zoom effects (normal quality)
+  // - Normal cinematic shots
+  // - Close-ups, wide shots, all standard shots
+  return 'seedance-1.5';
+}
+
+// Speed recommendation for editing
+export function getSpeedMultiplier(params: ModelRoutingParams): string {
+  if (params.isFightSlowMoShot) {
+    return 'x2';  // Speed up the slow-mo in edit
+  }
+  if (params.isSlowMo) {
+    return 'x1';  // Keep slow
+  }
+  return 'x1';    // Normal speed
+}
+
+// Detect if prompt is a rapid montage format (for Sora 2)
+export function isRapidMontagePrompt(prompt: string): boolean {
+  const rapidIndicators = [
+    'flash cut',
+    'rapid cut',
+    'sharp cut',
+    'quick cut',
+    'crash cut',
+    'final cut',
+    'fast cut',
+    /\d+\.\d+\s*second/i,  // "0.4 second", "0.5 second"
+    /\d+s\s*hold/i         // "2s hold"
+  ];
+
+  const lowerPrompt = prompt.toLowerCase();
+  return rapidIndicators.some(indicator => {
+    if (typeof indicator === 'string') {
+      return lowerPrompt.includes(indicator);
+    }
+    return indicator.test(prompt);
+  });
+}
+
+// Legacy compatibility wrapper
+export function routeModelLegacy(params: {
+  characterSpeaksOnCamera: boolean;
+  needsStartEndStateChange: boolean;
+  isCloseUp?: boolean;
+}): VideoModel {
+  return routeModel({
+    hasDialogue: params.characterSpeaksOnCamera,
+    needsStartEndChange: params.needsStartEndStateChange,
+    isCloseUp: params.isCloseUp
+  });
 }
 
 // ============================================

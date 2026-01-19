@@ -161,7 +161,7 @@ export interface VoiceInfo {
 // VIDEO MODEL TYPES
 // ============================================
 
-export type VideoModel = 'kling-2.6' | 'kling-o1' | 'seedance-1.5';
+export type VideoModel = 'kling-2.6' | 'kling-o1' | 'sora-2' | 'veed-fabric';
 
 export interface ModelSelection {
   model: VideoModel;
@@ -180,13 +180,21 @@ export interface ModelParameters {
 }
 
 export const MODEL_SPECS: Record<VideoModel, ModelParameters> = {
-  'seedance-1.5': {
-    endpoint: 'fal-ai/bytedance/seedance/v1.5/pro/image-to-video',
+  'sora-2': {
+    endpoint: 'fal-ai/sora/v2/image-to-video',
     imageParam: 'image_url',
-    endImageParam: 'end_image_url',
+    endImageParam: undefined,
+    supportsDialog: false,
+    supportsEndFrame: false,
+    maxDuration: 10
+  },
+  'veed-fabric': {
+    endpoint: 'fal-ai/veed/fabric/image-to-video',
+    imageParam: 'image_url',
+    endImageParam: undefined,
     supportsDialog: true,
-    supportsEndFrame: true,
-    maxDuration: 5
+    supportsEndFrame: false,
+    maxDuration: 10
   },
   'kling-o1': {
     endpoint: 'fal-ai/kling-video/o1/image-to-video',

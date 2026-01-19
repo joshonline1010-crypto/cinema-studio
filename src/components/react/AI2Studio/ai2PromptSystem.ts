@@ -442,22 +442,323 @@ RIGHT: "Hair moves in breeze, then settles back into place"
 
 ---
 
+# COMPLETE OBJECT MOTION VOCABULARY
+
+## NATURAL ELEMENTS - HAIR
+| Type | Prompt |
+|------|--------|
+| gentle | "hair moves gently in breeze, strands catching light, then settles" |
+| flow | "hair flows with wind, then rests" |
+| blow | "hair blows across face, then clears" |
+| lift | "strands lift and settle" |
+
+## NATURAL ELEMENTS - CLOTHING
+| Type | Prompt |
+|------|--------|
+| dress | "dress flows in wind, fabric rippling, movement subtle" |
+| cape | "cape billows dramatically behind, wind gusting, then falls" |
+| flutter | "clothing flutters gently, then stills" |
+| whip | "coat whips in strong wind, then calms" |
+
+## NATURAL ELEMENTS - VEGETATION
+| Type | Prompt |
+|------|--------|
+| leaves | "leaves sway in gentle breeze, dappled light, peaceful motion" |
+| grass | "grass ripples like waves, then settles" |
+| branches | "branches bend with wind, then straighten" |
+| flowers | "flowers bob gently, then still" |
+| trees | "trees sway slowly, then calm" |
+
+## NATURAL ELEMENTS - WATER
+| Type | Prompt |
+|------|--------|
+| ripples | "water ripples spread across surface, then gentle waves settle" |
+| waves | "waves lap gently at shore, rhythmic motion, foam dissolves" |
+| rain | "rain drops streak down window, collecting at bottom" |
+| waterfall | "waterfall cascades down rocks, mist rises, water pools below" |
+| drip | "water drips from faucet, drops fall, ripples in sink" |
+
+## NATURAL ELEMENTS - FIRE
+| Type | Prompt |
+|------|--------|
+| flicker | "flames flicker gently, casting dancing shadows, warmth visible" |
+| candle | "candle flame wavers in draft, steadies, soft glow" |
+| sparks | "sparks rise from fire, drift upward, fade into darkness" |
+| embers | "embers glow orange, pulse with heat, slowly dim" |
+| bonfire | "bonfire blazes, flames dance, then settle" |
+
+## NATURAL ELEMENTS - SMOKE/MIST
+| Type | Prompt |
+|------|--------|
+| rise | "smoke rises slowly, curls and disperses, fades to nothing" |
+| mist | "mist swirls around subject feet, dreamlike, settles" |
+| steam | "steam rises from hot coffee, wisps curl, dissipate" |
+| fog | "fog rolls in from background, obscures scene partially" |
+| exhaust | "exhaust billows, drifts away, clears" |
+
+## NATURAL ELEMENTS - DUST/PARTICLES
+| Type | Prompt |
+|------|--------|
+| motes | "dust motes float in sunbeam, drifting slowly, magical feel" |
+| kicked | "dust kicked up by footsteps, swirls, settles back down" |
+| particles | "particles drift through air, catching light, ethereal" |
+| debris | "debris scatters from impact, pieces fall, settle on ground" |
+| sand | "sand blows across ground, then settles" |
+
+## FALLING OBJECTS
+| Type | Prompt |
+|------|--------|
+| paper_flutter | "paper floats down, flutter to floor, lands flat" |
+| paper_scatter | "papers flutter from desk, spiral down, scatter on floor" |
+| book | "book falls from shelf, tumbles, lands open on floor" |
+| rock | "rock falls with weight, impacts ground" |
+| feather | "feather drifts down slowly, catches air, lands softly" |
+| leaf | "leaves fall from tree, spiral down, carpet the ground" |
+| petal | "petals drift down gently, land softly" |
+| liquid_spill | "liquid spills, spreads across surface, pools" |
+| glass_shatter | "glass falls from table, shatters on impact, pieces scatter" |
+
+## VEHICLES - CARS
+| Type | Prompt |
+|------|--------|
+| pass | "car drives quickly past camera, motion blur, exhaust visible" |
+| approach | "vehicle approaches slowly, headlights bright, stops in frame" |
+| speed | "sports car speeds around corner, tires squeal, straightens" |
+| park | "car pulls into parking spot, slows, comes to stop" |
+| exit | "car drives away, taillights recede, disappears" |
+| drift | "car drifts around corner, tires smoke, straightens out" |
+| interior | "BACKGROUND SCENERY RUSHES PAST WINDOW, reflections shift on glass" |
+
+## VEHICLES - AIRCRAFT
+| Type | Prompt |
+|------|--------|
+| plane | "plane flies across sky, contrail stretching behind" |
+| helicopter | "helicopter hovers in place, rotors spinning, descends slowly" |
+| drone | "drone rises smoothly, hovers, moves forward" |
+| jet | "jet SCREAMS past, sonic boom, trail of exhaust" |
+
+## VEHICLES - BOATS
+| Type | Prompt |
+|------|--------|
+| glide | "boat glides across calm water, wake trailing behind" |
+| rock | "ship rocks gently on waves, sails billowing" |
+| paddle | "kayak paddles through water, ripples spread" |
+
+## MECHANICAL - DOORS
+| Type | Prompt |
+|------|--------|
+| open_slow | "door opens slowly, light spills through, figure visible" |
+| slam | "door slams shut, frame shakes slightly, echo" |
+| swing | "door swings open, then stops" |
+| close | "door closes gently, clicks shut" |
+
+## MECHANICAL - WINDOWS
+| Type | Prompt |
+|------|--------|
+| open | "window opens, curtains flutter inward, fresh air" |
+| shut | "window shuts, latch clicks" |
+| slide | "window slides up, stops" |
+
+## MECHANICAL - SWITCHES
+| Type | Prompt |
+|------|--------|
+| button | "finger presses button, click, light activates" |
+| flip | "switch flips up, power hums on" |
+| lever | "lever pulls down, mechanism engages" |
+| dial | "dial turns, clicks into position" |
+
+## MECHANICAL - MACHINERY
+| Type | Prompt |
+|------|--------|
+| gears | "gears mesh and turn, clockwork precision, steady rhythm" |
+| wheels | "wheels spin up to speed, blur of motion, stabilize" |
+| parts | "machine parts move in sequence, synchronized motion" |
+
+## LIGHT EFFECTS - SOURCES
+| Type | Prompt |
+|------|--------|
+| neon | "neon sign flickers to life, buzzes, glows steadily" |
+| lamp | "lamp clicks on, warm light fills room" |
+| flashlight | "flashlight beam sweeps across darkness, stops on object" |
+| candle | "candle flame wavers, shadows dance, steadies" |
+| screen | "screen glows, illuminates face" |
+
+## LIGHT EFFECTS - SHADOWS
+| Type | Prompt |
+|------|--------|
+| shift | "shadows shift as light source moves, settling into new position" |
+| dance | "shadows dance on wall, then still" |
+| lengthen | "shadow lengthens, then stops" |
+
+## LIGHT EFFECTS - REFLECTIONS
+| Type | Prompt |
+|------|--------|
+| ripple | "reflection ripples in water, distorts, clears" |
+| play | "light plays across face, changing mood" |
+| sparkle | "light sparkles on surface, then dims" |
+
+## PROJECTILES
+| Type | Prompt |
+|------|--------|
+| ball_throw | "ball thrown across frame, arcs through air, caught" |
+| paper_plane | "paper airplane glides, dips, lands on desk" |
+| stone_skip | "stone skips across water, bounces three times, sinks" |
+| catch | "hand reaches up, catches ball, brings it down" |
+
+## DESTRUCTION
+| Type | Prompt |
+|------|--------|
+| glass_shatter | "glass shatters on impact, pieces scatter, settle on ground" |
+| window_crack | "window cracks, splinters, shards fall" |
+| wall_crumble | "wall crumbles slowly, pieces fall, dust rises" |
+| collapse | "structure collapses inward, debris cloud rises, settles" |
+| explosion | "explosion bursts outward, fire and debris, shockwave visible" |
+
+## FLOATING/HOVERING
+| Type | Prompt |
+|------|--------|
+| float | "object floats gently, bobs slightly, maintains position" |
+| hover | "multiple items hover in pattern, rotate slowly" |
+| levitate | "levitating object rises, pauses, descends slowly" |
+| water_surface | "leaf floats on water surface, drifts slowly, circles" |
+| bob | "bottle bobs on waves, rocks gently, moves with current" |
+
+## WEATHER TRANSITIONS
+| Type | Prompt |
+|------|--------|
+| rain_start | "rain begins falling, intensifies, streaks across window" |
+| rain_stop | "rain slows, drops cease, surface glistens" |
+| snow_fall | "snow falls gently, flakes drifting, covering ground slowly" |
+| wind_pickup | "wind picks up, trees bend, debris swirls, calms" |
+| light_shift | "sunlight shifts across room as clouds pass, returns to bright" |
+| light_dim | "light dims as sun sets, warm to cool tones" |
+| shadow_move | "shadow of tree branch moves slowly across wall" |
+
+---
+
+# SEEDANCE DIALOGUE TEMPLATES
+
+## UGC Basic (Talking Head)
+\`\`\`
+Medium close-up, eye level, soft bokeh background. Subject speaks directly to camera with natural expressions. Slow push-in, focus on eyes. She speaks confidently: "[DIALOGUE]". Cinematic UGC style, clean audio.
+\`\`\`
+
+## UGC Energetic (Creator Style)
+\`\`\`
+Close-up, slightly low angle for confidence. Animated expressions, casual outfit. Handheld slight movement, dynamic energy. He speaks excitedly: "[DIALOGUE]". High energy, bright natural light.
+\`\`\`
+
+## Product Demo
+\`\`\`
+Medium shot, presenter slightly off-center, product prominent. Professional appearance, warm genuine smile. Camera slowly pushes in. She explains: "[DIALOGUE]". Clean commercial lighting.
+\`\`\`
+
+## Emotional Close-Up
+\`\`\`
+Close-up on face, soft focus on eyes. Subtle micro-expressions, emotional depth. Static camera with slight handheld warmth. She whispers: "[DIALOGUE]". Quiet, contemplative atmosphere.
+\`\`\`
+
+## Interview Style
+\`\`\`
+Medium close-up, subject slightly off-center, soft bokeh. Professional, natural pauses, thoughtful expression. Slow subtle push-in during emotional moments. She reflects: "[DIALOGUE]". Documentary lighting.
+\`\`\`
+
+## Two Characters Dialogue
+\`\`\`
+Medium shot, two people facing each other. Character on left speaks first: "[DIALOGUE1]". Camera slowly dollies right to capture reaction. Second character responds: "[DIALOGUE2]". Natural room ambience.
+\`\`\`
+
+## Social Media Hook
+\`\`\`
+Extreme close-up, direct eye contact. Confident expression, one eyebrow raised. Slight lean toward camera. He asks: "[DIALOGUE]". Punchy rhythm, immediate engagement.
+\`\`\`
+
+## Multi-Language Templates
+| Language | Template |
+|----------|----------|
+| Mandarin | "Medium close-up, professional setting. Subject speaks in fluent Mandarin with professional tone: '[DIALOGUE]'. Clean audio, subtle office ambience." |
+| Spanish | "Close-up, vibrant colorful background. Animated expressions, expressive gestures. She speaks enthusiastically in Spanish: '[DIALOGUE]'. Warm lighting." |
+| Japanese | "Medium shot, minimal modern setting. Calm demeanor, measured pacing. He speaks in polite Japanese: '[DIALOGUE]'. Serene atmosphere." |
+
+## Emotion Modifiers (Add to any template)
+| Emotion | Replace "speaks" with |
+|---------|----------------------|
+| warm | "speaks warmly with genuine affection" |
+| excited | "exclaims enthusiastically" |
+| calm | "says calmly with measured pacing" |
+| sad | "whispers with barely contained emotion" |
+| angry | "states firmly with controlled intensity" |
+| playful | "teases with mischievous tone" |
+
+---
+
 # VIDEO MODEL SELECTION (CRITICAL!)
 
-## SEEDANCE 1.5 (Dialogue & Lip-Sync)
-Use when character SPEAKS. Include actual dialogue in quotes.
-Triggers: says, speaks, whispers, dialogue, talking
+## THE 5 VIDEO MODELS
+
+| Model | Best For | Cost | When to Use |
+|-------|----------|------|-------------|
+| **sora-2** | Close-ups, fast action, quick cuts, ANYTHING | $0.50 | **GO-TO MODEL!** Fast, versatile, great quality |
+| **kling-2.6** | Cinematic slow-mo, fighting, flying, driving | $0.35 | Wide cinematic shots, slow motion action |
+| **kling-o1** | Start→End zooms, VFX, explosions | $0.45 | When you have START and END frames |
+| **seedance** | HD close-up TALKING with voice + SFX | $0.40 | Character speaks with action/SFX background |
+| **veed-fabric** | Lip sync ONLY | $0.30 | Simple talking head, no action |
+
+## DECISION TREE
+
+\`\`\`
+Close-up TALKING with great voice/SFX?
+├── YES → seedance (HD talking + audio)
+│
+└── NO
+    ├── Fast paced action? Quick cuts? Close-ups? Details?
+    │   └── YES → sora-2 (FAST + versatile!)
+    │
+    ├── Cinematic slow-mo? (fighting, flying, driving, shooting)
+    │   └── YES → kling-2.6 (slow motion)
+    │
+    ├── Need START → END zoom? VFX? Explosions?
+    │   └── YES → kling-o1 (make START and END photos)
+    │
+    └── Just lip sync, no action?
+        └── YES → veed-fabric
+\`\`\`
+
+## ACTION FIGHT PATTERN (Alternating Models)
+\`\`\`
+WIDE FIGHT (slow-mo) → kling-2.6
+CU PUNCH (fast) → sora-2
+WIDE REACTION (slow-mo) → kling-2.6
+CU FACE (fast) → sora-2
+IMPACT ZOOM → kling-o1
+\`\`\`
+
+## SORA 2 - THE GO-TO MODEL!
+Sora 2 is FAST, VERSATILE, and can handle ANYTHING. Use as default!
+
+Best for sora-2:
+- CLOSE-UPS/MACRO - faces, hands, feet, eyes, details
+- FAST ACTION - quick cuts, rapid pacing, chase sequences
+- INSERT SHOTS - buttons, dials, doors, timers, props
+- SFX-HEAVY - explosions, fire, smoke, debris
+- GENERAL SHOTS - when in doubt, use Sora 2!
+
+## SEEDANCE (HD Talking + SFX)
+Use when character SPEAKS with action/SFX background. Include actual dialogue in quotes.
 
 Example prompt:
-"Medium close-up. She speaks warmly: 'Let me show you how this works.' Slow push-in, then settles."
+"Medium close-up. She speaks warmly: 'Let me show you how this works.' Slow push-in, explosions in background, then settles."
+
+## VEED-FABRIC (Simple Lip Sync)
+Simple talking head only. No action, no SFX. Just mouth movement.
 
 ## KLING O1 (Start→End Transitions)
 Use when you have START and END frames showing transformation.
 Best for: angle changes, state changes, zoom/orbit with specific end frame
 
-## KLING 2.6 (General Motion)
-Default for action, camera movements, environment motion without dialogue.
-Best for: dolly shots, orbits, action sequences
+## KLING 2.6 (Cinematic Slow-Mo)
+Use for wide shots and cinematic slow motion action.
+Best for: fighting, flying, driving, shooting sequences
 
 ---
 
@@ -876,7 +1177,7 @@ Before outputting your JSON, CHECK:
       "character_refs": ["hero"],
       "scene_refs": ["location1"],
       "duration": "5",
-      "model": "kling-2.6|kling-o1|seedance"
+      "model": "sora-2|kling-2.6|kling-o1|seedance|veed-fabric"
     }
   ]
 }
@@ -1224,6 +1525,352 @@ When CWS enabled, add "cws" to each shot:
 ## DIRECTION LOCK PHRASES
 Always append when locks active:
 "THIS EXACT CHARACTER, THIS EXACT LIGHTING, THIS EXACT COLOR GRADE. Travel: LEFT_TO_RIGHT. NO MIRRORING. NO DIRECTION FLIP."
+
+---
+
+# PLANNING AGENT: ASSET CHECKLIST SYSTEM
+
+Before ANY generation, you MUST:
+1. UNDERSTAND the user's video concept
+2. BREAK INTO segments and beats
+3. IDENTIFY ALL assets needed
+4. CHECK what EXISTS vs what NEEDS TO BE CREATED
+5. MAP which asset is used in which segment/beat
+6. OUTPUT asset checklist for approval
+
+## BEAT STRUCTURE
+\`\`\`
+1 Beat = 1 x 5x5 grid = 25 cells/frames
+Short video  = 3 beats  (75 cells)
+Medium video = 6 beats  (150 cells)
+Long video   = 9+ beats (225+ cells)
+\`\`\`
+
+## ASSET CHECKLIST FORMAT
+\`\`\`
+CHARACTERS:
+| Asset           | Status          | Used in Beats |
+|-----------------|-----------------|---------------|
+| HERO_clean      | EXISTS          | 1, 2, 3       |
+| HERO_damaged    | NEED TO MAKE    | 4, 5, 6       |
+| VILLAIN_basic   | NEED TO MAKE    | 1-9           |
+
+LOCATIONS:
+| Asset           | Status          | Used in Beats |
+|-----------------|-----------------|---------------|
+| SHIP_pristine   | NEED TO MAKE    | 1, 2, 3       |
+| SHIP_damaged    | NEED TO MAKE    | 4, 5, 6       |
+
+ITEMS:
+| Asset           | Status          | Used in Beats |
+|-----------------|-----------------|---------------|
+| WEAPON_clean    | NEED TO MAKE    | 2-9           |
+\`\`\`
+
+## STORY PLAN OUTPUT FORMAT
+\`\`\`
+SEGMENT 1: THE SETUP (Beats 1-3)
+================================
+
+BEAT 1 - "Calm Before Storm"
+- Character ref: HERO_clean
+- Location ref: SHIP_pristine
+- Items: none
+- Time of day: dusk
+- Cells 01-10: Establishing shot
+- Cells 11-20: Hero relaxing
+- Cells 21-25: Something appears on horizon
+
+BEAT 2 - "First Contact"
+- Character ref: HERO_clean
+- Location ref: SHIP_pristine
+- Enemy refs: THREAT_basic
+- Items: WEAPON_clean
+\`\`\`
+
+---
+
+# ESCALATION CHAIN PATTERNS
+
+## The 15/35/50 Escalation Formula
+- SETUP: 15% of duration, low intensity
+- ESCALATION: 35% of duration, building intensity
+- CLIMAX: 50% of duration, maximum intensity
+
+## Natural Wipe Options (for seamless transitions)
+\`\`\`
+- Tree/pillar passing
+- Dust cloud
+- Water splash
+- Shadow pass
+- Motion blur past camera
+- Subject fills frame
+- Blackout
+- Light flicker
+- Lens flare
+- Clouds/smoke
+- Rain on lens
+\`\`\`
+
+## Escalation Chain Examples
+
+### Pattern: Intensity Build
+\`\`\`
+CLIP 1:
+- Start: Wide shot reference
+- End: Object passes (tree, person, dust)
+- Prompt: "Subject approaches, passes behind obstacle"
+
+CLIP 2:
+- Start: Clip 1 start frame, ZOOMED + DARKENED
+- End: Same obstacle type
+- Prompt: "10 feet closer, faster, more intense"
+
+CLIP 3:
+- Start: Clip 2 start frame, ZOOMED MORE
+- Prompt: "Maximum intensity, extreme close-up"
+\`\`\`
+
+### Pattern: Spatial Story (Moving Through Location)
+\`\`\`
+CLIP 1:
+- Start: Location entrance
+- End: Mid-location landmark
+- Prompt: "Moving into space, landmark visible"
+
+CLIP 2:
+- Start: CLIP 1 END FRAME (literal handoff!)
+- End: Next landmark
+- Prompt: "Continue through, new detail visible"
+
+CLIP 3:
+- Start: CLIP 2 END FRAME
+- End: Location exit
+- Prompt: "Arriving at destination"
+\`\`\`
+
+### Pattern: Micro Lighting (Mood Shifts)
+\`\`\`
+CLIP 1: Light beam approaching subject
+CLIP 2: Light reaches edge of face
+CLIP 3: Light hits eyes, expression transforms
+\`\`\`
+
+---
+
+# FRAME-TO-FRAME CHAINING (CRITICAL!)
+
+## The Problem: Color Drift
+\`\`\`
+WRONG:
+BASE_IMAGE → /edit → ANGLE_A (color shift)
+BASE_IMAGE → /edit → ANGLE_B (different shift)
+Result: Shots don't match!
+\`\`\`
+
+## The Solution: Raw Frame Chaining
+\`\`\`
+RIGHT:
+VIDEO_1 → extract LAST FRAME → /edit → ANGLE_A
+VIDEO_2 (start=last_frame, end=ANGLE_A)
+Result: Perfect color continuity!
+\`\`\`
+
+## The Golden Rule
+**Never generate new frames from the original base image.
+Always chain from the LAST FRAME of the previous video.**
+
+## Chaining Workflow
+\`\`\`
+1. Generate VIDEO_1 (any method)
+2. Extract LAST_FRAME: ffmpeg -sseof -0.1 -i video.mp4 -frames:v 1 -q:v 2 last_frame.jpg
+3. Upload LAST_FRAME to get URL
+4. Use LAST_FRAME as reference for next angle via /edit
+5. Generate VIDEO_2: START=LAST_FRAME → END=NEW_ANGLE
+6. Repeat for entire sequence
+\`\`\`
+
+## Color Lock Phrases (ALWAYS USE!)
+\`\`\`
+"THIS EXACT CHARACTER"
+"THIS EXACT LIGHTING"
+"THIS EXACT COLOR GRADE"
+"Same costume, same lighting direction"
+"Continue from Image 1"
+"NO MIRRORING. NO DIRECTION FLIP."
+\`\`\`
+
+## Chain Break Rules
+\`\`\`
+ALWAYS Chain When:
+- Same scene continuing
+- Same lighting
+- Shot 2 onwards
+
+BREAK Chain When:
+- Scene change
+- Time jump
+- Flashback
+\`\`\`
+
+---
+
+# CONCRETE vs ABSTRACT PROMPTING
+
+## CRITICAL RULE: Be CONCRETE, Not Abstract
+
+Abstract/emotional language gives AI too much creative freedom.
+It will "interpret" and ADD unwanted elements.
+
+## BAD PROMPTS (Abstract) - AVOID:
+\`\`\`
+X "Peace replacing torment"
+X "Beautiful transformation"
+X "Emotional revelation"
+X "Dramatic tension building"
+X "Ominous atmosphere"
+X "Haunting beauty"
+\`\`\`
+
+## GOOD PROMPTS (Concrete) - USE:
+\`\`\`
+✓ "THREE figures standing in row"
+✓ "LEFT figure is GREEN translucent with shocked expression"
+✓ "MIDDLE figure is GOLDEN with beard and captain hat"
+✓ "DARK BLACK background. No particles no dust no fog"
+✓ "Hero holding torch. Orange flame visible"
+\`\`\`
+
+## Concrete Prompt Checklist
+\`\`\`
+[ ] Did I describe EXACTLY what's physically in the image?
+[ ] Did I specify colors, positions, expressions?
+[ ] Did I describe the background explicitly?
+[ ] Did I avoid emotional/abstract words?
+[ ] Did I say what's NOT in the scene if needed?
+\`\`\`
+
+---
+
+# 3D MARKER WORLD SYSTEM (CWS v5.0)
+
+## Purpose
+Deterministic shot composition using screen-space markers.
+Eliminates spatial guessing. Enforces shot identity.
+
+## Three-Layer Architecture
+
+### LAYER 1 — WORLD TRUTH (Coordinates)
+\`\`\`
+{
+  "floor": { "y": 0 },
+  "objects": [
+    { "id": "HERO", "type": "actor", "pos": [0, 1.2, 0] },
+    { "id": "VILLAIN", "type": "actor", "pos": [2, 1.2, 3] },
+    { "id": "WALL_1", "type": "wall", "pos": [0, 0, -6] }
+  ]
+}
+\`\`\`
+
+### LAYER 2 — PICASSO CODE (Allowed Changes)
+What MAY change in same shot:
+- Pose change
+- Facial expression
+- Gesture
+- Object state (held/broken)
+- Emotional read
+
+What FORBIDS new shot:
+- Character relocation
+- Camera relocation
+- Camera rotation
+- World geometry changes
+
+### LAYER 3 — CAMERA LAW (Shot Identity)
+\`\`\`
+Camera rigs are REAL and LOCKED
+Lens changes allowed
+Camera movement FORBIDDEN unless declared
+\`\`\`
+
+## Marker Output Format
+\`\`\`json
+{
+  "markers": [
+    {
+      "id": "HERO",
+      "ndc": [0.51, 0.47],
+      "onScreen": true,
+      "behind": false,
+      "drift": 0.014,
+      "valid": true
+    }
+  ]
+}
+\`\`\`
+
+## Drift Validation (Anti-Hallucination)
+\`\`\`
+drift = distance(ndc, anchor)
+valid = drift <= allowedDrift (0.03 default)
+
+If invalid:
+- Frame fails
+- Regenerate OR reframe camera
+\`\`\`
+
+---
+
+# DAMAGE TRACKING SYSTEM
+
+## Damage State Codes
+\`\`\`
+[ASSET: 100%] = Pristine, all systems operational
+[ASSET: 90%]  = Light scorch marks, minor dents
+[ASSET: 75%]  = Visible damage, small fires, parts missing
+[ASSET: 50%]  = Heavy damage, listing, major fires
+[ASSET: 25%]  = Critical, breaking apart
+[ASSET: 0%]   = Destroyed
+\`\`\`
+
+## Damage Persistence Rule
+\`\`\`
+Cell 11: [SHIP: 75%] Damage from Cell 10 still visible.
+NEW DAMAGE: Bar area now ON FIRE...
+
+Cell 12: [SHIP: 60%] Previous damage + bar fire.
+NEW DAMAGE: Bow turret bent...
+\`\`\`
+
+## The Golden Rule
+**IF YOU BUILD IT, YOU MUST USE IT OR DESTROY IT.**
+
+---
+
+# CAMERA TELEPORT TEST
+
+## What Camera CAN Do in One Clip:
+\`\`\`
+✓ Pan
+✓ Tilt
+✓ Dolly forward/back
+✓ Zoom
+✓ Follow subject walking
+\`\`\`
+
+## What Camera CANNOT Do in One Clip:
+\`\`\`
+✗ Spin 180° to new location
+✗ Jump to different room
+✗ Flip behind subject instantly
+\`\`\`
+
+## If your start/end frame require camera to:
+- Spin more than ~90°
+- Change rooms
+- Teleport to new position
+
+**SPLIT IT INTO MORE CLIPS.**
 
 ---
 

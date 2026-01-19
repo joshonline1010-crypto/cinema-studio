@@ -14,8 +14,23 @@
 
 import { callSpecAgent } from './specAICaller';
 import type { WorldEngineerOutput, BeatDefinition, MasterRef } from './specTypes';
-import movieShotsService from '../services/movieShotsService';
-import type { FormattedShotReference } from '../types/movieShots';
+
+// Movie shot references - fetched via API (not direct import - breaks browser!)
+interface FormattedShotReference {
+  id: string;
+  url: string;
+  director: string;
+  directorFormatted: string;
+  movie: string;
+  year: number;
+  shotType: string;
+  angle: string;
+  emotion: string;
+  lighting: string;
+  description: string;
+  photoPrompt: string;
+  tags: string[];
+}
 
 // ============================================
 // DIRECTOR SYSTEM PROMPT - FILM GRAMMAR MASTER
@@ -164,8 +179,8 @@ You must output a COMPLETE PRODUCTION PLAN:
         "allow_speed_up": false,
         "trim_dead_air": true
       },
-      "sora_candidate": false,
-      "sora_reason": "Story-critical establishing shot"
+      "video_model": "kling-2.6",
+      "model_reasoning": "Establishing shot, no dialogue"
     },
     {
       "shot_number": 2,
@@ -178,15 +193,15 @@ You must output a COMPLETE PRODUCTION PLAN:
       "camera_movement": "static",
       "energy_level": 4,
       "target_duration_ms": 1500,
+      "video_model": "kling-2.6",
+      "model_reasoning": "Character reaction shot",
       "edit_intent": {
         "pacing": "tight",
         "cut_trigger": "character_stops",
         "allow_speed_up": true,
         "max_speed": "x1.5",
         "trim_dead_air": true
-      },
-      "sora_candidate": false,
-      "sora_reason": "Character face - need precise continuity"
+      }
     },
     {
       "shot_number": 3,
@@ -199,15 +214,13 @@ You must output a COMPLETE PRODUCTION PLAN:
       "camera_movement": "orbit",
       "energy_level": 2,
       "target_duration_ms": 3000,
+      "video_model": "kling-2.6",
+      "model_reasoning": "Atmospheric shot with orbit movement",
       "edit_intent": {
         "pacing": "relaxed",
         "allow_speed_up": true,
         "max_speed": "x2"
-      },
-      "sora_candidate": true,
-      "sora_reason": "Pure atmosphere, no characters, no dialogue",
-      "sora_ref_type": "location_only",
-      "sora_preset": "ATMOSPHERE_EXT"
+      }
     }
   ],
 
@@ -314,38 +327,66 @@ Add \`dialogue_info\` to shots with speech:
 
 When planning dialogue/voiceover, know the tools BEFORE you plan shots:
 
+### CHARACTER VOICE STRATEGY
+
+**RECURRING CHARACTERS (speak in multiple shots) → LOCK voice_id**
+\`\`\`
+hero     → voice_id: "eleven_hero_voice" (USE FOR ALL HERO DIALOGUE)
+villain  → voice_id: "eleven_villain_voice" (USE FOR ALL VILLAIN DIALOGUE)
+narrator → voice_id: "eleven_narrator_voice" (USE FOR ALL NARRATION)
+\`\`\`
+Same voice_id for voiceover, lip sync, inner thoughts, flashback narration.
+This ensures voice CONSISTENCY across the entire production!
+
+**ONE-TIME CHARACTERS (speak once, minor role) → ANY FITTING VOICE**
+\`\`\`
+random_guard → Just pick voice that fits: male, gruff, suits the scene
+shopkeeper   → Just pick voice that fits: older, friendly, matches character
+\`\`\`
+No need to lock - just select appropriate ElevenLabs voice for character/story.
+
 ### Tool Selection:
 | Need | Tool | Notes |
 |------|------|-------|
-| **TTS (any voice)** | ElevenLabs | Use same voice_id = consistent voice! |
+| **TTS (any voice)** | ElevenLabs | Use LOCKED voice_id per character |
 | **Lip sync (face visible)** | VEED Fabric | Takes ElevenLabs audio → syncs to face |
 | **Clone celebrity voice** | MiniMax voice-clone | ONLY for celebrity/real person |
 | **TTS with cloned voice** | MiniMax speech-02-hd | After cloning |
 
 ### Workflow by Shot Type:
 \`\`\`
-VOICEOVER (face NOT visible):
-  → ElevenLabs TTS only (no VEED needed)
+FACE VISIBLE + SPEAKING + ACTION/SFX BACKGROUND:
+  → video_model: seedance (HD talking + voice + SFX!)
+  → Great for: hand movements, showing stuff, action behind speaker
 
-TALKING HEAD (face visible):
-  → ElevenLabs TTS → VEED lip sync
+FACE VISIBLE + SPEAKING (simple talking head):
+  → ElevenLabs TTS (character's locked voice_id)
+  → VEED Fabric lip sync
+  → video_model: veed-fabric
 
-NARRATION OVER FLASHBACK:
-  → ElevenLabs TTS (voiceover track)
-  → Flashback shots are SILENT video (sora-2/kling)
+FACE NOT VISIBLE + SPEAKING (voiceover/narration):
+  → ElevenLabs TTS only (character's locked voice_id)
+  → video_model: sora-2 or kling-2.6 (silent video)
   → Audio layered in post
 
-MULTIPLE CHARACTERS TALKING:
-  → Each character = different ElevenLabs voice_id
-  → Each gets VEED lip sync when on camera
+INNER THOUGHTS (face visible, NOT speaking):
+  → ElevenLabs TTS (character's locked voice_id)
+  → NO lip sync (mouth doesn't move)
+  → video_model: sora-2
+
+NARRATION OVER FLASHBACK:
+  → ElevenLabs TTS (narrator's locked voice_id)
+  → Flashback shots are SILENT video (sora-2 for CU, kling-2.6 for wide)
+  → Audio layered in post
 \`\`\`
 
 ### Frame Narrative (Story within Story):
 When someone TELLS a story with flashbacks:
-1. FRAME SHOTS (person talking) → ElevenLabs + VEED lip sync
-2. FLASHBACK SHOTS (action) → Silent video (sora-2/kling) + music/SFX
-3. VOICEOVER on flashback → Same ElevenLabs voice_id (consistency!)
-4. Return to FRAME → Same VEED lip sync setup
+1. FRAME SHOTS (person talking + gestures) → seedance (HD talking + SFX)
+   OR simple talking head → veed-fabric
+2. FLASHBACK SHOTS (action) → Silent video (sora-2 for fast/CU, kling-2.6 for slow-mo wide)
+3. VOICEOVER on flashback → SAME locked voice_id (consistency!)
+4. Return to FRAME → Same model as step 1
 
 ### When to Use Full Length (4-10s)
 - DIALOG (let actors breathe)
@@ -364,41 +405,43 @@ When someone TELLS a story with flashbacks:
 As Director, you SELECT the video model for each shot based on what the shot needs.
 This is YOUR decision - you know the creative intent, so you pick the best tool.
 
-### Available Models:
+### The 5 Video Models:
 
 | Model | Best For | Cost | When to Use |
 |-------|----------|------|-------------|
-| **sora-2** | CLOSE-UPS, details, b-roll | $0.50 | **PREFER THIS for ECU/CU shots!** Fast, great quality on close-ups |
-| **kling-2.6** | WIDE/MEDIUM action | $0.35 | Wide shots, full-body movement |
-| **kling-o1** | Start→End transitions | $0.45 | Controlled zoom/orbit with specific end frame |
-| **seedance-1.5** | Dialogue with lip sync | $0.40 | Character SPEAKS with visible face |
-| **veed-fabric** | Talking head avatar | $0.30 | Static close-up with character talking |
-
-### SORA 2 QUALITY RULES (CRITICAL!)
-- **CLOSE-UPS = BEST** (ECU, CU, INSERT) → Sora 2 excels here!
-- **WIDE SHOTS = POOR** → Never use Sora 2 for wide/establishing
-- **12 seconds = 5 shots optimal** for fast editing
-- **Input image = START FRAME** (highest priority)
+| **sora-2** | Close-ups, fast action, quick cuts, ANYTHING | $0.50 | **GO-TO MODEL!** Fast, versatile, great quality |
+| **kling-2.6** | Cinematic slow-mo, fighting, flying, driving | $0.35 | Wide cinematic shots, slow motion action |
+| **kling-o1** | Start→End zooms, VFX, explosions | $0.45 | When you have START and END frames |
+| **seedance** | HD close-up TALKING with voice + SFX | $0.40 | Character speaks with action/SFX background |
+| **veed-fabric** | Lip sync ONLY | $0.30 | Simple talking head, no action |
 
 ### Decision Tree:
 
 \`\`\`
-Is it a CLOSE-UP or DETAIL shot? (ECU, CU, INSERT, MACRO)
-├── YES → sora-2 (FAST + great quality on close-ups!)
-│   Examples: feet running, hands grabbing, eyes widening, dials/buttons
+Close-up TALKING with great voice/SFX?
+├── YES → seedance (HD talking + audio)
 │
-└── NO (WIDE or MEDIUM shot)
-    ├── Does character SPEAK? → seedance-1.5 or veed-fabric
-    ├── Start→End transition needed? → kling-o1
-    └── Standard action → kling-2.6
+└── NO
+    ├── Fast paced action? Quick cuts? Close-ups? Details?
+    │   └── YES → sora-2 (FAST + versatile!)
+    │
+    ├── Cinematic slow-mo? (fighting, flying, driving, shooting)
+    │   └── YES → kling-2.6 (slow motion)
+    │
+    ├── Need START → END zoom? VFX? Explosions?
+    │   └── YES → kling-o1 (make START and END photos)
+    │
+    └── Just lip sync, no action?
+        └── YES → veed-fabric
+\`\`\`
 
-CHASE/ACTION SCENE PATTERN (use lots of Sora 2!):
-- CU feet running → sora-2
-- WIDE establishing → kling-2.6
-- CU hands reaching → sora-2
-- CU villain approaching → sora-2
-- MEDIUM hero reacts → kling-2.6
-- INSERT detail (door closing, timer) → sora-2
+### Action Fight Pattern (Alternating Models):
+\`\`\`
+WIDE FIGHT (slow-mo) → kling-2.6
+CU PUNCH (fast) → sora-2
+WIDE REACTION (slow-mo) → kling-2.6
+CU FACE (fast) → sora-2
+IMPACT ZOOM → kling-o1
 \`\`\`
 
 ### Add video_model to EVERY shot:
@@ -408,247 +451,66 @@ CHASE/ACTION SCENE PATTERN (use lots of Sora 2!):
   "shot_number": 1,
   "shot_type": "WIDE_MASTER",
   "video_model": "kling-2.6",
-  "model_reasoning": "Establishing shot, no dialogue, standard movement"
+  "model_reasoning": "Establishing shot - wide shots use Kling"
 }
 \`\`\`
 
-## SORA 2 - USE IT AGGRESSIVELY!
-
-Sora 2 is FAST and EXCELLENT for close-ups. Use it to create dynamic editing with lots of cuts!
-
-**BEST for Sora 2 (sora_candidate: true, video_model: sora-2):**
-- **CLOSE-UPS/MACRO** - faces, hands, feet, eyes, details (BEST QUALITY!)
-- **INSERT SHOTS** - buttons, dials, doors closing, timers, props
-- **SFX-HEAVY SHOTS** - explosions, fire, smoke, debris, weather
-- **SPEED RAMPS** - slow-mo to fast, dramatic timing changes
-- **TRANSITIONS** - smooth camera moves, whip pans, reveals
-- **TENSION CUTS** - quick detail shots to build suspense
-- Vehicle/environment atmosphere (cityscapes, weather)
-- B-roll filler between scenes
-
-**HYPER-KINETIC EDITING with Sora 2:**
-For chase/action scenes, use MANY quick Sora 2 shots:
-- CU feet pounding → CU predator feet → CU hands reaching → INSERT door closing
-- Each 2-3 seconds, rapid cuts = tension!
-- Sora 2 generates FAST so you can make many variations
-
-**NOT for Sora 2:**
-- WIDE establishing shots (poor quality on wide)
-- Full-body character action (use Kling)
-- Dialogue scenes (use Seedance)
-- Shots requiring specific start→end control (use Kling O1)
-
-**Sora 2 Presets for Action/Chase:**
-| Preset | Use For | Duration |
-|--------|---------|----------|
-| FEET_RUNNING | Hero/villain feet pounding ground | 2-3s |
-| HANDS_REACHING | Desperate grab for door/lever/object | 2-3s |
-| EYES_WIDENING | Fear/shock reaction close-up | 2s |
-| PREDATOR_APPROACH | Villain/monster getting closer | 3s |
-| DOOR_CLOSING | Bunker/elevator/escape closing | 3s |
-| TIMER_COUNTDOWN | Clock/display counting down | 2s |
-| DEBRIS_FLYING | Explosion aftermath, dust, particles | 2-3s |
-| SPEED_RAMP_SLOW | Dramatic slow-mo moment | 3s |
-| IMPACT_MOMENT | Hit/crash/collision detail | 2s |
+\`\`\`json
+{
+  "shot_number": 2,
+  "shot_type": "CU_FACE",
+  "video_model": "sora-2",
+  "model_reasoning": "Close-up detail - Sora 2 excels here"
+}
+\`\`\`
 
 For each shot, add:
 - video_model: The model you've selected
 - model_reasoning: Why this model fits
-- sora_candidate: true/false
-- sora_reason: Why it is/isn't a good candidate
-- sora_ref_type: 'location_only' | 'character_only' | 'character_in_location'
-- sora_preset: Suggested preset from table above
 
-## SORA-2 BURST PATTERNS (PACING & STORY TURNS!)
+## SORA 2 - THE GO-TO MODEL!
 
-Sora-2 is your **PACING CONTROL TOOL**. Use BURSTS (3-6 rapid shots) to:
+Sora 2 is FAST, VERSATILE, and can handle ANYTHING. Use it as your default choice!
+
+**BEST for Sora 2 (video_model: "sora-2"):**
+- **CLOSE-UPS/MACRO** - faces, hands, feet, eyes, details
+- **FAST ACTION** - quick cuts, rapid pacing, chase sequences
+- **INSERT SHOTS** - buttons, dials, doors closing, timers, props
+- **SFX-HEAVY SHOTS** - explosions, fire, smoke, debris, weather
+- **SPEED RAMPS** - slow-mo to fast, dramatic timing
+- **TENSION CUTS** - quick detail shots to build suspense
+- **GENERAL SHOTS** - when in doubt, use Sora 2!
+
+**Use other models when:**
+- Cinematic slow-motion needed → kling-2.6
+- Have specific START and END frames → kling-o1
+- Character TALKING with voice/SFX → seedance
+- Simple lip sync only → veed-fabric
+
+## SORA 2 BURST PATTERNS (PACING CONTROL!)
+
+Use BURSTS (3-6 rapid Sora 2 shots) to:
 - SELL emotional gear shifts
 - CREATE intensity through rapid cuts
 - PUNCTUATE story turns
 - BUILD anticipation before impact
 
-### AUTOMATIC BURST TRIGGERS - When you see these, plan a Sora-2 burst:
+### BURST TRIGGERS - When you detect these, plan a Sora 2 burst:
 
-**TRIGGER 1: STORY TURN (Emotional Gear Shift)**
-\`\`\`
-DETECT: "Character decides to..." / "Now it's personal" / "Everything changes"
-DETECT: Character shifts from defensive → offensive
-DETECT: Stakes suddenly change
-ACTION: Plan 3-5 shot DETERMINATION BURST
-SHOTS: CU_FACE (anger) → CU_HANDS (grip) → ECU_EYES (locked) → CU_BODY (forward)
-\`\`\`
+**STORY TURN:** Character shifts emotion/intention
+→ CU_FACE (anger) → CU_HANDS (grip) → ECU_EYES → CU_BODY
 
-**TRIGGER 2: PACING ACCELERATION**
-\`\`\`
-DETECT: Energy jumps +3 or more (e.g., 4 → 8)
-DETECT: Chase begins / Fight escalates / Timer starts
-DETECT: "Suddenly..." / "In an instant..."
-ACTION: Plan 4-6 shot SPEED BURST
-SHOTS: Rapid alternating angles, each 2-3s, building intensity
-\`\`\`
+**PACING ACCELERATION:** Energy jumps, chase begins
+→ Rapid alternating angles, each 2-3s target duration
 
-**TRIGGER 3: PRE-IMPACT ANTICIPATION**
-\`\`\`
-DETECT: Something big about to hit (punch, rocket, crash)
-DETECT: Projectile in flight
-ACTION: Plan 2-4 shot ANTICIPATION BURST before impact
-SHOTS: CU projectile → different angle → target reaction → IMPACT
-\`\`\`
+**PRE-IMPACT:** Something big about to hit
+→ CU projectile → different angle → target reaction → IMPACT
 
-**TRIGGER 4: REACTION SEQUENCE**
-\`\`\`
-DETECT: Character sees something shocking
-DETECT: Multiple characters react to same event
-DETECT: "The moment they realized..."
-ACTION: Plan 3-4 shot REACTION BURST
-SHOTS: CU_FACE_A → CU_FACE_B → ECU_EYES → WIDE_REVEAL
-\`\`\`
+**VEHICLE PERFORMANCE:** Drifting, racing, gear changes
+→ CU_GEAR_SHIFT → CU_GAUGE → CU_STEERING → CU_PEDAL → CU_DRIVER_FACE
 
-**TRIGGER 5: PREPARATION/LOADING**
-\`\`\`
-DETECT: Character preparing for action / Suiting up
-DETECT: Weapon loading, vehicle starting, ritual before battle
-ACTION: Plan 4-5 shot PREP BURST
-SHOTS: CU_HANDS → DETAIL → CU_FACE → DETAIL → READY_POSE
-\`\`\`
-
-**TRIGGER 6: DESTRUCTION CASCADE**
-\`\`\`
-DETECT: Something breaks apart / Chain reaction
-DETECT: Robot/vehicle exploding, building collapsing
-ACTION: Plan 3-5 shot DESTRUCTION BURST
-SHOTS: IMPACT → PART_A explodes → PART_B explodes → DEBRIS → AFTERMATH
-\`\`\`
-
-**TRIGGER 7: INTERIOR ACTION (Cockpit, Vehicle, Mech)**
-\`\`\`
-DETECT: Action inside vehicle/cockpit/mech
-DETECT: Pilot/driver taking action
-ACTION: Plan 3-4 shot INTERIOR BURST
-SHOTS: COCKPIT_WIDE → CU_CONTROLS → CU_PILOT_FACE → POV_WINDOW
-\`\`\`
-
-**TRIGGER 8: VEHICLE PERFORMANCE (Drifting, Racing, Flying)**
-\`\`\`
-DETECT: Car drifting / Racing scene / Fast driving
-DETECT: Gear changes, pedal work, steering action
-DETECT: Speed showcase / Performance moment
-ACTION: Plan 4-6 shot VEHICLE BURST
-SHOTS: CU_GEAR_SHIFT → CU_GAUGE → CU_STEERING → CU_PEDAL → CU_DRIVER_FACE → EXT_DRIFT
-REQ_REFS: VEHICLE_INTERIOR (gauge cluster, gear shift, steering wheel, pedals)
-\`\`\`
-
-### BURST REF REQUIREMENTS (CRITICAL!)
-
-**IMPORTANT: Bursts need MATCHING REFS to work!**
-
-When you plan a burst, you MUST specify what refs are needed:
-
-| Burst Type | Required Refs | Example |
-|------------|---------------|---------|
-| VEHICLE_INTERIOR | gauge_cluster, gear_shift, steering_wheel, pedals | Car drift scene |
-| COCKPIT_ACTION | cockpit_wide, control_panel, pilot_seat, windshield | Helicopter/jet |
-| MECH_INTERIOR | cockpit_hud, control_sticks, pilot_harness, screens | Giant robot |
-| CHARACTER_REACTION | face_neutral, face_angry, face_determined, face_fear | Emotion burst |
-| WEAPON_LOADING | gun_chamber, magazine, hands_loading, scope | Prep sequence |
-| DESTRUCTION_PARTS | body_part_A, body_part_B, debris, fire_detail | Robot exploding |
-
-### Add required_refs to burst planning:
-
-\`\`\`json
-{
-  "burst_info": {
-    "is_burst": true,
-    "burst_id": "BURST_002_DRIFT",
-    "burst_type": "VEHICLE_PERFORMANCE",
-    "burst_trigger": "Car enters drift sequence",
-
-    "required_refs": [
-      {
-        "ref_id": "car_interior_gauge",
-        "ref_type": "DETAIL",
-        "description": "Close-up of speedometer/tachometer gauge cluster",
-        "must_match": "Same car interior as establishing shot"
-      },
-      {
-        "ref_id": "car_interior_gearshift",
-        "ref_type": "DETAIL",
-        "description": "Gear shift lever with driver's hand",
-        "must_match": "Same car interior"
-      },
-      {
-        "ref_id": "car_interior_steering",
-        "ref_type": "DETAIL",
-        "description": "Steering wheel being turned hard",
-        "must_match": "Same car interior"
-      },
-      {
-        "ref_id": "car_interior_pedals",
-        "ref_type": "DETAIL",
-        "description": "Foot on gas/brake pedals",
-        "must_match": "Same car interior"
-      }
-    ]
-  }
-}
-\`\`\`
-
-**THE PLANNING CHAIN:**
-\`\`\`
-1. Director detects burst trigger (car drifting scene)
-2. Director plans burst structure (4-6 interior shots)
-3. Director specifies required_refs (gauge, gear, steering, pedals)
-4. Ref Planner generates these refs FIRST (consistent style!)
-5. Shot Compiler assigns refs to burst shots
-6. Sora-2 generates burst with matching refs
-\`\`\`
-
-### BURST STRUCTURE IN OUTPUT:
-
-When you detect a trigger, mark the shots as a burst:
-
-\`\`\`json
-{
-  "shot_number": 4,
-  "shot_type": "CU_FACE",
-  "video_model": "sora-2",
-  "sora_candidate": true,
-  "sora_preset": "GEAR_SHIFT_FACE",
-
-  "burst_info": {
-    "is_burst": true,
-    "burst_id": "BURST_001_DETERMINATION",
-    "burst_type": "GEAR_SHIFT",
-    "burst_position": 1,
-    "burst_total": 4,
-    "burst_trigger": "Hero decides to fight back after helicopter hit",
-    "burst_emotion": "defensive_to_aggressive",
-    "pacing": "rapid"
-  }
-}
-\`\`\`
-
-### BURST SIZE BY INTENSITY:
-
-| Story Moment | Burst Size | Duration Each |
-|--------------|------------|---------------|
-| Minor shift | 2-3 shots | 5s each |
-| Medium turn | 3-4 shots | 5s each |
-| Major climax | 4-6 shots | 5s each |
-| Ultimate moment | 6-8 shots | 5s each |
-
-### SORA-2 vs KLING DECISION:
-
-| Situation | Model | Why |
-|-----------|-------|-----|
-| Normal dialogue | Kling 2.6 | Steady pacing needed |
-| Walking/traveling | Kling 2.6 | Continuous motion |
-| Establishing shot | Kling 2.6 | Wide = Kling territory |
-| **STORY TURN** | **Sora-2 BURST** | Sell the emotional shift! |
-| **FAST ACTION** | **Sora-2 BURST** | Pacing control |
-| **PRE-IMPACT** | **Sora-2 BURST** | Build tension |
-| **DESTRUCTION** | **Sora-2 BURST** | Chaos details |
-| Calm after storm | Kling 2.6 | Reset to normal |
+**DESTRUCTION CASCADE:** Something breaks apart
+→ IMPACT → PART_A explodes → PART_B → DEBRIS → AFTERMATH
 
 ## REMEMBER
 
@@ -726,22 +588,17 @@ export interface ShotPlan {
   };
 
   // ============================================
-  // SORA 2 B-ROLL DETECTION
-  // ============================================
-  // Director flags shots that could use Sora 2 for efficiency
-  // Producer will route to Sora 2 based on this flag
-
-  sora_candidate: boolean;  // Can this shot use Sora 2?
-  sora_reason?: string;     // Why it's a good/bad candidate
-  sora_ref_type?: 'location_only' | 'character_only' | 'character_in_location' | 'collage';
-  sora_preset?: string;     // Suggested preset (VEHICLE_FLYING, ATMOSPHERE_EXT, etc.)
-
-  // ============================================
   // VIDEO MODEL SELECTION - Director decides!
   // ============================================
   // Director picks the model for each shot based on creative needs
-  video_model: 'kling-2.6' | 'kling-o1' | 'seedance-1.5' | 'sora-2' | 'veed-fabric';
+  video_model: 'kling-2.6' | 'kling-o1' | 'sora-2' | 'seedance' | 'veed-fabric';
   model_reasoning?: string;  // Why this model was chosen
+
+  // SORA-SPECIFIC FIELDS
+  sora_candidate?: boolean;  // Good for Sora (no precise character control)
+  sora_preset?: string;      // Sora preset name
+  sora_ref_type?: 'location_only' | 'character_only' | 'character_in_location' | 'collage';
+  sora_reason?: string;      // Why Sora was chosen/not chosen
 }
 
 export interface RefAssignment {
@@ -813,7 +670,11 @@ export const directorAgent = {
 
       if (recommendedDirector) {
         console.log('[Director] 🎥 Fetching reference shots for director:', recommendedDirector);
-        movieShotRefs = await movieShotsService.getShotsByDirector(recommendedDirector, 5);
+        const response = await fetch(`/api/movie-shots/query?director=${encodeURIComponent(recommendedDirector)}&limit=5`);
+        if (response.ok) {
+          const data = await response.json();
+          movieShotRefs = data.shots || [];
+        }
         console.log('[Director] 📽️ Found', movieShotRefs.length, 'reference shots');
       }
 
@@ -821,7 +682,11 @@ export const directorAgent = {
       if (movieShotRefs.length === 0 && input.storyAnalysis?.emotionalArc) {
         const emotion = input.storyAnalysis.emotionalArc.split(' ')[0].toLowerCase();
         console.log('[Director] 🎭 Fetching shots by emotion:', emotion);
-        movieShotRefs = await movieShotsService.getShotsByEmotion(emotion, 5);
+        const response = await fetch(`/api/movie-shots/query?emotion=${encodeURIComponent(emotion)}&limit=5`);
+        if (response.ok) {
+          const data = await response.json();
+          movieShotRefs = data.shots || [];
+        }
       }
     } catch (err) {
       console.warn('[Director] Could not fetch movie shot references:', err);
@@ -1030,9 +895,6 @@ function createDefaultShotSequence(shotCount: number, sceneType: string): ShotPl
     subject_focus: 'hero',
     camera_movement: 'static',
     energy_level: Math.min(5, 2 + Math.floor(i / 2)),
-    // Default: not Sora 2 candidate (story shots need full pipeline)
-    sora_candidate: false,
-    sora_reason: 'Story-critical shot - needs full pipeline for character continuity',
     // Default video model
     video_model: 'kling-2.6' as const,
     model_reasoning: 'Default action model for story shots'

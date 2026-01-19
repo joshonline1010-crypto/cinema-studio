@@ -7,11 +7,15 @@ const FAL_API_KEY = 'Key 30048d83-df50-41fa-9c2f-61be8fcdb719:8bb12ec91651bf9dc7
 // Videos: use queue.fal.run (async with polling - videos take 30-60s)
 // Images: use fal.run (sync - images are fast, ~10-20s)
 const FAL_ENDPOINTS = {
-  'video-kling': 'https://queue.fal.run/fal-ai/kling-video/v2.6/pro/image-to-video',
-  'video-kling-o1': 'https://queue.fal.run/fal-ai/kling-video/o1/image-to-video',
-  'video-seedance': 'https://queue.fal.run/fal-ai/bytedance/seedance/v1.5/pro/image-to-video', // Seedance 1.5 Pro
-  'video-kling-lipsync': 'https://queue.fal.run/fal-ai/kling-video/lipsync/audio-to-video', // Kling LipSync - audio + image to talking video
-  'video-kling-avatar': 'https://queue.fal.run/fal-ai/kling-video/ai-avatar/v2/pro', // Kling Avatar - audio + image to avatar
+  // VIDEO MODELS (queue-based, async)
+  'video-kling': 'https://queue.fal.run/fal-ai/kling-video/v2.6/pro/image-to-video',      // Kling 2.6 - cinematic slow-mo
+  'video-kling-o1': 'https://queue.fal.run/fal-ai/kling-video/o1/image-to-video',         // Kling O1 - start→end transitions
+  'video-seedance': 'https://queue.fal.run/fal-ai/bytedance/seedance/v1.5/pro/image-to-video', // Seedance 1.5 - HD talking + SFX
+  'video-sora-2': 'https://queue.fal.run/fal-ai/sora-2',                                   // Sora 2 - GO-TO model for everything
+  'video-veed-fabric': 'https://queue.fal.run/fal-ai/veed/lipsync',                       // Veed Fabric - simple lip sync
+  'video-kling-lipsync': 'https://queue.fal.run/fal-ai/kling-video/lipsync/audio-to-video', // Kling LipSync
+  'video-kling-avatar': 'https://queue.fal.run/fal-ai/kling-video/ai-avatar/v2/pro',      // Kling Avatar
+  // IMAGE MODELS (sync, fast)
   'image': 'https://fal.run/fal-ai/nano-banana-pro',           // Text-to-image
   'image-edit': 'https://fal.run/fal-ai/nano-banana-pro/edit', // Image-to-image (with reference)
   'face-adapter': 'https://fal.run/fal-ai/ip-adapter-face-id'
@@ -53,6 +57,10 @@ async function pollFalResult(requestId: string, endpoint: string, maxAttempts = 
   let basePath = 'fal-ai/kling-video';
   if (endpoint.includes('seedance')) {
     basePath = 'fal-ai/bytedance/seedance/v1.5/pro'; // Seedance 1.5 Pro polling path
+  } else if (endpoint.includes('sora-2')) {
+    basePath = 'fal-ai/sora-2'; // Sora 2 polling path
+  } else if (endpoint.includes('veed')) {
+    basePath = 'fal-ai/veed/lipsync'; // Veed Fabric polling path
   } else if (endpoint.includes('nano-banana')) {
     basePath = 'fal-ai/nano-banana-pro';
   } else if (endpoint.includes('lipsync')) {
@@ -160,7 +168,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       case 'video-seedance': {
-        // Seedance - for dialogue/character animation
+        // Seedance 1.5 - HD talking with voice + SFX
         const seedBody: any = {
           image_url: image_url || start_image_url,
           prompt
@@ -169,6 +177,38 @@ export const POST: APIRoute = async ({ request }) => {
         if (end_image_url) seedBody.end_image_url = end_image_url;
 
         result = await callFal(FAL_ENDPOINTS['video-seedance'], seedBody);
+        break;
+      }
+
+      case 'video-sora-2':
+      case 'sora-2': {
+        // Sora 2 - GO-TO model for everything (close-ups, fast action, anything!)
+        const soraBody: any = {
+          image_url: image_url || start_image_url,
+          prompt,
+          duration: parseInt(duration) || 5,
+          aspect_ratio
+        };
+
+        result = await callFal(FAL_ENDPOINTS['video-sora-2'], soraBody);
+        break;
+      }
+
+      case 'video-veed-fabric':
+      case 'veed-fabric': {
+        // Veed Fabric - simple lip sync for talking heads
+        const veedBody: any = {
+          video_url: image_url || start_image_url, // Can accept image or video
+          audio_url: body.audio_url
+        };
+
+        if (!veedBody.audio_url) {
+          return new Response(JSON.stringify({
+            error: 'audio_url required for veed-fabric lipsync'
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        result = await callFal(FAL_ENDPOINTS['video-veed-fabric'], veedBody);
         break;
       }
 

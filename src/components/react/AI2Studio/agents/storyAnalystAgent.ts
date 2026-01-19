@@ -98,7 +98,30 @@ Which director's style fits this story and WHY?
 | Edgar Wright | Comedy, rhythm, visual gags | Cuts on action, whip pans, energy |
 | Wes Anderson | Whimsy, symmetry, quirk | Dollhouse world, pastel, deadpan |
 
-### 6. THE REFERENCE STRATEGY
+### 6. EXTRACT STORY ENTITIES (CRITICAL!)
+
+You MUST extract ALL named entities from the concept:
+
+**CHARACTERS** - Every person/creature mentioned:
+- "woman running from police" → character: "woman" (protagonist)
+- "police" → character: "police" (antagonist)
+- "tells her kid" → character: "kid" (supporting)
+
+**LOCATIONS** - Every place mentioned:
+- "escape plane" → location: "escape plane" (destination)
+- "burning building" → location: "burning building" (environment)
+
+**VEHICLES** - Any vehicles:
+- "helicopter" → vehicle: "helicopter"
+- "escape plane" → vehicle: "escape plane"
+
+**PROPS** - Important objects:
+- "briefcase" → prop: "briefcase"
+- "weapon" → prop: "weapon"
+
+Extract the ACTUAL WORDS from the concept, not generic labels like "hero" or "environment"!
+
+### 7. THE REFERENCE STRATEGY
 What visual references are needed and WHY?
 - Character ref: WHY? → Maintain identity across shots
 - Environment ref: WHY? → Consistent world
@@ -117,6 +140,20 @@ What visual references are needed and WHY?
     "core_emotion": "What's the ONE feeling this should evoke?",
     "story_type": "ACTION|DRAMA|HORROR|COMEDY|COMMERCIAL|DOCUMENTARY",
     "target_audience": "Who is this for?"
+  },
+
+  "extracted_entities": {
+    "characters": [
+      { "name": "woman", "type": "character", "role": "protagonist", "description": "Woman fleeing, desperate, determined" },
+      { "name": "police", "type": "character", "role": "antagonist", "description": "Police officers in pursuit" }
+    ],
+    "locations": [
+      { "name": "escape plane", "type": "location", "role": "environment", "description": "Small aircraft waiting for escape" }
+    ],
+    "vehicles": [
+      { "name": "escape plane", "type": "vehicle", "role": "object", "description": "Small propeller plane, getaway vehicle" }
+    ],
+    "props": []
   },
 
   "emotional_journey": {
@@ -263,6 +300,14 @@ export interface LensChoice {
   why: string;
 }
 
+// Entity extracted from the concept
+export interface StoryEntity {
+  name: string;           // Actual name from story (e.g., "woman", "police", "escape plane")
+  type: 'character' | 'location' | 'vehicle' | 'prop';
+  role: 'protagonist' | 'antagonist' | 'supporting' | 'environment' | 'object';
+  description: string;    // Brief description for ref generation
+}
+
 export interface StoryAnalysisOutput {
   concept_analysis: {
     original_concept: string;
@@ -270,6 +315,14 @@ export interface StoryAnalysisOutput {
     core_emotion: string;
     story_type: 'ACTION' | 'DRAMA' | 'HORROR' | 'COMEDY' | 'COMMERCIAL' | 'DOCUMENTARY';
     target_audience: string;
+  };
+
+  // NEW: Extracted entities from the concept
+  extracted_entities: {
+    characters: StoryEntity[];
+    locations: StoryEntity[];
+    vehicles: StoryEntity[];
+    props: StoryEntity[];
   };
 
   emotional_journey: {
@@ -414,6 +467,11 @@ function validateAnalysis(analysis: StoryAnalysisOutput, input: StoryAnalysisInp
     };
   }
 
+  // Ensure extracted_entities exists - extract from concept if AI didn't
+  if (!analysis.extracted_entities) {
+    analysis.extracted_entities = extractEntitiesFromConcept(input.concept);
+  }
+
   if (!analysis.emotional_journey) {
     analysis.emotional_journey = {
       opening_emotion: { emotion: 'curiosity', why: 'Hook viewer' },
@@ -490,6 +548,141 @@ function validateAnalysis(analysis: StoryAnalysisOutput, input: StoryAnalysisInp
   return analysis;
 }
 
+// Extract entities from concept text using pattern matching
+function extractEntitiesFromConcept(concept: string): StoryAnalysisOutput['extracted_entities'] {
+  const conceptLower = concept.toLowerCase();
+  const characters: StoryEntity[] = [];
+  const locations: StoryEntity[] = [];
+  const vehicles: StoryEntity[] = [];
+  const props: StoryEntity[] = [];
+
+  // Character patterns - extract actual names
+  const characterPatterns = [
+    // Specific people
+    { pattern: /\b(woman|man|girl|boy|child|kid|person|people)\b/gi, role: 'protagonist' as const },
+    { pattern: /\b(police|cop|officer|guard|soldier|thief|villain|enemy|criminal)\b/gi, role: 'antagonist' as const },
+    { pattern: /\b(robot|alien|creature|monster|dragon|beast)\b/gi, role: 'supporting' as const },
+    // Named roles
+    { pattern: /\b(hero|protagonist|main character)\b/gi, role: 'protagonist' as const },
+    { pattern: /\b(antagonist|bad guy)\b/gi, role: 'antagonist' as const },
+  ];
+
+  for (const { pattern, role } of characterPatterns) {
+    const matches = concept.match(pattern);
+    if (matches) {
+      for (const match of matches) {
+        const name = match.toLowerCase();
+        if (!characters.some(c => c.name === name)) {
+          characters.push({
+            name,
+            type: 'character',
+            role,
+            description: `${name.charAt(0).toUpperCase() + name.slice(1)} - story character`
+          });
+        }
+      }
+    }
+  }
+
+  // Location patterns
+  const locationPatterns = [
+    /\b(building|house|apartment|office|room|warehouse|factory|school|hospital|prison|jail)\b/gi,
+    /\b(city|street|alley|highway|road|bridge|tunnel)\b/gi,
+    /\b(forest|mountain|beach|desert|ocean|river|lake)\b/gi,
+    /\b(airport|station|dock|port|hangar)\b/gi,
+    /\b(cockpit|interior|exterior)\b/gi,
+  ];
+
+  for (const pattern of locationPatterns) {
+    const matches = concept.match(pattern);
+    if (matches) {
+      for (const match of matches) {
+        const name = match.toLowerCase();
+        if (!locations.some(l => l.name === name)) {
+          locations.push({
+            name,
+            type: 'location',
+            role: 'environment',
+            description: `${name.charAt(0).toUpperCase() + name.slice(1)} - scene location`
+          });
+        }
+      }
+    }
+  }
+
+  // Vehicle patterns
+  const vehiclePatterns = [
+    /\b(car|truck|van|motorcycle|bike|bus)\b/gi,
+    /\b(plane|airplane|jet|helicopter|aircraft)\b/gi,
+    /\b(boat|ship|yacht|submarine)\b/gi,
+    /\b(train|subway|tram)\b/gi,
+    /\b(spaceship|shuttle|rocket)\b/gi,
+  ];
+
+  for (const pattern of vehiclePatterns) {
+    const matches = concept.match(pattern);
+    if (matches) {
+      for (const match of matches) {
+        const name = match.toLowerCase();
+        if (!vehicles.some(v => v.name === name)) {
+          vehicles.push({
+            name,
+            type: 'vehicle',
+            role: 'object',
+            description: `${name.charAt(0).toUpperCase() + name.slice(1)} - vehicle`
+          });
+        }
+      }
+    }
+  }
+
+  // Check for compound terms like "escape plane"
+  if (conceptLower.includes('escape plane')) {
+    if (!vehicles.some(v => v.name === 'escape plane')) {
+      vehicles.push({
+        name: 'escape plane',
+        type: 'vehicle',
+        role: 'object',
+        description: 'Escape plane - getaway aircraft'
+      });
+    }
+  }
+
+  // Prop patterns
+  const propPatterns = [
+    /\b(gun|weapon|knife|sword|rifle)\b/gi,
+    /\b(briefcase|suitcase|bag|backpack)\b/gi,
+    /\b(phone|computer|laptop|device)\b/gi,
+    /\b(key|card|badge|document)\b/gi,
+  ];
+
+  for (const pattern of propPatterns) {
+    const matches = concept.match(pattern);
+    if (matches) {
+      for (const match of matches) {
+        const name = match.toLowerCase();
+        if (!props.some(p => p.name === name)) {
+          props.push({
+            name,
+            type: 'prop',
+            role: 'object',
+            description: `${name.charAt(0).toUpperCase() + name.slice(1)} - important prop`
+          });
+        }
+      }
+    }
+  }
+
+  console.log('[StoryAnalyst] Extracted entities:', {
+    characters: characters.map(c => c.name),
+    locations: locations.map(l => l.name),
+    vehicles: vehicles.map(v => v.name),
+    props: props.map(p => p.name)
+  });
+
+  return { characters, locations, vehicles, props };
+}
+
 function createFallbackAnalysis(input: StoryAnalysisInput): StoryAnalysisOutput {
   console.log('[StoryAnalyst] Using fallback analysis...');
 
@@ -507,6 +700,9 @@ function createFallbackAnalysis(input: StoryAnalysisInput): StoryAnalysisOutput 
   if (words.some(w => ['funny', 'comedy', 'laugh'].includes(w))) storyType = 'COMEDY';
   if (words.some(w => ['product', 'brand', 'commercial'].includes(w))) storyType = 'COMMERCIAL';
 
+  // Extract entities from concept
+  const extractedEntities = extractEntitiesFromConcept(input.concept);
+
   return {
     concept_analysis: {
       original_concept: input.concept,
@@ -515,6 +711,7 @@ function createFallbackAnalysis(input: StoryAnalysisInput): StoryAnalysisOutput 
       story_type: storyType,
       target_audience: 'general audience'
     },
+    extracted_entities: extractedEntities,
     emotional_journey: {
       opening_emotion: { emotion: 'curiosity', why: 'Draw viewer in' },
       building_tension: { emotion: 'anticipation', why: 'Build stakes' },

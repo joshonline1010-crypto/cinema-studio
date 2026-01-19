@@ -152,12 +152,13 @@ Recommend the right model for each angle:
 
 | Angle Type | Best Model | Why |
 |------------|------------|-----|
-| Dialogue CU with lip sync | seedance-1.5 | Lip sync capability |
+| Dialogue CU with lip sync | veed-fabric | Lip sync capability |
 | Static talking head | veed-fabric | Avatar mode |
+| Close-up/detail shot | sora-2 | Excellent quality on CU |
 | Action/movement | kling-2.6 | General motion |
 | Start→End transition | kling-o1 | Controlled endpoints |
 | POV/atmosphere (no character) | sora-2 | Multi-shot, no precise control needed |
-| B-roll/establishing | sora-2 | Efficient for atmosphere |
+| B-roll/establishing | kling-2.6 | Wide shots need Kling |
 
 ## SORA 2 CANDIDATES
 
@@ -320,7 +321,6 @@ Return JSON with beat_coverages array.`;
     const modelDistribution: Record<VideoModel, number> = {
       'kling-2.6': 0,
       'kling-o1': 0,
-      'seedance-1.5': 0,
       'sora-2': 0,
       'veed-fabric': 0
     };
@@ -418,8 +418,8 @@ Return JSON with beat_coverages array.`;
           purpose: 'Emotional anchor - show face',
           subject: 'hero face',
           camera_movement: 'static',
-          recommended_model: isDialogue ? 'seedance-1.5' : 'kling-2.6',
-          model_reasoning: isDialogue ? 'Dialogue shot needs lip sync' : 'Reaction shot',
+          recommended_model: isDialogue ? 'veed-fabric' : 'kling-2.6',
+          model_reasoning: isDialogue ? 'Dialogue shot needs VEED lip sync' : 'Reaction shot',
           is_primary: false,
           is_dialogue_ready: true,
           sora_candidate: false,

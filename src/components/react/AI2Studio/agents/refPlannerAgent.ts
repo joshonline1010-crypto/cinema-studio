@@ -145,7 +145,7 @@ export const refPlannerAgent = {
   },
 
   /**
-   * Identify what refs are needed based on shots and entities
+   * Identify what refs are needed based on shots and story analysis entities
    */
   identifyRefRequirements(
     shots: ShotPlan[],
@@ -153,6 +153,106 @@ export const refPlannerAgent = {
     storyAnalysis?: StoryAnalysisOutput
   ): RefRequirement[] {
     const refs: RefRequirement[] = [];
+
+    // PRIORITY: Use extracted_entities from story analysis - these have ACTUAL names!
+    const extractedEntities = storyAnalysis?.extracted_entities;
+
+    if (extractedEntities) {
+      console.log('[RefPlanner] Using extracted entities from story analysis');
+
+      // Create CHARACTER_MASTER refs from extracted characters
+      for (const char of extractedEntities.characters || []) {
+        const usedInShots = shots.map(s => s.shot_number); // Characters appear in all shots
+        refs.push({
+          ref_id: `char_${char.name.replace(/\s+/g, '_')}`,
+          ref_type: 'CHARACTER_MASTER',
+          name: char.name,  // ACTUAL name like "woman", "police"
+          description: char.description || `3x3 expression grid for ${char.name}`,
+          grid_type: '3x3_expressions',
+          priority: char.role === 'protagonist' ? 'required' : 'recommended',
+          used_in_shots: usedInShots,
+          generation_prompt_hint: `${char.name} - ${char.description}`
+        });
+      }
+
+      // Create ENVIRONMENT_MASTER refs from extracted locations
+      for (const loc of extractedEntities.locations || []) {
+        const wideShots = shots
+          .filter(s => s.shot_type.includes('WIDE') || s.shot_type.includes('ESTABLISHING'))
+          .map(s => s.shot_number);
+
+        refs.push({
+          ref_id: `env_${loc.name.replace(/\s+/g, '_')}`,
+          ref_type: 'ENVIRONMENT_MASTER',
+          name: loc.name,  // ACTUAL name like "building", "street"
+          description: loc.description || `3x3 angle grid for ${loc.name}`,
+          grid_type: '3x3_angles',
+          priority: 'required',
+          used_in_shots: wideShots.length > 0 ? wideShots : [1, shots.length],
+          generation_prompt_hint: `${loc.name} - ${loc.description}`
+        });
+      }
+
+      // Create PROP_MASTER refs from extracted vehicles and props
+      for (const vehicle of extractedEntities.vehicles || []) {
+        refs.push({
+          ref_id: `vehicle_${vehicle.name.replace(/\s+/g, '_')}`,
+          ref_type: 'PROP_MASTER',
+          name: vehicle.name,  // ACTUAL name like "escape plane", "helicopter"
+          description: vehicle.description || `Reference for ${vehicle.name}`,
+          grid_type: '6_views',
+          priority: 'recommended',
+          used_in_shots: shots.map(s => s.shot_number),
+          generation_prompt_hint: `${vehicle.name} - ${vehicle.description}`
+        });
+      }
+
+      for (const prop of extractedEntities.props || []) {
+        refs.push({
+          ref_id: `prop_${prop.name.replace(/\s+/g, '_')}`,
+          ref_type: 'PROP_MASTER',
+          name: prop.name,  // ACTUAL name like "briefcase", "weapon"
+          description: prop.description || `Reference for ${prop.name}`,
+          grid_type: '6_views',
+          priority: 'optional',
+          used_in_shots: [],
+          generation_prompt_hint: `${prop.name} - ${prop.description}`
+        });
+      }
+
+      // If no characters extracted, add a default based on story
+      if (refs.filter(r => r.ref_type === 'CHARACTER_MASTER').length === 0) {
+        refs.push({
+          ref_id: 'char_main',
+          ref_type: 'CHARACTER_MASTER',
+          name: 'Main Character',
+          description: '3x3 expression grid for main character',
+          grid_type: '3x3_expressions',
+          priority: 'required',
+          used_in_shots: shots.map(s => s.shot_number),
+          generation_prompt_hint: 'Story protagonist'
+        });
+      }
+
+      // If no locations extracted, add main environment
+      if (refs.filter(r => r.ref_type === 'ENVIRONMENT_MASTER').length === 0) {
+        refs.push({
+          ref_id: 'env_main',
+          ref_type: 'ENVIRONMENT_MASTER',
+          name: 'Main Environment',
+          description: '3x3 angle grid for main environment',
+          grid_type: '3x3_angles',
+          priority: 'required',
+          used_in_shots: [1, shots.length],
+          generation_prompt_hint: 'Story environment'
+        });
+      }
+
+      return refs;
+    }
+
+    // FALLBACK: Old method if no extracted entities (shouldn't happen)
+    console.log('[RefPlanner] No extracted entities, using fallback method');
     const charactersSeen = new Set<string>();
     const environmentsSeen = new Set<string>();
 
@@ -217,7 +317,7 @@ export const refPlannerAgent = {
       refs.push({
         ref_id: 'env_main',
         ref_type: 'ENVIRONMENT_MASTER',
-        name: 'main_environment',
+        name: 'Main Environment',
         description: '3x3 angle grid for main environment',
         grid_type: '3x3_angles',
         priority: 'required',
@@ -231,7 +331,7 @@ export const refPlannerAgent = {
       refs.push({
         ref_id: 'prop_main',
         ref_type: 'PROP_MASTER',
-        name: 'key_prop',
+        name: 'Key Prop',
         description: 'Important story prop',
         grid_type: '6_views',
         priority: 'optional',

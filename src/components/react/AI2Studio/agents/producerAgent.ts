@@ -327,16 +327,22 @@ export const producerAgent = {
           deps.push(`photo_${shotCards[i + 1].shot_id}`);
         }
 
-        // Determine render tool from model
-        let renderTool: RenderTool = 'kling-2.6';
-        if (shot.video_model === 'kling-o1') renderTool = 'kling-o1';
-        else if (shot.video_model === 'seedance-1.5') renderTool = 'seedance-1.5';
+        // Determine render tool from model (map Director's video_model to RenderTool)
+        let renderTool: RenderTool = 'sora-2';  // Default to Sora 2 (go-to model!)
+        switch (shot.video_model) {
+          case 'sora-2': renderTool = 'sora-2'; break;
+          case 'kling-2.6': renderTool = 'kling-2.6'; break;
+          case 'kling-o1': renderTool = 'kling-o1'; break;
+          case 'seedance': renderTool = 'seedance-1.5'; break;  // Map seedance → seedance-1.5
+          case 'veed-fabric': renderTool = 'veed-fabric'; break;
+          default: renderTool = 'sora-2';  // Fallback to Sora 2
+        }
 
-        // Check if dialogue needs lip sync
+        // Check if dialogue needs seedance or veed-fabric
         const needsLipSync = shotPlan?.dialogue_info?.has_dialogue &&
                             shotPlan.dialogue_info.speech_mode === 'lip_sync';
-        if (needsLipSync) {
-          renderTool = 'seedance-1.5';  // Force Seedance for lip sync
+        if (needsLipSync && shot.video_model !== 'seedance') {
+          renderTool = 'veed-fabric';  // Simple lip sync → veed-fabric
         }
 
         assets.push({

@@ -21,6 +21,15 @@ import { unifiedPipelineV2, type UnifiedPipelineV2Output } from './agents/unifie
 // Keep V1 for backwards compatibility if needed
 import { unifiedPipeline, type UnifiedPipelineOutput } from './agents/unifiedPipeline';
 
+// 3D World Bridge - Connect to Multi-Angle Studio for visual preview
+import {
+  openViewerWithShots,
+  pushShotsTo3DViewer,
+  playFullSequence,
+  is3DViewerAvailable,
+  convertShotCardsToTimeline
+} from './world3DBridge';
+
 // Mode descriptions
 const MODE_INFO = {
   auto: 'AI decides the best approach',
@@ -45,6 +54,8 @@ interface GeneratedAsset {
   type: 'image' | 'video';
   prompt: string;
   motionPrompt?: string;
+  soraPrompt?: string;    // Sora-specific prompt (timestamped multi-shot format)
+  videoModel?: string;    // Which video model to use
   url?: string;           // Image URL
   videoUrl?: string;      // Video URL
   status: 'pending' | 'generating' | 'done' | 'error';
@@ -207,9 +218,18 @@ export default function AI2Studio() {
   // DEFAULT: true - Execute Plan now runs fully automatic (refs→images→videos→stitch)
   const [autoApprove, setAutoApprove] = useState(true);
 
-  // Video model selection
-  type VideoModel = 'kling-2.6' | 'kling-o1' | 'seedance';
-  const [videoModel, setVideoModel] = useState<VideoModel>('kling-2.6');
+  // TEST MODE - Skip API calls, use mock/cached data for UI testing
+  // When enabled: loads last saved state, skips FAL/generation calls, lets you test UI/pipeline logic
+  const [testMode, setTestMode] = useState(false);
+
+  // Video model selection - 5 models available
+  // sora-2: GO-TO model for everything (close-ups, fast action, anything!)
+  // kling-2.6: Cinematic slow-mo
+  // kling-o1: Start→end transitions (best for chaining)
+  // seedance: HD talking with voice + SFX
+  // veed-fabric: Simple lip sync for talking heads
+  type VideoModel = 'sora-2' | 'kling-2.6' | 'kling-o1' | 'seedance' | 'veed-fabric';
+  const [videoModel, setVideoModel] = useState<VideoModel>('sora-2'); // Sora 2 is the new default GO-TO
   const [autoDetectDialogue, setAutoDetectDialogue] = useState(true); // Auto-switch to Seedance for dialogue
 
   // Frame Chaining - extract last frame of each video, use as input for next
@@ -330,6 +350,137 @@ export default function AI2Studio() {
     { id: 'refn', name: 'Refn', desc: 'Neon-drenched, Drive style', prompt: 'Nicolas Winding Refn style, neon-drenched, extreme color gels, synth-wave aesthetic, Drive style, hyperreal', color: '#D53F8C' },
     { id: 'malick', name: 'Malick', desc: 'Golden hour, ethereal', prompt: 'Terrence Malick style, magic hour golden light, nature documentary style, ethereal, spiritual, whispered feeling', color: '#DD6B20' },
   ];
+
+  // ============================================
+  // TEST MODE - Mock Data for UI Testing
+  // ============================================
+  const MOCK_TEST_DATA = {
+    // Placeholder images (colored gradients for testing)
+    mockImageUrl: (type: string, index: number) => {
+      // Use placeholder.com for test images
+      const colors = ['667eea', '764ba2', 'f093fb', '66a6ff', '89f7fe'];
+      const color = colors[index % colors.length];
+      const labels = {
+        ref: `REF-${index}`,
+        shot: `SHOT-${index}`,
+        character: `CHAR`,
+        location: `LOC`,
+        prop: `PROP`
+      };
+      return `https://via.placeholder.com/512x512/${color}/ffffff?text=${labels[type as keyof typeof labels] || 'TEST'}`;
+    },
+
+    // Mock refs
+    mockRefs: [
+      { id: 'char_woman', name: 'Woman', type: 'character' as const, description: 'Determined woman in tactical gear', status: 'done' as const, url: 'https://via.placeholder.com/512/667eea/ffffff?text=WOMAN+REF', approved: true },
+      { id: 'char_dinosaur', name: 'T-Rex', type: 'character' as const, description: 'Massive T-Rex predator', status: 'done' as const, url: 'https://via.placeholder.com/512/764ba2/ffffff?text=TREX+REF', approved: true },
+      { id: 'loc_bunker', name: 'Bunker', type: 'location' as const, description: 'Post-apocalyptic bunker with blast door', status: 'done' as const, url: 'https://via.placeholder.com/512/66a6ff/ffffff?text=BUNKER+REF', approved: true },
+    ],
+
+    // Mock shot cards (what Shot Compiler outputs)
+    mockShotCards: [
+      {
+        shot_id: 'shot_01',
+        beat_id: 'beat_01',
+        type: 'STATE_IMAGE',
+        shot_type: 'WIDE_ESTABLISHING',
+        refs: { image_1: 'BASE_WORLD', image_2: 'CHARACTER: Woman', image_3: 'LOCATION: Jungle Clearing', others: [] },
+        photo_prompt: 'TEST: Wide shot of woman standing alert in post-apocalyptic jungle clearing, tactical gear, morning light',
+        video_model: 'kling-2.6',
+        video_duration_seconds: 5,
+        video_motion_prompt: 'TEST: Woman turns slowly scanning horizon, leaves rustle in breeze, then holds final pose',
+        sora_prompt: 'TEST: Woman TURNS scanning horizon, eyes wide with tension, then holds',
+        sora_candidate: false,
+      },
+      {
+        shot_id: 'shot_02',
+        beat_id: 'beat_02',
+        type: 'STATE_IMAGE',
+        shot_type: 'CU_REACTION',
+        refs: { image_1: 'LAST_FRAME', image_2: 'CHARACTER: Woman', image_3: 'LOCATION: Jungle Clearing', others: [] },
+        photo_prompt: 'TEST: Close-up of woman face showing fear, eyes widening, sweat on brow',
+        video_model: 'sora-2',
+        video_duration_seconds: 5,
+        video_motion_prompt: 'TEST: Eyes widen in terror, subtle gasp, then holds',
+        sora_prompt: 'TEST: Woman GASPS in terror, eyes WIDEN, breath catches, then holds final expression',
+        sora_candidate: true,
+      },
+      {
+        shot_id: 'shot_03',
+        beat_id: 'beat_03',
+        type: 'STATE_IMAGE',
+        shot_type: 'WIDE_MASTER',
+        refs: { image_1: 'LAST_FRAME', image_2: 'CHARACTER: T-Rex', image_3: 'LOCATION: Jungle Clearing', others: [] },
+        photo_prompt: 'TEST: T-Rex emerges from treeline, massive predator, dust swirling',
+        video_model: 'kling-2.6',
+        video_duration_seconds: 5,
+        video_motion_prompt: 'TEST: T-Rex CHARGES forward, ground shakes, dust billows, then slows to menacing approach',
+        sora_prompt: 'TEST: T-Rex BURSTS from trees, ROARS with ground-shaking force, then settles into predator stance',
+        sora_candidate: false,
+      },
+      {
+        shot_id: 'shot_04',
+        beat_id: 'beat_04',
+        type: 'STATE_IMAGE',
+        shot_type: 'TRACKING_WIDE',
+        refs: { image_1: 'LAST_FRAME', image_2: 'CHARACTER: Woman', image_3: 'LOCATION: Rocky Terrain', others: [] },
+        photo_prompt: 'TEST: Woman sprinting toward bunker in distance, T-Rex pursuing behind',
+        video_model: 'kling-2.6',
+        video_duration_seconds: 5,
+        video_motion_prompt: 'TEST: Woman SPRINTS desperately, T-Rex CHARGES behind, camera TRACKS alongside, then settles',
+        sora_prompt: 'TEST: Woman SPRINTS forward with desperation, arms pumping, then holds stride',
+        sora_candidate: false,
+      },
+      {
+        shot_id: 'shot_05',
+        beat_id: 'beat_05',
+        type: 'STATE_IMAGE',
+        shot_type: 'MEDIUM_SHOT',
+        refs: { image_1: 'LAST_FRAME', image_2: 'CHARACTER: Woman', image_3: 'LOCATION: Bunker Entrance', others: ['PROP: Blast Door'] },
+        photo_prompt: 'TEST: Woman diving through closing blast door, bunker interior visible',
+        video_model: 'kling-o1',
+        video_duration_seconds: 5,
+        video_motion_prompt: 'TEST: Woman DIVES through narrowing gap, door CLOSES behind her, then holds safe inside',
+        sora_prompt: 'TEST: Woman DIVES forward through gap, ROLLS to safety, then holds catching breath',
+        sora_candidate: false,
+      },
+    ],
+  };
+
+  // Test-mode-aware image generation helper
+  const generateWithTestMode = async (
+    type: string,
+    prompt: string,
+    index: number = 0,
+    extraParams?: Record<string, any>
+  ): Promise<{ url?: string; error?: string }> => {
+    if (testMode) {
+      // In test mode, return mock URL after fake delay
+      console.log(`[TEST MODE] Skipping API call for: ${type} - ${prompt.substring(0, 50)}...`);
+      await new Promise(r => setTimeout(r, 500 + Math.random() * 500)); // Fake 0.5-1s delay
+      return {
+        url: MOCK_TEST_DATA.mockImageUrl(
+          type === 'image' ? 'shot' : type.includes('char') ? 'character' : type.includes('loc') ? 'location' : 'ref',
+          index
+        )
+      };
+    }
+
+    // Real API call
+    const response = await fetch('/api/cinema/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, prompt, ...extraParams })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { error: errorData.error || `API error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    return { url: data.url };
+  };
 
   // Handle ref image upload - prompts for name (no limit)
   const handleRefImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -725,7 +876,11 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
         finalVideoUrl,
         voiceoverUrl,
         voiceoverText,
-        accumulatedPlans
+        accumulatedPlans,
+        // SPEC DATA - includes shot cards with refs info
+        specShotCards: specShotCards,
+        specBeats: specBeats,
+        specWorldState: specWorldState
       };
 
       await fetch('/api/ai/project', {
@@ -763,8 +918,12 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
         if (ps.voiceoverUrl) setVoiceoverUrl(ps.voiceoverUrl);
         if (ps.voiceoverText) setVoiceoverText(ps.voiceoverText);
         if (ps.accumulatedPlans?.length) setAccumulatedPlans(ps.accumulatedPlans);
+        // SPEC DATA - restore shot cards with refs info
+        if (ps.specShotCards) setSpecShotCards(ps.specShotCards);
+        if (ps.specBeats) setSpecBeats(ps.specBeats);
+        if (ps.specWorldState) setSpecWorldState(ps.specWorldState);
 
-        console.log(`[AI2] Project state loaded: ${ps.generatedAssets?.length || 0} assets, ${ps.generatedRefs?.length || 0} refs`);
+        console.log(`[AI2] Project state loaded: ${ps.generatedAssets?.length || 0} assets, ${ps.generatedRefs?.length || 0} refs, ${ps.specShotCards?.shotCards?.length || 0} shots`);
       }
     } catch (error) {
       console.error('[AI2] Failed to load project state:', error);
@@ -773,12 +932,13 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
 
   // Auto-save project state when significant changes happen
   useEffect(() => {
-    // Save when we have assets or refs
-    if (generatedAssets.length > 0 || generatedRefs.length > 0 || finalVideoUrl) {
+    // Save when we have assets, refs, OR uploaded ref images
+    const hasData = generatedAssets.length > 0 || generatedRefs.length > 0 || finalVideoUrl || refImages.length > 0;
+    if (hasData) {
       const timer = setTimeout(() => saveProjectState(), 2000); // Debounce 2s
       return () => clearTimeout(timer);
     }
-  }, [generatedAssets, generatedRefs, finalVideoUrl, currentSessionId]);
+  }, [generatedAssets, generatedRefs, finalVideoUrl, currentSessionId, refImages]);
 
   // MEMOIZE: Pre-calculate all refs data to avoid recalculation on every render
   // This fixes lag when many photos are displayed
@@ -1558,29 +1718,54 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
       }
     };
 
-    // ============ PHASE 1: Generate BASE shots first ============
-    console.log(`[AI2] PHASE 1: Generating ${baseIndices.size} base shots...`);
-    const basePromises = [...baseIndices].map(i => generateShot(shots[i], i, []));
-    const baseResults = await Promise.all(basePromises);
+    // ============ PHASE 1: Generate BASE shots first (ONE BY ONE) ============
+    console.log(`[AI2] PHASE 1: Generating ${baseIndices.size} base shots ONE BY ONE...`);
+    const baseResults: Array<{index: number; success: boolean; url?: string; sceneId?: string}> = [];
+    let imageCount = 0;
+    const totalImages = baseIndices.size + nonBaseIndices.length;
 
-    // Store base shot URLs for each scene
-    baseResults.forEach(result => {
+    for (const i of [...baseIndices]) {
+      imageCount++;
+      console.log(`[AI2] 📸 Generating image ${imageCount}/${totalImages} (base shot ${i + 1})...`);
+      setGenerationProgress({ current: imageCount - 1, total: totalImages });
+
+      const result = await generateShot(shots[i], i, []);
+      baseResults.push(result);
+
+      // Store base shot URL for scene
       if (result.success && result.url && result.sceneId) {
         sceneBaseUrls[result.sceneId] = result.url;
-        console.log(`[AI2] Scene "${result.sceneId}" base shot URL stored`);
+        console.log(`[AI2] ✅ Scene "${result.sceneId}" base shot complete`);
+      } else if (!result.success) {
+        console.log(`[AI2] ❌ Base shot ${i + 1} failed`);
       }
-    });
+    }
 
-    // ============ PHASE 2: Generate NON-BASE shots with base refs ============
-    console.log(`[AI2] PHASE 2: Generating ${nonBaseIndices.length} non-base shots with base refs...`);
-    const nonBasePromises = nonBaseIndices.map((i: number) => {
+    // ============ PHASE 2: Generate NON-BASE shots with base refs (ONE BY ONE) ============
+    console.log(`[AI2] PHASE 2: Generating ${nonBaseIndices.length} non-base shots ONE BY ONE...`);
+    const nonBaseResults: Array<{index: number; success: boolean; url?: string; sceneId?: string}> = [];
+
+    for (const i of nonBaseIndices) {
+      imageCount++;
+      console.log(`[AI2] 📸 Generating image ${imageCount}/${totalImages} (shot ${i + 1})...`);
+      setGenerationProgress({ current: imageCount - 1, total: totalImages });
+
       const shot = shots[i];
       const sceneId = shot.scene_id || 'default';
       const baseUrl = sceneBaseUrls[sceneId];
       const extraRefs = baseUrl ? [baseUrl] : [];
-      return generateShot(shot, i, extraRefs);
-    });
-    const nonBaseResults = await Promise.all(nonBasePromises);
+
+      const result = await generateShot(shot, i, extraRefs);
+      nonBaseResults.push(result);
+
+      if (result.success) {
+        console.log(`[AI2] ✅ Shot ${i + 1} complete`);
+      } else {
+        console.log(`[AI2] ❌ Shot ${i + 1} failed`);
+      }
+    }
+
+    setGenerationProgress({ current: totalImages, total: totalImages });
 
     // Combine all results
     const imageResults = [...baseResults, ...nonBaseResults];
@@ -1691,17 +1876,19 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
 
   // Map videoModel state to API type
   const getVideoApiType = (model: string, motionPrompt: string): string => {
-    // Auto-detect dialogue if enabled
+    // Auto-detect dialogue if enabled - route to Seedance for HD talking
     if (autoDetectDialogue && isDialoguePrompt(motionPrompt)) {
-      console.log('[AI2] Dialogue detected in prompt - routing to Seedance');
+      console.log('[AI2] Dialogue detected in prompt - routing to Seedance (HD talking)');
       return 'video-seedance';
     }
 
     switch (model) {
-      case 'kling-2.6': return 'video-kling';
-      case 'kling-o1': return 'video-kling-o1';
-      case 'seedance': return 'video-seedance';
-      default: return 'video-kling';
+      case 'sora-2': return 'video-sora-2';       // GO-TO model for everything
+      case 'kling-2.6': return 'video-kling';      // Cinematic slow-mo
+      case 'kling-o1': return 'video-kling-o1';    // Start→end transitions
+      case 'seedance': return 'video-seedance';    // HD talking + SFX
+      case 'veed-fabric': return 'video-veed-fabric'; // Simple lip sync
+      default: return 'video-sora-2';              // Fallback to Sora 2
     }
   };
 
@@ -1714,6 +1901,65 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
       console.log('[AI2] No approved shots to generate videos for');
       return;
     }
+
+    // ============================================
+    // TEST MODE - Skip API calls, use existing video URLs or simulate
+    // ============================================
+    if (testMode) {
+      console.log(`[TEST MODE] 🧪 Simulating video generation for ${approvedAssets.length} shots`);
+      setIsGeneratingAssets(true);
+      setPipelinePhase('videos');
+
+      // Check if we already have video URLs from saved data
+      const hasExistingVideos = approvedAssets.some(a => a.videoUrl);
+
+      // Simulate video generation with delays
+      for (let i = 0; i < approvedAssets.length; i++) {
+        const asset = approvedAssets[i];
+        const index = generatedAssets.findIndex(a => a.id === asset.id);
+
+        // Mark as generating
+        setGeneratedAssets(prev => prev.map((a, idx) =>
+          idx === index ? { ...a, videoStatus: 'generating' } : a
+        ));
+        setGenerationProgress({ current: i, total: approvedAssets.length });
+
+        // Fake delay (shorter if we have existing videos)
+        await new Promise(r => setTimeout(r, hasExistingVideos ? 200 : 600 + Math.random() * 400));
+
+        // Mark as done - keep existing videoUrl if present, otherwise use placeholder
+        const videoUrl = asset.videoUrl || `https://via.placeholder.com/512x288/1a1a2e/ffffff?text=VIDEO+${i+1}`;
+        setGeneratedAssets(prev => prev.map((a, idx) =>
+          idx === index ? { ...a, videoStatus: 'done', videoUrl } : a
+        ));
+      }
+
+      setGenerationProgress({ current: approvedAssets.length, total: approvedAssets.length });
+      setPipelinePhase('stitching');
+
+      // Fake stitch
+      await new Promise(r => setTimeout(r, 300));
+
+      // Keep existing final video URL if present
+      if (!finalVideoUrl) {
+        setFinalVideoUrl('https://via.placeholder.com/1280x720/1a1a2e/ffffff?text=FINAL+VIDEO+(TEST+MODE)');
+      }
+      setPipelinePhase('done');
+      setIsGeneratingAssets(false);
+
+      const hadVideos = hasExistingVideos ? '(restored from saved run)' : '(placeholder URLs)';
+      addMessage('assistant', `🧪 **TEST MODE - Video Generation Simulated**
+
+**${approvedAssets.length} videos** marked complete ${hadVideos}
+**No API calls** - credits saved!
+
+${hasExistingVideos ? 'Your previously generated videos are preserved.' : 'Placeholder URLs used since no saved videos found.'}`);
+      return;
+    }
+
+    // ============================================
+    // REAL MODE - Generate actual videos
+    // ============================================
     console.log(`[AI2] generateVideosWithAssets called with ${approvedAssets.length} assets (passed directly: ${!!passedAssets})`);
     console.log(`[AI2] Frame chaining: ${enableChaining ? 'ENABLED (sequential)' : 'DISABLED (parallel)'}`);
 
@@ -1742,17 +1988,28 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
         const compressedUrl = compressData.image_url || compressData.compressed_url || asset.url;
         console.log(`[AI2] Compressed: ${compressedUrl?.substring(0, 50)}... (${compressData.compressed_size ? Math.round(compressData.compressed_size/1024) + 'KB' : 'unknown size'})`);
 
-        const motionPrompt = asset.motionPrompt || 'Slow cinematic movement, then settles';
         const duration = asset.duration || defaultDuration;
 
         // Determine which video model to use (may auto-switch for dialogue)
-        const apiType = getVideoApiType(videoModel, motionPrompt);
+        // Prefer asset's videoModel if set by director, otherwise use global videoModel
+        const effectiveModel = asset.videoModel || videoModel;
+        const motionPrompt = asset.motionPrompt || 'Slow cinematic movement, then settles';
+        const apiType = getVideoApiType(effectiveModel, motionPrompt);
         console.log(`[AI2] Using video model: ${apiType} for shot ${index + 1}`);
+
+        // Use Sora-specific prompt if available and model is Sora
+        const promptToUse = (apiType === 'video-sora' && asset.soraPrompt)
+          ? asset.soraPrompt
+          : motionPrompt;
+
+        if (apiType === 'video-sora' && asset.soraPrompt) {
+          console.log(`[AI2] Using SORA prompt format for shot ${index + 1}`);
+        }
 
         // Build request body based on model type
         const requestBody: any = {
           type: apiType,
-          prompt: motionPrompt,
+          prompt: promptToUse,
           aspect_ratio: aspectRatio
         };
 
@@ -1782,7 +2039,7 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
               console.log(`[AI2] O1 transition: start→end frame set`);
             }
           }
-        } else if (apiType === 'video-seedance') {
+        } else if (apiType === 'video-veed-fabric' || apiType === 'video-sora') {
           requestBody.image_url = startImageUrl;
         } else {
           requestBody.image_url = startImageUrl;
@@ -1922,14 +2179,169 @@ ${visRec?.cameraMovement ? `- **Camera:** ${visRec.cameraMovement}` : ''}
   };
 
   // ============================================
+  // TEST SINGLE IMAGE - Verify FAL works before full run
+  // ============================================
+  const [testingFal, setTestingFal] = useState(false);
+  const [testImageUrl, setTestImageUrl] = useState<string | null>(null);
+
+  const testSingleImage = async () => {
+    console.log('[AI2] 🧪 Testing FAL with single image...');
+    setTestingFal(true);
+    setTestImageUrl(null);
+    addMessage('assistant', `🧪 **Testing FAL API...**\n\nGenerating ONE test image to verify your account works.`);
+
+    try {
+      // Use first uploaded ref if available, otherwise simple test prompt
+      const hasRef = refImages.length > 0 && refImages[0].url?.startsWith('http');
+      const testPrompt = hasRef
+        ? `${refImages[0].description || 'Character'}, high quality portrait, studio lighting, 8K detail`
+        : 'A simple red cube on white background, 3D render, studio lighting';
+
+      const requestBody: any = {
+        type: hasRef ? 'edit' : 'image',
+        prompt: testPrompt,
+        aspect_ratio: '1:1',
+        resolution: '2K'
+      };
+
+      if (hasRef) {
+        requestBody.image_urls = [refImages[0].url];
+      }
+
+      console.log('[AI2] Test request:', requestBody);
+
+      const response = await fetch('/api/cinema/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `API error: ${response.status}`);
+      }
+
+      // API returns { success, image_url, video_url, raw }
+      const imageUrl = data.image_url || data.images?.[0]?.url || data.image?.url || data.url;
+      if (imageUrl) {
+        setTestImageUrl(imageUrl);
+        addMessage('assistant', `✅ **FAL Works!**\n\n![Test Image](${imageUrl})\n\n**You're ready to run the full pipeline!**`);
+      } else {
+        console.error('[AI2] FAL response:', data);
+        throw new Error('No image URL in response - check console for details');
+      }
+    } catch (error: any) {
+      console.error('[AI2] FAL test failed:', error);
+      addMessage('assistant', `❌ **FAL Test Failed**\n\n${error.message}\n\n**Check:**\n- FAL balance at https://fal.ai/dashboard/billing\n- API key in .env file`);
+    } finally {
+      setTestingFal(false);
+    }
+  };
+
+  // ============================================
   // SPEC PIPELINE (PDF Bible v4.0)
   // ============================================
 
   /**
    * Run the UNIFIED pipeline - Director + Council + Spec + Validation ALL IN ONE
    * No toggles, no modes - just complete production planning
+   *
+   * TEST MODE: When testMode is ON, loads mock data instantly without API calls
    */
   const runSpecPipeline = async (concept: string, targetDuration: number = 30) => {
+    // ============================================
+    // TEST MODE - Load from last saved session
+    // ============================================
+    if (testMode) {
+      console.log('[TEST MODE] 🧪 Loading from last saved session...');
+      addMessage('assistant', `🧪 **TEST MODE - Loading Last Saved Run**
+
+Looking for most recent saved session with data...`);
+
+      try {
+        // Find the most recent session with data
+        const sessionsToTry = sessions.length > 0 ? sessions : [{ id: currentSessionId }];
+        let loadedData = false;
+
+        for (const session of sessionsToTry) {
+          if (!session.id) continue;
+
+          const response = await fetch(`/api/ai/project?sessionId=${session.id}`);
+          const data = await response.json();
+
+          if (data.projectState && (data.projectState.generatedAssets?.length > 0 || data.projectState.specShotCards?.shotCards?.length > 0)) {
+            const ps = data.projectState;
+            console.log(`[TEST MODE] Found saved data in session: ${session.id}`);
+
+            // Restore all state from saved session
+            if (ps.generatedAssets?.length) setGeneratedAssets(ps.generatedAssets);
+            if (ps.generatedRefs?.length) setGeneratedRefs(ps.generatedRefs);
+            if (ps.characterRefs?.length) setCharacterRefs(ps.characterRefs);
+            if (ps.productRefs?.length) setProductRefs(ps.productRefs);
+            if (ps.locationRefs?.length) setLocationRefs(ps.locationRefs);
+            if (ps.refImages?.length) setRefImages(ps.refImages);
+            if (ps.specShotCards) setSpecShotCards(ps.specShotCards);
+            if (ps.specBeats) setSpecBeats(ps.specBeats);
+            if (ps.specWorldState) setSpecWorldState(ps.specWorldState);
+            if (ps.finalVideoUrl) setFinalVideoUrl(ps.finalVideoUrl);
+
+            setPipelinePhase('approval');
+            setPipelineStatus('Loaded from saved run');
+            setIsGeneratingAssets(false);
+
+            const assetCount = ps.generatedAssets?.length || 0;
+            const refCount = ps.generatedRefs?.length || 0;
+            const shotCount = ps.specShotCards?.shotCards?.length || 0;
+
+            addMessage('assistant', `✅ **Loaded Last Saved Run!**
+
+**Session:** ${session.id}
+**${assetCount} Assets** (images with prompts)
+**${refCount} Refs** (characters, locations)
+**${shotCount} Shot Cards** (with ref assignments)
+
+All data restored from your previous real run.
+No API calls made - you can test UI changes freely!
+
+**To run a NEW real pipeline:** Turn off Test Mode first.`);
+
+            loadedData = true;
+            break;
+          }
+        }
+
+        if (!loadedData) {
+          // No saved data found - tell user to do a real run first
+          addMessage('assistant', `⚠️ **No Saved Data Found**
+
+Test Mode needs a previous run to load from.
+
+**To create test data:**
+1. Turn OFF Test Mode (click the yellow "TEST" button)
+2. Run a real pipeline (this will call APIs and spend credits)
+3. Wait for it to complete
+4. Turn ON Test Mode
+5. Now "Run Pipeline" will load that saved data instantly!
+
+The data auto-saves after each real run.`);
+        }
+
+        return;
+      } catch (error) {
+        console.error('[TEST MODE] Error loading saved data:', error);
+        addMessage('assistant', `❌ **Error loading saved data**
+
+${error}
+
+Try running a real pipeline first to create saved data.`);
+        return;
+      }
+    }
+
+    // ============================================
+    // REAL MODE - Run actual pipeline
+    // ============================================
     console.log('[AI2] 🚀 Running UNIFIED Pipeline for:', concept.substring(0, 50) + '...');
     addMessage('assistant', `🎬 **UNIFIED PIPELINE Started**
 
@@ -2039,6 +2451,8 @@ Running all phases automatically...`);
         type: 'image' as const,
         prompt: card.photo_prompt,
         motionPrompt: card.video_motion_prompt,
+        soraPrompt: card.sora_prompt,           // Sora-specific prompt
+        videoModel: card.video_model,           // Which model to use
         status: 'pending' as const,
         duration: String(card.video_duration_seconds) as '5' | '10'
       }));
@@ -2430,6 +2844,22 @@ ${JSON.stringify(specPlan, null, 2)}
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
             Auto
+          </button>
+
+          {/* TEST MODE toggle - Skip API calls, use cached data */}
+          <button
+            onClick={() => setTestMode(!testMode)}
+            className={`px-3 py-1.5 text-sm rounded-lg transition flex items-center gap-1.5 ${
+              testMode
+                ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50 animate-pulse'
+                : 'bg-white/10 text-white/50 hover:bg-white/20'
+            }`}
+            title="TEST MODE: Skip FAL API calls, use mock data for UI testing (saves credits!)"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            {testMode ? 'TEST' : 'Test'}
           </button>
 
           {/* 3D Camera toggle - OPTIONAL override for specific angles (consistency is automatic) */}
@@ -2848,11 +3278,32 @@ ${JSON.stringify(specPlan, null, 2)}
                       </div>
                     )}
 
+                    {/* TEST FAL BUTTON - Verify API works before full run */}
+                    <button
+                      onClick={testSingleImage}
+                      disabled={testingFal}
+                      className="w-full py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-500/50 rounded-lg hover:bg-yellow-500/30 transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                    >
+                      {testingFal ? (
+                        <>
+                          <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Testing FAL...
+                        </>
+                      ) : (
+                        <>
+                          <span>🧪</span>
+                          Test FAL (1 image) - Verify before full run
+                        </>
+                      )}
+                    </button>
+
                     {/* SPEC PIPELINE BUTTON (when enabled) */}
                     {useSpecPipeline && (
                       <button
                         onClick={() => runSpecPipeline(concept, 30)}
-                        disabled={pendingUploads.length > 0 || !concept}
+                        disabled={pendingUploads.length > 0 || !concept || testingFal}
                         className="w-full py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition flex items-center justify-center gap-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <span className="text-lg">🌍</span>
@@ -2881,9 +3332,18 @@ ${JSON.stringify(specPlan, null, 2)}
               if (useSpecPipeline && !isGenerating && !isGeneratingAssets && concept) {
                 return (
                   <div className="space-y-2">
+                    {/* TEST FAL BUTTON */}
+                    <button
+                      onClick={testSingleImage}
+                      disabled={testingFal}
+                      className="w-full py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-500/50 rounded-lg hover:bg-yellow-500/30 transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                    >
+                      {testingFal ? '🔄 Testing...' : '🧪 Test FAL (1 image)'}
+                    </button>
                     <button
                       onClick={() => runSpecPipeline(concept, 30)}
-                      className="w-full py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition flex items-center justify-center gap-2 font-semibold"
+                      disabled={testingFal}
+                      className="w-full py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition flex items-center justify-center gap-2 font-semibold disabled:opacity-50"
                     >
                       <span className="text-lg">🌍</span>
                       Run Spec Pipeline
@@ -3171,6 +3631,32 @@ ${JSON.stringify(specPlan, null, 2)}
                               </button>
                             </div>
                           )}
+                          {/* 3D VIEWER BUTTONS - View shots in Multi-Angle Studio */}
+                          {latestPlan?.shots?.length > 0 && (
+                            <div className="flex gap-2 ml-2">
+                              <button
+                                onClick={() => {
+                                  const shotCards = latestPlan.shots || [];
+                                  openViewerWithShots(shotCards as any[], undefined, 'AI2 Project');
+                                }}
+                                className="px-2 py-1 bg-cyan-500/20 text-cyan-300 rounded text-xs hover:bg-cyan-500/30 flex items-center gap-1"
+                                title="Open 3D viewer with shots"
+                              >
+                                🎬 View in 3D
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const shotCards = latestPlan.shots || [];
+                                  pushShotsTo3DViewer(shotCards as any[], undefined, 'AI2 Project');
+                                  playFullSequence();
+                                }}
+                                className="px-2 py-1 bg-orange-500/20 text-orange-300 rounded text-xs hover:bg-orange-500/30 flex items-center gap-1"
+                                title="Play sequence in 3D viewer"
+                              >
+                                ▶️ Play Sequence
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         {/* Segment Filter Tabs - only show if we have segments */}
@@ -3289,17 +3775,15 @@ ${JSON.stringify(specPlan, null, 2)}
                                     {shot?.refs?.image_2 && (
                                       <div className="flex items-center gap-1">
                                         <span className="px-1.5 py-0.5 bg-purple-500/20 rounded text-[9px] text-purple-200">
-                                          2️⃣ {shot.refs.image_2.includes('CHARACTER') ? '👤 ' : ''}
-                                          {shot.refs.image_2 || 'Character Ref'}
+                                          👤 {shot.refs.image_2.replace('CHARACTER: ', '').replace('CHARACTER_MASTER', 'Character')}
                                         </span>
                                       </div>
                                     )}
                                     {/* Image 3: Environment ref */}
                                     {shot?.refs?.image_3 && (
                                       <div className="flex items-center gap-1">
-                                        <span className="px-1.5 py-0.5 bg-blue-500/20 rounded text-[9px] text-blue-200">
-                                          3️⃣ {shot.refs.image_3.includes('ENVIRONMENT') ? '🏞️ ' : ''}
-                                          {shot.refs.image_3 || 'Environment Ref'}
+                                        <span className="px-1.5 py-0.5 bg-green-500/20 rounded text-[9px] text-green-200">
+                                          🏞️ {shot.refs.image_3.replace('LOCATION: ', '').replace('ENVIRONMENT_MASTER', 'Location')}
                                         </span>
                                       </div>
                                     )}
@@ -3373,18 +3857,12 @@ ${JSON.stringify(specPlan, null, 2)}
                                   <div className="mb-2 flex items-center gap-2">
                                     <span className={`px-2 py-0.5 rounded text-[9px] font-medium ${
                                       shot.video_model === 'sora-2' ? 'bg-green-500/20 text-green-300' :
-                                      shot.video_model === 'seedance-1.5' ? 'bg-pink-500/20 text-pink-300' :
                                       shot.video_model === 'kling-o1' ? 'bg-amber-500/20 text-amber-300' :
                                       shot.video_model === 'veed-fabric' ? 'bg-purple-500/20 text-purple-300' :
                                       'bg-blue-500/20 text-blue-300'
                                     }`}>
                                       🎬 {shot.video_model}
                                     </span>
-                                    {shot?.sora_preset && (
-                                      <span className="px-1.5 py-0.5 bg-green-500/10 rounded text-[8px] text-green-300/70">
-                                        {shot.sora_preset}
-                                      </span>
-                                    )}
                                   </div>
                                 )}
 
@@ -3422,12 +3900,17 @@ ${JSON.stringify(specPlan, null, 2)}
                             const shot = latestPlan?.shots?.[idx];
                             const hasImage = asset.status === 'done' && asset.url;
                             const hasVideo = asset.videoStatus === 'done' && asset.videoUrl;
-                            // Check ALL possible motion prompt field names
-                            const motionText = asset.motionPrompt || shot?.motion_prompt || shot?.video_prompt || shot?.motion || shot?.camera_movement || shot?.movement || '';
+                            // Determine effective model for this shot
+                            const effectiveModel = asset.videoModel || shot?.video_model || videoModel;
+                            // Use Sora prompt for Sora shots, otherwise standard motion prompt
+                            const isSoraShot = effectiveModel === 'sora-2';
+                            const motionText = isSoraShot && asset.soraPrompt
+                              ? asset.soraPrompt
+                              : (asset.motionPrompt || shot?.motion_prompt || shot?.video_prompt || shot?.motion || shot?.camera_movement || shot?.movement || '');
                             const isDialogue = motionText.toLowerCase().includes('speak') || motionText.toLowerCase().includes('talk') || motionText.toLowerCase().includes('dialogue');
                             const hasEndFrame = idx < (latestPlan?.shots?.length || 0) - 1;
-                            const videoType = isDialogue ? 'Dialogue' : hasEndFrame && videoModel === 'kling-o1' ? 'Start→End' : 'Motion';
-                            const modelName = isDialogue ? 'Seedance' : videoModel === 'kling-2.6' ? 'Kling 2.6' : videoModel === 'kling-o1' ? 'Kling O1' : 'Seedance';
+                            const videoType = isDialogue ? 'Dialogue' : isSoraShot ? 'Sora Multi-Shot' : hasEndFrame && videoModel === 'kling-o1' ? 'Start→End' : 'Motion';
+                            const modelName = isDialogue ? 'VEED' : effectiveModel === 'kling-2.6' ? 'Kling 2.6' : effectiveModel === 'kling-o1' ? 'Kling O1' : effectiveModel === 'sora-2' ? 'Sora 2' : 'VEED';
 
                             return (
                               <div key={asset.id} className="bg-white/5 rounded-xl p-3 border border-purple-500/20">
@@ -3524,7 +4007,8 @@ ${JSON.stringify(specPlan, null, 2)}
                                     <div className="flex items-center gap-1">
                                       <span className={`px-1.5 py-0.5 rounded text-[9px] ${
                                         shot?.video_model === 'sora-2' ? 'bg-green-500/20 text-green-200' :
-                                        shot?.video_model === 'seedance-1.5' ? 'bg-pink-500/20 text-pink-200' :
+                                        shot?.video_model === 'veed-fabric' ? 'bg-pink-500/20 text-pink-200' :
+                                        shot?.video_model === 'kling-o1' ? 'bg-amber-500/20 text-amber-200' :
                                         'bg-purple-500/20 text-purple-200'
                                       }`}>
                                         ⚙️ Model: {shot?.video_model || modelName}

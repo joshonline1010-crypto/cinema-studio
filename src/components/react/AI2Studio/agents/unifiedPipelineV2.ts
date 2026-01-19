@@ -447,6 +447,9 @@ export const unifiedPipelineV2 = {
         cameraRigs: world?.cameraRigs || { rigs: {} },
         beats: beats.beats || [],
         masterRefs,
+        // Pass story context for building motion prompts!
+        concept: input.concept,
+        storyAnalysis,
         directorPlan: {
           shotSequence: direction.shot_sequence,
           refAssignments: direction.ref_assignments,

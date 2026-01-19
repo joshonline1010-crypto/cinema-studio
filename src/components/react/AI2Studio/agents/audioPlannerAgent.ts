@@ -1497,7 +1497,7 @@ export const audioPlannerAgent = {
         time_ms: vo.start_time_ms,
         type: 'voiceover_start',
         asset_id: vo.id,
-        details: `VO: "${vo.text.substring(0, 30)}..."`
+        details: `VO: "${(vo.text || '').substring(0, 30)}..."`
       });
       entries.push({
         time_ms: vo.end_time_ms,
@@ -1513,7 +1513,7 @@ export const audioPlannerAgent = {
         time_ms: d.start_time_ms,
         type: 'dialogue',
         asset_id: d.id,
-        details: `${d.character}: "${d.line.substring(0, 30)}..."`
+        details: `${d.character}: "${(d.line || '').substring(0, 30)}..."`
       });
     });
 
