@@ -805,47 +805,240 @@ When user says "make it more X" or "change Y":
 
 # VIDEO MODEL SELECTION (CRITICAL!)
 
-The system auto-selects the best video model based on your prompt. Use the RIGHT keywords:
+## MODEL ROLES
 
-## SEEDANCE 1.5 PRO (Dialogue & Lip-Sync)
-Use when character SPEAKS. Triggers: says, speaks, whispers, exclaims, dialogue, UGC, talking head, interview
+### SEEDANCE 1.5 - DIALOGUE & TALKING SHOTS
+Use for:
+- Talking / dialogue / lip-sync
+- Talking WHILE action happening (driving, explosions in background)
+- Close-ups with character speaking
+- Zooms with dialogue
 
-SEEDANCE VIDEO PROMPT FORMAT:
+BEST FOR: Face detail, hand movements, talking + action backgrounds, zooms.
+
+SEEDANCE PROMPT FORMAT:
 \`\`\`
-[SHOT TYPE]. [CHARACTER DESCRIPTION].
-[CAMERA MOVEMENT]. She speaks [TONE]: "[DIALOGUE]".
-[STYLE], [LIGHTING], [AUDIO].
+[SHOT TYPE]. [CHARACTER ACTION].
+[CAMERA MOVEMENT]. Character speaks [TONE]: "[DIALOGUE]".
+[STYLE], [SETTLE].
 \`\`\`
 
-EXAMPLE:
-"Medium close-up, eye level, soft bokeh. Confident woman with natural expressions.
-Slow push-in, focus on eyes. She speaks warmly: 'Let me show you how this works.'
-Cinematic UGC style, clean indoor lighting, natural room tone."
+SEEDANCE EXAMPLES:
+- "Character speaks animatedly, gestures with hands, returns to rest"
+- "Subject delivers line with serious expression, slight head nod"
+- "Person speaks while looking slightly off-camera, finishes and looks forward"
+- "Character whispers urgently, leans in, then pulls back"
+- "Face shifts from neutral to concerned, brows furrow, relaxes"
+- "Character laughs, shoulders shake, settles into smile"
+- "Eyes widen in surprise, mouth opens, composes self"
+
+SEEDANCE + ACTION BACKGROUND:
+- "Interior car, driver speaks urgently while BACKGROUND SCENERY RUSHES PAST WINDOW, hands grip wheel, then steadies"
+- "Character speaks calmly, explosion visible through window behind, debris drifts past, settles"
 
 SEEDANCE RULES:
-- Include actual dialogue in quotes: She says: "Your text here"
+- Include actual dialogue in quotes: Character speaks: "Your text here"
 - Specify emotion: speaks warmly, exclaims excitedly, whispers softly
-- Specify language if non-English: "speaks in Mandarin with professional tone"
+- CAN handle action backgrounds while talking
 - Audio is auto-generated - no separate TTS needed!
 
-## KLING O1 (Start→End Transitions)
-Use when you have START and END frames showing a transformation.
-Best for: angle changes, state changes, time transitions
+---
 
-## KLING 2.6 (General Motion)
-Default for action, camera movements, environment motion without dialogue.
-Best for: dolly shots, orbits, action sequences
+### KLING 2.6 - CINEMATIC SLOW-MO & WIDE SHOTS
+Use for:
+- Cinematic slow motion shots
+- Wide establishing shots
+- Slow-mo action (fighting, impacts, hero moments)
+- VFX shots (explosions, debris, fire)
+- Multiple angles of same action (generate each angle separately)
+
+BEST FOR: Premium 4K cinematic quality, slow-mo, wide shots, VFX.
+
+KLING 2.6 PROMPT FORMAT:
+\`\`\`
+[CAMERA MOVEMENT], [SUBJECT MOTION], [BACKGROUND MOTION], then [ENDPOINT]
+\`\`\`
+
+KLING 2.6 CAMERA MOVEMENTS:
+- "slow dolly shot around the subject, camera settles to rest"
+- "push-in on face, movement slows then holds"
+- "camera orbits slowly around subject, completes quarter turn then stops"
+- "smooth tracking shot following from side, pace matches subject"
+- "static shot, subtle breathing motion, minimal movement"
+- "slight handheld movement, documentary feel, steadies"
+- "cinematic dolly zoom, zali effect, then holds" (WORKS GREAT!)
+
+KLING 2.6 SUBJECT MOTION:
+- "character walks toward camera, stops and looks up"
+- "hair moves in breeze, then settles back into place"
+- "subject turns head slowly left to right, returns to center"
+- "eyes blink twice, expression shifts to smile, holds"
+
+KLING 2.6 ENVIRONMENT:
+- "fire billows in background, flames dance then calm"
+- "leaves fall gently, drift to ground and settle"
+- "water ripples spread outward, waves dissipate"
+- "smoke rises slowly, disperses into air"
+- "clouds drift across sky, movement slows"
+
+KLING 2.6 RULES:
+- Video prompts = MOTION ONLY (image has all visual info)
+- ONE camera movement at a time
+- ADD MOTION ENDPOINTS (prevents 99% hang)
+- Use POWER VERBS: WALKING, BILLOWING, CHARGING, ERUPTING
+- Duration: "5" or "10" only (strings!)
+
+---
+
+### SORA 2 - FAST ACTION & MULTI-SHOT AUTO-EDIT (GO-TO DEFAULT!)
+Use for:
+- Fast-paced action with quick cuts
+- Close-ups / macro details (faces, hands, feet, eyes)
+- Insert shots (buttons, dials, doors, props)
+- SFX-heavy shots (explosions, fire, smoke, debris)
+- Multi-shot sequences where AI handles the editing
+- When in doubt, use Sora 2!
+
+BEST FOR: Fast action, quick cuts, close-ups, insert shots, multi-shot sequences.
+
+SORA 2 IS UNIQUE: Give it ONE base photo and a multi-shot prompt.
+It generates ALL the cuts, angle changes, and timing IN ONE GENERATION.
+
+## SORA 2 MULTI-SHOT FORMAT
+
+For fast action sequences, use this format:
+\`\`\`
+[CUT TYPE] - [SHOT TYPE] of [SPECIFIC SUBJECT], [ACTION], [DETAIL 1], [DETAIL 2], [DURATION], [FOCUS/TECHNICAL].
+\`\`\`
+
+CUT TYPES:
+- Flash cut (fastest, 0.3-0.5s)
+- Rapid cut (fast, 0.5-0.6s)
+- Quick cut (medium-fast, 0.6-0.8s)
+- Sharp cut (punchy, 0.5-0.7s)
+- Crash cut (impact moment)
+
+## SORA 2 REAL EXAMPLES
+
+CAR CHASE SEQUENCE:
+\`\`\`
+Flash cut - Extreme close-up of grey fuzzy flipper slamming gear shifter forward, metallic click sound, chrome lever gleaming, 0.4 second hold, shallow focus.
+
+Rapid cut - Macro shot of small grey foot barely reaching accelerator pedal, toes straining to press down, pedal descending fast, pink bunny suit leg visible, 0.5 second.
+
+Sharp cut - Dashboard POV, speedometer needle sweeping rapidly from 80 to 120 mph, yellow and red zone illuminated, reflection of penguin's determined face in glass, 0.6 second.
+
+Quick cut - Low angle exterior, front wheel spinning violently, tire smoke erupting, rubber texture blurring, asphalt streaking past, motion blur on spokes, 0.5 second.
+
+Flash cut - Interior tight shot, flipper yanking gear shifter back into second gear, wrist twisting, metallic mechanical sound, 0.4 second.
+
+Crash cut - Extreme close-up of penguin's eye reflecting speedometer lights, pupil contracting, sweat bead on fuzzy grey cheek, 0.5 second.
+\`\`\`
+
+BOMB DEFUSAL SEQUENCE:
+\`\`\`
+Fast cut - Extreme close-up of grey fuzzy flipper reaching toward colorful wire bundle, pink bunny costume sleeve edge visible, fingers gripping red wire with precision, shallow focus on wire texture.
+
+Quick cut - Macro shot of flipper pulling blue wire from terminal, wire snapping free with tension, metallic connector gleaming, other rainbow wires blurred in background, 0.8 second hold.
+
+Rapid cut - Tight overhead angle of both flippers working simultaneously, one hand stripping yellow wire insulation, other hand positioning green wire into terminal slot, urgent precise movements, 0.6 second shot.
+
+Sharp cut - Extreme close-up of digital timer display, flipper tapping keypad buttons, yellow digits changing rapidly, "DEVICE ARMED" text glowing ominously, reflection of green interface on grey fur, 0.5 second.
+\`\`\`
+
+TACTICAL COCKPIT SEQUENCE:
+\`\`\`
+Fast cut - Close-up of gloved hand pointing and tapping on main tactical display screen, green grid interface with targeting data, finger selecting targets on touchscreen.
+
+Quick cut - Overhead angle of hand rapidly flipping row of toggle switches on side panel, switches snapping up with metallic clicks, precise deliberate movements.
+
+Rapid cut - Tight shot of hand pressing sequence of buttons on center console keypad, fingers moving quickly across numbered buttons and controls, tactical inputs being entered.
+
+Final cut - Wide interior shot showing hand reaching for main instrument panel with glowing green and red indicator lights, tactical display showing active systems, ready status.
+
+Hyper-kinetic editing, 0.5-1 second per shot, dramatic green instrument glow, metallic textures, shallow depth of field on hands and controls, building mechanical tension, professional military cinematography.
+\`\`\`
+
+SIMPLE SORA 2 PROMPTS (single shots):
+- "Subject WHIPS head toward camera, eyes LOCK on lens, hair TRAILS behind, then settles"
+- "Car SURGES forward, tires GRIP asphalt, dust TRAILS behind, then settles"
+- "Hair BILLOWS in breeze, strands CATCHING light, then settles back into place"
+- "Flames LICK upward, embers DRIFT across frame, smoke CURLS, then dissipates"
+- "Character CHARGES forward, coat BILLOWS behind, feet POUND concrete, then skids to stop"
+
+SORA 2 RULES:
+- Video prompts = MOTION ONLY (image has all visual info)
+- Use POWER VERBS in CAPS: SURGES, WHIPS, SLAMS, POUNDS, BILLOWS
+- Add motion endpoints for single shots: "then settles", "then holds"
+- For multi-shot: specify cut type and duration per shot
+- Include texture/detail notes: "shallow focus", "motion blur", "metallic gleam"
+
+---
+
+## DECISION TREE
+
+Does character SPEAK or need dialogue (even with action in background)?
+  YES → SEEDANCE 1.5
+  NO  → Is it CINEMATIC SLOW-MO or WIDE establishing shot?
+        YES → KLING 2.6
+        NO  → SORA 2 (fast action, close-ups, multi-shot, default)
+
+## ACTION FIGHT PATTERN (ALTERNATING MODELS)
+
+For fight sequences, alternate between models:
+\`\`\`
+WIDE FIGHT (slow-mo)     → KLING 2.6
+CU PUNCH (fast)          → SORA 2
+WIDE REACTION (slow-mo)  → KLING 2.6
+CU FACE (fast)           → SORA 2
+FAST CUT MONTAGE         → SORA 2 (multi-shot format)
+\`\`\`
+
+## FOR ACTION/FIGHTING SEQUENCES
+
+**OPTION A: Mixed Models (manual control)**
+1. Generate BASE PHOTO of the action with Nano Banana
+2. Use /edit to create MULTIPLE ANGLES from base
+3. Wide/slow-mo shots → KLING 2.6
+4. Close-ups/fast cuts → SORA 2
+5. Edit together in post
+
+**OPTION B: Sora 2 Multi-Shot (AI handles editing)**
+1. Generate BASE PHOTO of the action with Nano Banana
+2. Give Sora 2 the base photo + multi-shot prompt with cut types and durations
+3. Sora 2 generates entire fast-cut sequence in one generation
+
+---
 
 ## MODEL SELECTION EXAMPLES
 
-DIALOGUE SHOT (triggers Seedance):
-"Close-up on face. She speaks excitedly: 'This is amazing!' Slow push-in, then settles."
+DIALOGUE SHOT (Seedance):
+"Close-up on face. Character speaks urgently: 'We need to move NOW.' Push-in, then settles."
 
-ACTION SHOT (triggers Kling 2.6):
-"Character walks forward, cape billows, camera follows from side, then settles."
+DIALOGUE + ACTION BACKGROUND (Seedance):
+"Interior car, driver speaks through gritted teeth: 'Hold on!' BACKGROUND SCENERY RUSHES PAST WINDOW, explosions visible behind, handheld shake, then steadies."
 
-TRANSITION SHOT (triggers Kling O1 - needs end frame):
-"Character turns from window to face camera, light shifts from backlit to front-lit."
+CINEMATIC SLOW-MO (Kling 2.6):
+"SLOW MOTION. Fist connects with jaw, head snaps back, sweat droplets scatter. Dolly around the impact, debris BILLOWING, then settles."
+
+WIDE ESTABLISHING (Kling 2.6):
+"Wide aerial shot, city sprawls below, clouds drift past, golden hour light, slow crane down, then settles on skyline."
+
+FAST ACTION CLOSE-UP (Sora 2):
+"Flash cut - Extreme close-up of hand slamming button, finger impact, red light activates, metallic click, 0.4 second, shallow focus."
+
+MULTI-SHOT SEQUENCE (Sora 2):
+"Quick cut - Hand grabs lever. Rapid cut - Lever yanks down. Flash cut - Gauge needle spikes. Sharp cut - Eyes widen in reflection. Crash cut - System activates. 0.5 second per shot, hyper-kinetic editing."
+
+---
+
+## Summary: Model Quick Reference
+
+| Model | Use For | Prompt Style |
+|-------|---------|--------------|
+| **Seedance 1.5** | Dialogue, talking + action BG, zooms | Include "speaks: 'text'" |
+| **Kling 2.6** | Cinematic slow-mo, wide shots, VFX | Motion + endpoint |
+| **Sora 2** | Fast action, close-ups, multi-shot, DEFAULT | Cut types + durations OR power verbs + endpoint |
 
 ---
 

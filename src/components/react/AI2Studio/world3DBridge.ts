@@ -78,6 +78,14 @@ export interface TimelineBeat {
   label: string;
   narrativeBeat?: string;
   transitionType: 'CUT' | 'DISSOLVE' | 'FADE_BLACK' | 'FADE_WHITE';
+  // Actor movement for World Mode visualization
+  actorMovement?: Array<{
+    actorId: string;
+    actorName?: string;
+    startPos: [number, number, number];
+    endPos: [number, number, number];
+    action: string;
+  }>;
   // Generated content
   generatedImageUrl?: string;
   generatedVideoUrl?: string;
@@ -184,7 +192,8 @@ export function loadTimelineFromSharedStorage(): Timeline3D | null {
 // CONVERT AI2 STUDIO → 3D WORLD
 // ============================================
 
-import type { ShotCard, WorldStateJSON } from './agents/specTypes';
+import type { ShotCard, WorldStateJSON, BeatDefinition } from './agents/specTypes';
+import { addMovementToBeats, type BeatWithMovement, type ActorMovement } from './agents/scenePositionTracker';
 
 /**
  * Convert AI2 Studio WorldStateJSON to Multi-Angle Studio format
@@ -307,6 +316,82 @@ function mapEnergyToNarrative(index: number, total: number): string {
   return 'RESOLUTION';
 }
 
+/**
+ * Convert AI2 Studio beats to Timeline with FULL MOVEMENT TRACKING
+ * This generates actorMovement data for World Mode visualization
+ */
+export function convertBeatsToTimelineWithMovement(
+  beats: BeatDefinition[],
+  worldState: WorldStateJSON,
+  projectName: string = 'AI2 Project'
+): Timeline3D {
+  // Process beats through position tracker to add actorMovement
+  const beatsWithMovement = addMovementToBeats(beats, worldState);
+
+  console.log('[World3DBridge] Processing', beats.length, 'beats with movement tracking');
+
+  // Helper to get duration from timecode range
+  const getBeatDuration = (b: BeatWithMovement) => {
+    if (b.timecode_range_seconds) {
+      return (b.timecode_range_seconds.end - b.timecode_range_seconds.start) * 1000;
+    }
+    return 5000; // Default 5 seconds
+  };
+
+  const timelineBeats: TimelineBeat[] = beatsWithMovement.map((beat, index) => {
+    // Calculate start time
+    let startTime = 0;
+    for (let i = 0; i < index; i++) {
+      startTime += getBeatDuration(beatsWithMovement[i]);
+    }
+
+    return {
+      id: beat.beat_id || `beat_${index}`,
+      index,
+      startTime,
+      duration: getBeatDuration(beat),
+      cameraId: beat.camera_rig_id || 'default',
+      cameraMovement: beat.camera_intent || 'static',
+      entityActions: [],
+      dialogue: [],
+      label: beat.end_state_truth?.substring(0, 50) || `Beat ${index + 1}`,
+      narrativeBeat: mapEnergyToNarrative(index, beats.length),
+      transitionType: 'CUT',
+      // Include the generated actorMovement data!
+      actorMovement: beat.actorMovement?.map(move => ({
+        actorId: move.actorId,
+        actorName: move.actorName,
+        startPos: move.startPos,
+        endPos: move.endPos,
+        action: move.action
+      })),
+      status: 'PLANNED'
+    };
+  });
+
+  const totalDuration = timelineBeats.reduce((sum, b) => sum + b.duration, 0);
+
+  // Log movement summary
+  let totalMovements = 0;
+  timelineBeats.forEach(beat => {
+    totalMovements += beat.actorMovement?.filter(m =>
+      m.startPos[0] !== m.endPos[0] ||
+      m.startPos[1] !== m.endPos[1] ||
+      m.startPos[2] !== m.endPos[2]
+    ).length || 0;
+  });
+  console.log('[World3DBridge] Generated', totalMovements, 'movement actions across', timelineBeats.length, 'beats');
+
+  return {
+    id: `timeline_${Date.now()}`,
+    name: projectName,
+    beats: timelineBeats,
+    totalDuration,
+    currentTime: 0,
+    isPlaying: false
+  };
+}
+
 // ============================================
 // SYNC FUNCTIONS
 // ============================================
@@ -330,6 +415,26 @@ export function pushShotsTo3DViewer(
   saveTimelineToSharedStorage(timeline);
 
   console.log('[World3DBridge] Pushed', shotCards.length, 'shots to 3D viewer');
+}
+
+/**
+ * Push beats WITH MOVEMENT TRACKING to 3D viewer
+ * Use this for full spatial continuity visualization
+ */
+export function pushBeatsWithMovementTo3DViewer(
+  beats: BeatDefinition[],
+  worldState: WorldStateJSON,
+  projectName?: string
+): void {
+  // Convert and save world
+  const world3D = convertAI2WorldTo3D(worldState);
+  saveWorldToSharedStorage(world3D);
+
+  // Convert beats with movement tracking
+  const timeline = convertBeatsToTimelineWithMovement(beats, worldState, projectName);
+  saveTimelineToSharedStorage(timeline);
+
+  console.log('[World3DBridge] Pushed', beats.length, 'beats WITH MOVEMENT TRACKING to 3D viewer');
 }
 
 /**

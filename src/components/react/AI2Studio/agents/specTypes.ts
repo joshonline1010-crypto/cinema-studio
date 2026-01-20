@@ -235,6 +235,9 @@ export interface ShotCompilerInput {
   }>;
   // Validated ref stacks from refValidator
   validatedRefs?: any[];
+  // Live 3D spatial context for real position awareness
+  spatialContext?: string;  // Generated from WorldStateContext
+  worldContext?: object;    // Full world context JSON
 }
 
 export interface MasterRef {
@@ -296,6 +299,9 @@ export interface ContinuityValidatorInput {
   worldState: WorldStateJSON;
   sceneGeographyMemory: SceneGeographyMemory;
   shotCards: ShotCard[];
+  // Live 3D spatial context for real distance validation
+  spatialContext?: string;  // Generated from WorldStateContext
+  worldContext?: object;    // Full world context JSON
 }
 
 export interface GeneratedAsset {

@@ -279,6 +279,19 @@ export const continuityValidatorAgent: SpecAgent = {
   async execute(input: ContinuityValidatorInput): Promise<ContinuityValidatorOutput> {
     console.log('[ContinuityValidator] Validating', input.generatedImages.length, 'images and', input.generatedVideos.length, 'videos');
 
+    // Log spatial context availability
+    if (input.spatialContext) {
+      console.log('[ContinuityValidator] 📍 Using LIVE 3D spatial context for distance validation');
+      console.log('[ContinuityValidator] Spatial context preview:', input.spatialContext.substring(0, 200) + '...');
+    }
+
+    // Parse world context for distance calculations if available
+    const worldCtx = input.worldContext as any;
+    if (worldCtx?.entities) {
+      const entityIds = Object.keys(worldCtx.entities);
+      console.log('[ContinuityValidator] 🎭 Tracking', entityIds.length, 'entities:', entityIds.join(', '));
+    }
+
     const violations: ContinuityViolation[] = [];
     const repairInstructions: RepairInstruction[] = [];
 

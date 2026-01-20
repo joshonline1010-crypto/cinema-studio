@@ -25,10 +25,15 @@ import { unifiedPipeline, type UnifiedPipelineOutput } from './agents/unifiedPip
 import {
   openViewerWithShots,
   pushShotsTo3DViewer,
+  pushBeatsWithMovementTo3DViewer,
   playFullSequence,
   is3DViewerAvailable,
-  convertShotCardsToTimeline
+  convertShotCardsToTimeline,
+  open3DViewer
 } from './world3DBridge';
+
+// Movement tracking
+import { addMovementTrackingToOutput, getBeatsWithMovement } from './agents/unifiedPipelineV2';
 
 // Mode descriptions
 const MODE_INFO = {
@@ -3646,6 +3651,31 @@ ${JSON.stringify(specPlan, null, 2)}
                                 title="Open 3D viewer with shots"
                               >
                                 🎬 View in 3D
+                              </button>
+                              <button
+                                onClick={() => {
+                                  // Use movement tracking for full spatial continuity!
+                                  if (latestPlan?.beats && latestPlan?.world?.worldState) {
+                                    pushBeatsWithMovementTo3DViewer(
+                                      latestPlan.beats as any[],
+                                      latestPlan.world.worldState as any,
+                                      'AI2 Project'
+                                    );
+                                    setTimeout(() => {
+                                      open3DViewer();
+                                      playFullSequence();
+                                    }, 100);
+                                  } else {
+                                    // Fallback to old method
+                                    const shotCards = latestPlan.shots || [];
+                                    pushShotsTo3DViewer(shotCards as any[], undefined, 'AI2 Project');
+                                    playFullSequence();
+                                  }
+                                }}
+                                className="px-2 py-1 bg-green-500/20 text-green-300 rounded text-xs hover:bg-green-500/30 flex items-center gap-1"
+                                title="View with character movement paths (spatial continuity)"
+                              >
+                                🛤️ Movement Paths
                               </button>
                               <button
                                 onClick={() => {

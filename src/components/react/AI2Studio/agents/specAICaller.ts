@@ -278,11 +278,23 @@ Return JSON:
 export function buildShotCompilerPrompt(
   beats: any[],
   worldState: any,
-  masterRefs: any[]
+  masterRefs: any[],
+  spatialContext?: string
 ): string {
   const refList = masterRefs.map((ref, i) =>
     `- ${ref.name} (${ref.type}): ${ref.url || 'pending generation'}`
   ).join('\n');
+
+  // Include spatial context if provided
+  const spatialSection = spatialContext ? `
+LIVE 3D WORLD POSITIONS (USE THESE EXACT COORDINATES!):
+${spatialContext}
+
+CRITICAL: Use the ACTUAL entity positions above when writing prompts!
+- If HERO_A is at [5, 0, 3], mention "positioned 5 meters right, 3 meters back"
+- If distance between A and B is 4.2m, describe them as "close together"
+- Camera positions tell you the actual viewing angle
+` : '';
 
   return `Compile SHOT CARDS with image generation prompts from these beats.
 
@@ -291,7 +303,7 @@ ${JSON.stringify(beats, null, 2)}
 
 WORLD STATE:
 ${JSON.stringify(worldState, null, 2)}
-
+${spatialSection}
 MASTER REFERENCES:
 ${refList || 'No refs yet - generate without character refs'}
 

@@ -67,6 +67,9 @@ import { editorAdvisorAgent, type EditorAdvisorOutput } from './editorAdvisorAge
 import { producerAgent, type ProductionManifest } from './producerAgent';
 import { verificationAgent, type VerificationResult } from './verificationAgent';
 
+import { addMovementToBeats, generateMovementSummary, type BeatWithMovement } from './scenePositionTracker';
+import { WorldStateContext, createWorldContext } from './worldStateContext';
+
 import type {
   WorldEngineerOutput,
   BeatPlannerOutput,
@@ -384,6 +387,26 @@ export const unifiedPipelineV2 = {
       progress('PHASE_6', `✅ World built (${timing.phase6_world}ms)`);
 
       // ============================================
+      // CREATE WORLD STATE CONTEXT (Spatial Awareness for Agents)
+      // ============================================
+      const worldContext = createWorldContext({
+        worldState: world.worldState,
+        cameraRigs: world.cameraRigs
+      });
+      console.log(`[PipelineV2] 🌍 WorldStateContext: ${worldContext.getSummary()}`);
+      console.log(`[PipelineV2] 📍 Spatial context:\n${worldContext.generateSpatialContext()}`);
+
+      // Plan movements for each beat using real positions
+      for (const beat of beats.beats || []) {
+        worldContext.setCurrentBeat(beat.beat_id);
+        const movementPlans = worldContext.planMovementForBeat(beat);
+        if (movementPlans.length > 0) {
+          console.log(`[PipelineV2] 🏃 Beat ${beat.beat_id}: ${movementPlans.length} movements planned`);
+          worldContext.applyMovementPlans(movementPlans);
+        }
+      }
+
+      // ============================================
       // PHASE 7: REF PLANNING (NEW! - Replaces Council)
       // ============================================
       progress('PHASE_7', '🖼️ Planning refs and chaining...');
@@ -457,7 +480,10 @@ export const unifiedPipelineV2 = {
           characterDirections: direction.character_directions
         },
         script: script.dialogue_lines,
-        validatedRefs: refValidation.validated_stacks
+        validatedRefs: refValidation.validated_stacks,
+        // NEW: Pass FULL spatial context with facing info for real 3D awareness
+        spatialContext: worldContext.generateFullSpatialContext(),
+        worldContext: worldContext.toJSON()
       }) as ShotCompilerOutput;
 
       timing.phase10_shots = Date.now() - phase10Start;
@@ -507,7 +533,10 @@ export const unifiedPipelineV2 = {
           color_grade_lock: 'neutral',
           forbid_flip: false
         },
-        shotCards: shots.shotCards || []
+        shotCards: shots.shotCards || [],
+        // NEW: Pass FULL spatial context with facing for distance/heading validation
+        spatialContext: worldContext.generateFullSpatialContext(),
+        worldContext: worldContext.toJSON()
       }) as ContinuityValidatorOutput;
 
       timing.phase12_continuity = Date.now() - phase12Start;
@@ -730,7 +759,52 @@ export const unifiedPipelineV2 = {
 };
 
 // ============================================
+// MOVEMENT TRACKING HELPER
+// ============================================
+
+/**
+ * Add movement tracking to pipeline output
+ * Call this after pipeline completes to get actorMovement data for World Mode
+ */
+export function addMovementTrackingToOutput(
+  pipelineOutput: UnifiedPipelineV2Output
+): BeatWithMovement[] | null {
+  if (!pipelineOutput.beats?.beats || !pipelineOutput.world?.worldState) {
+    console.warn('[PipelineV2] Cannot add movement tracking - missing beats or worldState');
+    return null;
+  }
+
+  console.log('[PipelineV2] Adding movement tracking to', pipelineOutput.beats.beats.length, 'beats');
+
+  // Convert worldState to the format expected by scenePositionTracker
+  const worldStateForTracker = {
+    ...pipelineOutput.world.worldState,
+    entities: pipelineOutput.world.worldState.entities || []
+  };
+
+  const beatsWithMovement = addMovementToBeats(
+    pipelineOutput.beats.beats,
+    worldStateForTracker as any
+  );
+
+  // Log summary
+  const summary = generateMovementSummary(beatsWithMovement);
+  console.log('[PipelineV2] Movement tracking summary:\n', summary);
+
+  return beatsWithMovement;
+}
+
+/**
+ * Quick function to get beats with movement from pipeline output
+ */
+export function getBeatsWithMovement(output: UnifiedPipelineV2Output): BeatWithMovement[] {
+  const tracked = addMovementTrackingToOutput(output);
+  return tracked || [];
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
 export default unifiedPipelineV2;
+export type { BeatWithMovement } from './scenePositionTracker';

@@ -217,6 +217,39 @@ export {
 } from './theStack';
 export type { RefPriority, StackedRef, RefStack, GridCell, Grid3x3 } from './theStack';
 
+// SCENE POSITION TRACKER - Beat-to-Beat Spatial Continuity
+export {
+  ScenePositionTracker,
+  scenePositionTracker,
+  addMovementToBeats,
+  generateMovementSummary
+} from './scenePositionTracker';
+export type {
+  MovementAction,
+  ActorMovement,
+  TrackedEntity,
+  BeatWithMovement,
+  PositionTrackerOutput
+} from './scenePositionTracker';
+
+// WORLD STATE CONTEXT - Live 3D Spatial Awareness for Agents
+export {
+  WorldStateContext,
+  worldStateContext,
+  createWorldContext,
+  querySpatial
+} from './worldStateContext';
+export type {
+  EntityState,
+  CameraState,
+  SpatialQuery,
+  SpatialResult,
+  MovementPlan,
+  // NEW: Agent decision types for write-back
+  AgentPositionDecision,
+  SpatialValidationResult
+} from './worldStateContext';
+
 // ============================================
 // NEW AGENTS - Pipeline V2
 // ============================================

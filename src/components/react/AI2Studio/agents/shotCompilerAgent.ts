@@ -269,12 +269,17 @@ export const shotCompilerAgent: SpecAgent = {
     console.log('[ShotCompiler] 🧠 CALLING CLAUDE AI to compile shot cards...');
     console.log('[ShotCompiler] Beats to compile:', input.beats.length);
 
-    // Build the user prompt for Claude
+    // Build the user prompt for Claude (with spatial context if available!)
     const userPrompt = buildShotCompilerPrompt(
       input.beats,
       input.worldState,
-      input.masterRefs
+      input.masterRefs,
+      input.spatialContext  // NEW: Pass real 3D positions
     );
+
+    if (input.spatialContext) {
+      console.log('[ShotCompiler] 📍 Using LIVE 3D spatial context for position awareness');
+    }
 
     // Call Claude with the system prompt
     const aiResponse = await callSpecAgent({
